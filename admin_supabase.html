@@ -15,7 +15,7 @@
 .logout-btn{color:#93b4d4;text-decoration:none;font-size:13px;padding:6px 12px;border:1px solid rgba(255,255,255,.2);border-radius:6px;cursor:pointer}
 .logout-btn:hover{background:rgba(255,255,255,.1);color:#fff}
 .tabs{display:flex;gap:4px;padding:16px 24px 0;max-width:1400px;margin:0 auto}
-.tab suicide{padding:10px 20px;border-radius:8px 8px 0 0;border:1px solid #d0d8e8;border-bottom:none;background:#fff;color:#4a5568;cursor:pointer;font-family:Outfit;font-size:14px;font-weight:500}
+.tab{padding:10px 20px;border-radius:8px 8px 0 0;border:1px solid #d0d8e8;border-bottom:none;background:#fff;color:#4a5568;cursor:pointer;font-family:Outfit;font-size:14px;font-weight:500}
 .tab:hover{color:#1d327b}.tab.active{background:#1d327b;color:#fff;border-color:#1d327b}
 .panel{max-width:1400px;margin:0 auto;padding:0 24px 24px}
 .panel-content{background:#fff;border:1px solid #d0d8e8;border-radius:0 8px 8px 8px;padding:20px}
@@ -31,4 +31,136 @@ select:focus,input:focus{border-color:#25bbee}
 .select-sm{padding:6px 10px;font-size:12px}
 table{width:100%;border-collapse:collapse;font-size:13px}
 thead th{padding:8px 12px;text-align:left;color:#718096;font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #e2e8f0;background:#f7fafc}
-tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
+tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}tbody tr:hover{background:#f0f7ff}
+.text-right{text-align:right}.text-center{text-align:center}
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}.modal{background:#fff;border-radius:12px;padding:24px;width:100%;max-width:550px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal h3{font-size:18px;margin-bottom:16px;color:#1d327b}
+.form-row{margin-bottom:14px}.form-row label{display:block;font-size:12px;font-weight:500;color:#4a5568;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.form-row input,.form-row select{width:100%}.form-row-inline{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid #e2e8f0}
+.toast{position:fixed;top:20px;right:20px;padding:12px 20px;border-radius:8px;color:#fff;font-family:Outfit;font-size:13px;font-weight:500;z-index:2000;animation:slideIn .3s;box-shadow:0 4px 12px rgba(0,0,0,.15)}
+.toast-success{background:#16a34a}.toast-error{background:#dc2626}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+.size-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:6px}
+.sz-peq{background:#dcfce7;color:#166534}.sz-med{background:#fef9c3;color:#854d0e}.sz-grd{background:#fee2e2;color:#991b1b}.sz-maq{background:#ede9fe;color:#5b21b6}
+.mult-cell{padding:6px 10px;text-align:center;font-size:13px;border-radius:4px;display:inline-block}
+.mult-discount{background:#dcfce7;color:#166534}.mult-neutral{background:#f1f5f9;color:#475569}.mult-markup{background:#fee2e2;color:#991b1b}.mult-na{background:#f1f5f9;color:#a0aec0;font-style:italic}
+.user-card{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px}
+.user-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px}
+.hidden{display:none}.loading{text-align:center;padding:40px;color:#718096}
+/* LOGIN */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f0f4f8}
+.login-card{background:#fff;border-radius:12px;padding:40px;width:100%;max-width:400px;box-shadow:0 4px 24px rgba(0,0,0,.08);border:1px solid #e2e8f0}
+.login-card h1{font-size:20px;color:#1d327b;font-weight:700;text-align:center;margin:12px 0 4px}
+.login-card p{font-size:13px;color:#718096;text-align:center;margin-bottom:24px}
+.field{margin-bottom:16px}.field label覆{display:block;font-size:12px;font-weight:500;color:#4a5568;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.field input{width:100%;padding:10px 14px;border:1px solid #c3cfe2;border-radius:8px;font-size:14px;font-family:Outfit;outline:none}
+.field input:focus{border-color:#25bbee}
+.btn-login{width:100%;padding:12px;background:#1d327b;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:Outfit}
+.btn-login:hover{background:#162666}
+.err-msg{background:#fee2e2;color:#991b1b;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;border:1px solid #fecaca}
+</style>
+</head>
+<body>
+
+<div id="loginPage" class="login-wrap">
+<div class="login-card">
+<div style="text-align:center">
+<svg width="50" height="50" viewBox="0 0 200 200"><rect x="10" y="10" width="180" height="180" rx="30" fill="#e30613"/><line x1="30" y1="30" x2="82" y2="95" stroke="#fff" stroke-width="10" stroke-linecap="round"/><polygon points="100,38 108,80 145,55 118,88 158,92 120,105 148,138 108,118 100,162 92,118 52,138 80,105 42,92 82,88 55,55 92,80" fill="#fff"/></svg>
+</div>
+<h1>Painel Administrativo</h1>
+<p>Tabela de Preços Boxer</p>
+<div id="loginErr" class="err-msg hidden"></div>
+<div class="field"><label>Email</label><input id="loginEmail" type="email" placeholder="seu@email.com"></div>
+<div class="field"><label>Senha</label><input id="loginPass" type="password" placeholder="••••••••"></div>
+<button class="btn-login" onclick="doLogin()">Entrar</button>
+</div>
+</div>
+
+<div id="adminPage" class="hidden">
+<div class="topbar">
+<div class="topbar-left">
+<svg width="32" height="32" viewBox="0 0 200 200"><rect x="10" y="10" width="180" height="180" rx="30" fill="#e30613"/><line x1="30" y1="30" x2="82" y2="95" stroke="#fff" stroke-width="10" stroke-linecap="round"/><polygon points="100,38 108,80 145,55 118,88 158,92 120,105 148,138 108,118 100,162 92,118 52,138 80,105 42,92 82,88 55,55 92,80" fill="#fff"/></svg>
+<h1>Painel Admin Boxer</h1></div>
+<div class="topbar-right">
+<span class="user-badge"><strong id="userName"></strong> <span class="perm-tag" id="userPerm"></span></span>
+<span class="logout-btn" onclick="doLogout()">Sair</span>
+</div></div>
+
+<div class="tabs">
+<div class="tab active" onclick="showTab('produtos',this)">Produtos</div>
+<div class="tab" onclick="showTab('estados',this)">Estados</div>
+<div class="tab" onclick="showTab('multiplicadores',this)">Multiplicadores</div>
+<div class="tab admin-only hidden" onclick="showTab('usuarios',this)">Usuários</div>
+</div>
+<div class="panel">
+<div class="panel-content" id="tab-produtos">
+<div class="panel-header"><div><div class="panel-title">Cadastro de Produtos</div><div class="panel-sub" id="prodSub"></div></div>
+<div style="display:flex;gap:8px;align-items:center">
+<select id="prodTabela" class="select-sm" onchange="loadProdutos()"><option value="1">Principal</option><option value="2">Automação</option></select>
+<input type="text" id="prodSearch" placeholder="Buscar..." style="width:200px;padding:6px 10px;font-size:12px" oninput="filterProdutos()">
+<button class="btn btn-warn btn-sm admin-only hidden" onclick="openReajusteModal()">% Reajuste em Massa</button>
+<button class="btn btn-primary btn-sm" onclick="openProdModal()">+ Novo</button>
+</div></div>
+<div style="overflow:auto;max-height:600px" id="prodTableWrap"><div class="loading">Carregando...</div></div>
+</div>
+
+<div class="panel-content hidden" id="tab-estados">
+<div class="panel-header"><div><div class="panel-title">Parâmetros por Estado</div><div class="panel-sub">Apenas campos que influenciam no cálculo</div></div></div>
+<div style="overflow:auto" id="estadosTable"><div class="loading">Carregando...</div></div>
+</div>
+
+<div class="panel-content hidden" id="tab-multiplicadores">
+<div class="panel-header"><div><div class="panel-title">Multiplicadores Comerciais</div></div>
+<select id="multTabela" class="select-sm" onchange="loadMult()"><option value="1">Principal</option><option value="2">Automação</option></select></div>
+<div id="multGrid"><div class="loading">Carregando...</div></div>
+</div>
+
+<div class="panel-content hidden" id="tab-usuarios">
+<div class="panel-header"><div><div class="panel-title">Gestão de Usuários</div><div class="panel-sub">Apenas admin</div></div>
+<button class="btn btn-primary btn-sm" onclick="openUserModal()">+ Novo usuário</button></div>
+<div id="usersList"><div class="loading">Carregando...</div></div>
+</div>
+</div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()"><div class="modal" id="modalContent"></div></div>
+
+<script>
+const SB_URL = 'https://bmepxcnrsofofoswubuu.supabase.co';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtZXB4Y25yc29mb2Zvc3d1YnV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MTczNzMsImV4cCI6MjA5NTI5MzM3M30.S55ouFczRYlUYNFf5PotYKXBPT5idypTSmbzR-x2Pk0';
+
+let SESSION = null, PERFIL = null, IS_ADMIN = false;
+let allProd = [];
+
+function toast(m,t='success'){const d=document.createElement('div');d.className='toast toast-'+t;d.textContent=m;document.body.appendChild(d);setTimeout(()=>d.remove(),3000);}
+function openModal(h){document.getElementById('modalContent').innerHTML=h;document.getElementById('modalOverlay').classList.add('show');}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('show');}
+
+async function sb(path, method='GET', body=null, token=null) {
+    const hdrs = {
+        'Content-Type':'application/json',
+        'apikey': SB_ANON,
+        'Authorization': 'Bearer '+(token || SESSION?.access_token || SB_ANON),
+        'Prefer': method==='POST' ? 'return=representation' : method==='PATCH' ? 'return=minimal' : ''
+    };
+    const opts = {method, headers: hdrs};
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(SB_URL+'/rest/v1'+path, opts);
+    if (!r.ok) { const e = await r.text(); throw new Error(e); }
+    return method==='GET' || method==='POST' ? r.json() : r;
+}
+
+async function sbAuth(path, body) {
+    const r = await fetch(SB_URL+'/auth/v1'+path, {
+        method:'POST', headers:{'Content-Type':'application/json','apikey':SB_ANON},
+        body: JSON.stringify(body)
+    });
+    return r.json();
+}
+
+async function doLogin() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPass').value;
+    const errEl = document.getElementById('loginErr');
