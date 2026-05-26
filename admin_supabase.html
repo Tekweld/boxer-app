@@ -465,6 +465,10 @@ async function delUser(id,n){
 
 // Inicialização da página
 window.addEventListener('DOMContentLoaded', () => {
+    const hash = window.location.hash;
+    if (!hash || !hash.includes('access_token=')) {
+        document.getElementById('loginPage').classList.remove('hidden');
+    }
     checkHashLogin();
 });
 </script>
