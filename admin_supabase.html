@@ -192,7 +192,7 @@ async function doLogin() {
 // login via Supabase Auth abaixo
     
     try {
-        const res = await sbAuth('/login?grant_type=password', {email, password: pass});
+        const res = await sbAuth('/token?grant_type=password', {email, password: pass});
         
         if (res.error || !res.access_token) { 
             errEl.textContent = 'Email ou senha incorretos'; 
