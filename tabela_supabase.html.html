@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tabela de Preços Boxer</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f4f8;color:#1a202c}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:#e2e8f0}::-webkit-scrollbar-thumb{background:#25bbee;border-radius:3px}
+.header{background:linear-gradient(135deg,#1d327b 0%,#162666 100%);border-bottom:3px solid #25bbee;padding:18px 24px}
+.header-inner{max-width:1400px;margin:0 auto}.logo-row{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.logo-row h1{font-family:Outfit;font-size:22px;font-weight:700;color:#fff;letter-spacing:-.5px}
+.logo-row p{font-family:Outfit;font-size:12px;color:#93b4d4;margin-top:2px}
+.nav-btn{position:absolute;right:24px;top:18px;padding:10px 20px;border-radius:8px;border:2px solid #25bbee;background:rgba(37,187,238,.1);color:#fff;font-family:Outfit;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.nav-btn:hover{background:#25bbee;color:#fff}
+.filters-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.filter-label{font-family:Outfit;font-size:11px;color:#93b4d4;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px}
+.state-select{width:80px;padding:8px 4px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:#fff;font-size:14px;font-family:Outfit}
+.state-select option{color:#1a202c;background:#fff}
+.btn-group{display:flex;gap:4px}
+.fb{padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:#c8ddf0;cursor:pointer;font-size:13px;transition:all .2s;font-family:Outfit;white-space:nowrap}
+.fb:hover{border-color:#25bbee;color:#fff}.fb.on{background:#25bbee;border-color:#25bbee;color:#fff;box-shadow:0 2px 8px rgba(29,50,123,.25)}
+.fb-classe{min-width:40px;text-align:center}
+.comissao-box{display:none;padding:8px 16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-left:auto}
+.comissao-text{font-family:Outfit;font-size:14px;color:#fff;font-weight:500}
+.comissao-text span{color:#25bbee;font-weight:600}
+.content{max-width:1400px;margin:0 auto;padding:16px 24px}
+.search-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.search-input{flex:1 1 280px;padding:9px 14px;border-radius:8px;border:1px solid #c3cfe2;background:#fff;color:#1a202c;font-size:14px;outline:none;font-family:Outfit}
+.cat-select{padding:9px 14px;border-radius:8px;border:1px solid #c3cfe2;background:#fff;color:#1a202c;font-size:13px;min-width:220px;font-family:Outfit}
+.cat-header{padding:8px 16px;border-radius:8px;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+.cat-header span:first-child{font-family:Outfit;font-weight:600;font-size:14px;color:#fff}
+.cat-badge{font-family:Outfit;font-size:12px;color:rgba(255,255,255,.7);background:rgba(255,255,255,.15);padding:2px 8px;border-radius:10px}
+.cat-group{margin-bottom:16px}.tbl-wrap{overflow:auto;border-radius:8px;border:1px solid #d0d8e8}
+table{width:100%;border-collapse:collapse;font-size:13px}thead tr{background:#1d327b}
+th{padding:8px 12px;color:#fff;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+.al{text-align:left}.ar{text-align:right}.ac{text-align:center}
+tbody tr{border-bottom:1px solid #e2e8f0;transition:background .15s}tbody tr:nth-child(odd){background:#fff}tbody tr:nth-child(even){background:#eef2fa}tbody tr:hover{background:#dbeafe !important}
+td{padding:7px 12px}.td-code{color:#4a5568;font-variant-numeric:tabular-nums;font-size:12px}.td-name{color:#1a202c;max-width:340px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.td-price-base{text-align:right;color:#718096;font-variant-numeric:tabular-nums;font-size:12px}.td-price-final{text-align:right;color:#1d327b;font-weight:700;font-variant-numeric:tabular-nums}
+.td-pct{text-align:right;color:#718096;font-size:12px}.td-ncm{color:#a0aec0;font-size:11px}
+.size-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:6px;display:inline-block}
+.sz-peq{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}.sz-med{background:#fef9c3;color:#854d0e;border:1px solid #fde68a}.sz-grd{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}.sz-maq{background:#ede9fe;color:#5b21b6;border:1px solid #c4b5fd}
+.footer{margin-top:24px;padding:16px;background:#fff;border-radius:10px;border:1px solid #d0d8e8}.footer p{font-family:Outfit;font-size:12px;color:#718096}.footer strong{color:#1d327b}
+.empty{text-align:center;padding:60px;color:#718096;font-family:Outfit}.loading{text-align:center;padding:80px;color:#718096;font-family:Outfit;font-size:16px}
+</style>
+</head>
+<body>
+<div class="header" style="position:relative;"><div class="header-inner">
+<a id="navBtn" href="#" class="nav-btn"></a>
+<div class="logo-row">
+<svg width="40" height="40" viewBox="0 0 200 200"><rect x="10" y="10" width="180" height="180" rx="30" fill="#e30613"/><line x1="30" y1="30" x2="82" y2="95" stroke="#fff" stroke-width="10" stroke-linecap="round"/><polygon points="100,38 108,80 145,55 118,88 158,92 120,105 148,138 108,118 100,162 92,118 52,138 80,105 42,92 82,88 55,55 92,80" fill="#fff"/></svg>
+<div><h1 id="pageTitle">Tabela de Preços Boxer</h1><p id="pageSubtitle">Carregando...</p></div></div>
+<div class="filters-row">
+<div><label class="filter-label">Estado</label><select id="selState" class="state-select"></select></div>
+<div><label class="filter-label">Segmento</label><div id="segBtns" class="btn-group"></div></div>
+<div><label class="filter-label">Classe</label><div id="clsBtns" class="btn-group"></div></div>
+<div class="comissao-box" id="comissaoBox"><label class="filter-label">Comissionamento</label><div class="comissao-text" id="comissaoText"></div></div>
+</div></div></div>
+<div class="content">
+<div class="search-row"><input id="searchInput" class="search-input" placeholder="Buscar por nome ou código..."/><select id="selCat" class="cat-select"></select></div>
+<div id="tableArea"><div class="loading">Carregando tabela de preços...</div></div>
+<div class="footer"><p>Configuração: <strong id="footState"></strong> · <strong id="footSeg"></strong> · Classe <strong id="footCls"></strong></p></div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://bmepxcnrsofofoswubuu.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtZXB4Y25yc29mb2Zvc3d1YnV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MTczNzMsImV4cCI6MjA5NTI5MzM3M30.S55ouFczRYlUYNFf5PotYKXBPT5idypTSmbzR-x2Pk0';
+
+const params = new URLSearchParams(window.location.search);
+const TID = parseInt(params.get('t')) || 1;
+const IS_AUTO = TID === 2;
+
+const SZ = {Pequenas:'PEQ',Médias:'MED',Grandes:'GRD','Maquinário':'MAQ'};
+const SZC = {Pequenas:'sz-peq',Médias:'sz-med',Grandes:'sz-grd','Maquinário':'sz-maq'};
+
+const COMISSAO = {
+    'REP > IND-1':'Representante = 5%','REP > IND-2':'Representante = 6%','REP > IND-3':'Representante = 7%',
+    'REP > REV-1':'Representante = 2%','REP > REV-2':'Representante = 3%','REP > REV-3':'Representante = 4%',
+    'REP+REV > IND-1':'Representante = 3% · Revenda = 3%','REP+REV > IND-2':'Representante = 4% · Revenda = 4%','REP+REV > IND-3':'Representante = 5% · Revenda = 5%'
+};
+
+let P=[], ST=[], M={}, SEG=[], CLS=[], CATS=[];
+let cState='SP', cSeg='', cCls=0, cCat='TODAS', cSearch='';
+
+function fmt(v){return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
+
+async function sbFetch(path) {
+    const r = await fetch(SUPABASE_URL+'/rest/v1'+path, {
+        headers: {'apikey': SUPABASE_ANON, 'Authorization': 'Bearer '+SUPABASE_ANON}
+    });
+    return r.json();
+}
+
+async function load() {
+    const [tabelaRes, estadosRes, multsRes, prodsRes, catsRes] = await Promise.all([
+        sbFetch('/tabelas?id=eq.'+TID+'&select=*'),
+        sbFetch('/estados?select=uf,mult_4_icms,mult_total&order=uf'),
+        sbFetch('/multiplicadores?tabela_id=eq.'+TID+'&select=segmento,classe,porte,valor'),
+        sbFetch('/produtos?tabela_id=eq.'+TID+'&ativo=eq.true&pv_sp=gt.0&select=codigo,modelo,pv_sp,porte,icms,ipi,ncm,categoria_id&order=modelo'),
+        sbFetch('/categorias?tabela_id=eq.'+TID+'&select=id,nome,ordem&order=ordem')
+    ]);
+
+    const tabela = tabelaRes[0];
+    ST = estadosRes;
+    SEG = tabela.segmentos;
+    CLS = tabela.classes;
+
+    // Build multipliers map
+    multsRes.forEach(m => { M[m.segmento+m.classe+m.porte] = parseFloat(m.valor); });
+
+    // Build categories map
+    const catMap = {};
+    catsRes.forEach(c => { catMap[c.id] = c.nome; });
+    CATS = catsRes.map(c => c.nome);
+
+    // Build products with category names
+    P = prodsRes.map(p => ({...p, cat: catMap[p.categoria_id] || 'SEM CATEGORIA'}));
+
+    cSeg = SEG[0];
+    cCls = IS_AUTO ? CLS[0] : CLS[CLS.length-1];
+
+    const atualizado = new Date(tabela.atualizado_em).toLocaleDateString('pt-BR');
+    document.getElementById('pageSubtitle').textContent = `Atualizado em ${atualizado} · ${P.length} produtos`;
+
+    if (IS_AUTO) {
+        document.getElementById('pageTitle').innerHTML = 'Tabela de Preços Boxer <span style="font-size:14px;color:#e30613;font-weight:600;background:rgba(227,6,19,.15);padding:2px 10px;border-radius:6px;margin-left:8px">Automação</span>';
+        document.querySelector('.header').style.borderBottomColor = '#e30613';
+        document.getElementById('navBtn').href = 'tabela_supabase.html?t=1';
+        document.getElementById('navBtn').innerHTML = '&#10132; Tabela Principal';
+        document.title = 'Tabela de Preços Boxer - Automação';
+    } else {
+        document.getElementById('navBtn').href = 'tabela_supabase.html?t=2';
+        document.getElementById('navBtn').innerHTML = 'Tabela Automação &#10132;';
+    }
+
+    buildFilters();
+    render();
+}
+
+function buildFilters() {
+    const sel = document.getElementById('selState');
+    ST.forEach(s => { const o = document.createElement('option'); o.value=s.uf; o.textContent=s.uf; sel.appendChild(o); });
+    sel.value = cState;
+    sel.addEventListener('change', () => { cState=sel.value; render(); });
+
+    const sd = document.getElementById('segBtns');
+    SEG.forEach(s => { const b=document.createElement('button'); b.className='fb'+(s===cSeg?' on':''); b.textContent=s; b.addEventListener('click',()=>{cSeg=s;updBtns();render();}); sd.appendChild(b); });
+
+    const cd = document.getElementById('clsBtns');
+    CLS.forEach(c => { const b=document.createElement('button'); b.className='fb fb-classe'+(c===cCls?' on':''); b.textContent=c; b.addEventListener('click',()=>{cCls=c;updBtns();render();}); cd.appendChild(b); });
+
+    const cs = document.getElementById('selCat');
+    const oA = document.createElement('option'); oA.value='TODAS'; oA.textContent=`Todas as categorias (${P.length})`; cs.appendChild(oA);
+    CATS.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; cs.appendChild(o); });
+    cs.addEventListener('change', () => { cCat=cs.value; render(); });
+
+    document.getElementById('searchInput').addEventListener('input', e => { cSearch=e.target.value; render(); });
+}
+
+function updBtns() {
+    document.querySelectorAll('#segBtns .fb').forEach(b => b.className='fb'+(b.textContent===cSeg?' on':''));
+    document.querySelectorAll('#clsBtns .fb').forEach(b => b.className='fb fb-classe'+(parseInt(b.textContent)===cCls?' on':''));
+}
+
+function updateComissao() {
+    const box = document.getElementById('comissaoBox');
+    if (!IS_AUTO) { box.style.display='none'; return; }
+    const key = cSeg+'-'+cCls;
+    const text = COMISSAO[key];
+    if (text) {
+        box.style.display = 'block';
+        document.getElementById('comissaoText').innerHTML = text.replace(/([\d]+%)/g,'<span>$1</span>');
+    } else { box.style.display='none'; }
+}
+
+function render() {
+    const st = ST.find(s => s.uf===cState);
+    let items = P;
+    if (cCat !== 'TODAS') items = items.filter(p => p.cat===cCat);
+    if (cSearch.trim()) { const q=cSearch.toLowerCase(); items=items.filter(p=>p.modelo.toLowerCase().includes(q)||p.codigo.toLowerCase().includes(q)); }
+
+    const g = {};
+    items.forEach(p => { if(!g[p.cat]) g[p.cat]=[]; g[p.cat].push(p); });
+
+    const a = document.getElementById('tableArea'); a.innerHTML='';
+    const gr = IS_AUTO ? '#1d327b,#e30613' : '#1d327b,#25bbee';
+
+    if (!items.length) { a.innerHTML='<div class="empty"><p style="font-size:18px">Nenhum produto encontrado</p></div>'; }
+    else {
+        Object.entries(g).forEach(([cat,ps]) => {
+            const d = document.createElement('div'); d.className='cat-group';
+            d.innerHTML = `<div class="cat-header" style="background:linear-gradient(90deg,${gr})"><span>${cat}</span><span class="cat-badge">${ps.length} itens</span></div>`;
+            let r = '';
+            ps.forEach(p => {
+                const tb = p.pv_sp * parseFloat(st.mult_4_icms) / (1 - parseFloat(st.mult_total)/100);
+                const k = cSeg+cCls+p.porte;
+                const scm = M[k];
+                let pc = scm!==undefined ? `<td class="td-price-final">${fmt(tb*scm)}</td>` : `<td style="text-align:right;color:#a0aec0;font-style:italic;font-size:12px">N/D</td>`;
+                const ic = cState==='SP' ? p.icms : 4;
+                r += `<tr><td class="td-code">${p.codigo}</td><td class="td-name">${p.modelo}</td><td class="ac"><span class="size-badge ${SZC[p.porte]||'sz-grd'}">${SZ[p.porte]||p.porte}</span></td><td class="td-price-base">${fmt(tb)}</td>${pc}<td class="td-pct">${ic}%</td><td class="td-pct">${p.ipi}%</td><td class="td-ncm">${p.ncm}</td></tr>`;
+            });
+            d.innerHTML += `<div class="tbl-wrap"><table><thead><tr><th class="al">Código</th><th class="al">Descrição</th><th class="ac">Porte</th><th class="ar">Tabela</th><th class="ar">c/ Desconto</th><th class="ar">ICMS</th><th class="ar">IPI</th><th class="al">NCM</th></tr></thead><tbody>${r}</tbody></table></div>`;
+            a.appendChild(d);
+        });
+    }
+    document.getElementById('footState').textContent = cState;
+    document.getElementById('footSeg').textContent = cSeg;
+    document.getElementById('footCls').textContent = cCls;
+    updateComissao();
+}
+
+document.addEventListener('DOMContentLoaded', load);
+</script>
+</body>
+</html>
