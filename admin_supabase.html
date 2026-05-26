@@ -51,7 +51,7 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 .hidden{display:none}.loading{text-align:center;padding:40px;color:#718096}
 /* LOGIN */
 .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f0f4f8}
-.login-card{background:#fff;border-radius:12px;padding:40px;width:100%;max-width:400px;box-shadow:0 4px 24 rgba(0,0,0,.08);border:1px solid #e2e8f0}
+.login-card{background:#fff;border-radius:12px;padding:40px;width:100%;max-width:400px;box-shadow:0 4px 24px rgba(0,0,0,.08);border:1px solid #e2e8f0}
 .login-card h1{font-size:20px;color:#1d327b;font-weight:700;text-align:center;margin:12px 0 4px}
 .login-card p{font-size:13px;color:#718096;text-align:center;margin-bottom:24px}
 .field{margin-bottom:16px}.field label{display:block;font-size:12px;font-weight:500;color:#4a5568;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
@@ -184,11 +184,21 @@ async function doLogin() {
         
         SESSION = res;
         
-        const perfis = await sb('/perfis?id=eq.'+res.user.id+'&select=*');
-        PERFIL = perfis[0] || {permissao:'editor', nome: email};
+        // REGRA DE RECAPE PLANO B: Se for o seu e-mail, força Admin direto ignorando erro da tabela
+        if (email.toLowerCase() === 'bruno@boxersoldas.com.br') {
+            PERFIL = { permissao: 'admin', nome: 'Bruno Boxer (CEO)' };
+        } else {
+            try {
+                const perfis = await sb('/perfis?id=eq.'+res.user.id+'&select=*');
+                PERFIL = perfis[0] || {permissao:'editor', nome: email};
+            } catch(e) {
+                PERFIL = {permissao:'editor', nome: email};
+            }
+        }
+        
         IS_ADMIN = PERFIL.permissao === 'admin';
         
-        document.getElementById('userName').textContent = PERFIL.nome || email;
+        document.getElementById('userName').textContent = PERFIL.nome;
         const pt = document.getElementById('userPerm');
         pt.textContent = PERFIL.permissao.toUpperCase();
         pt.className = 'perm-tag perm-'+PERFIL.permissao;
@@ -227,13 +237,17 @@ function showTab(n,el){
 
 // PRODUTOS
 async function loadProdutos(){
-    const tid = document.getElementById('prodTabela').value;
-    const [prods, cats] = await Promise.all([
-        sb('/produtos?tabela_id=eq.'+tid+'&ativo=eq.true&pv_sp=gt.0&select=*,categorias(nome)&order=modelo'),
-        sb('/categorias?tabela_id=eq.'+tid+'&select=id,nome&order=ordem')
-    ]);
-    allProd = prods.map(p => ({...p, cat: p.categorias?.nome || 'SEM CATEGORIA'}));
-    renderProd(allProd);
+    try {
+        const tid = document.getElementById('prodTabela').value;
+        const [prods, cats] = await Promise.all([
+            sb('/produtos?tabela_id=eq.'+tid+'&ativo=eq.true&pv_sp=gt.0&select=*,categorias(nome)&order=modelo'),
+            sb('/categorias?tabela_id=eq.'+tid+'&select=id,nome&order=ordem')
+        ]);
+        allProd = prods.map(p => ({...p, cat: p.categorias?.nome || 'SEM CATEGORIA'}));
+        renderProd(allProd);
+    } catch (e) {
+        document.getElementById('prodTableWrap').innerHTML = `<div style="text-align:center;padding:20px;color:#dc2626">Erro ao carregar produtos: ${e.message}</div>`;
+    }
 }
 function filterProdutos(){const q=document.getElementById('prodSearch').value.toLowerCase();renderProd(q?allProd.filter(p=>p.modelo.toLowerCase().includes(q)||p.codigo.toLowerCase().includes(q)):allProd);}
 function renderProd(ps){
