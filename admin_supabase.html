@@ -170,8 +170,10 @@ function setupAdminSession(nome, permissao) {
     document.getElementById('prodSub').textContent = IS_ADMIN ? 'Admin: edita tudo' : 'Editor: edita tudo exceto PV SP';
     document.querySelectorAll('.admin-only').forEach(el => IS_ADMIN ? el.classList.remove('hidden') : el.classList.add('hidden'));
     
+setTimeout(() => {
     document.getElementById('loginPage').classList.add('hidden');
     document.getElementById('adminPage').classList.remove('hidden');
+}, 50);
     
     loadProdutos();
 }
