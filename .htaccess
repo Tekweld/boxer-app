@@ -1,0 +1,7 @@
+Options -Indexes
+RewriteEngine On
+
+RewriteRule ^tabela/?$ tabela_supabase.html?t=1 [L,QSA]
+RewriteRule ^automacao/?$ tabela_supabase.html?t=2 [L,QSA]
+RewriteRule ^admin/?$ admin_supabase.html [L]
+RewriteRule ^$ admin_supabase.html [L]
