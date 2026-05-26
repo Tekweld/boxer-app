@@ -189,13 +189,7 @@ async function doLogin() {
     
     errEl.classList.add('hidden');
     
-    // TRAVA MASTER ABSOLUTA: Verifica localmente ANTES de qualquer contato com rede
-    if (email.toLowerCase() === 'bruno@boxersoldas.com.br' && pass === 'boxer2026') {
-        SESSION = { access_token: SB_ANON, user: { id: 'master-admin', email: email } };
-        setupAdminSession('Bruno Boxer (CEO)', 'admin');
-        toast('Acesso mestre liberado!');
-        return;
-    }
+// login via Supabase Auth abaixo
     
     try {
         const res = await sbAuth('/login?grant_type=password', {email, password: pass});
