@@ -173,9 +173,9 @@ function setupAdminSession(nome, permissao) {
 setTimeout(() => {
     document.getElementById('loginPage').classList.add('hidden');
     document.getElementById('adminPage').classList.remove('hidden');
-}, 50);
-    
     loadProdutos();
+}, 50);
+
 }
 
 async function doLogin() {
