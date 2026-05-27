@@ -134,11 +134,7 @@ const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsIn
 let SESSION = null, PERFIL = null, IS_ADMIN = false;
 let allProd = [];
 
-function toast(m,t='success'){const d=document.createElement('div');d.className='toast toast-'+t;d.textContent=m;document.body.appendChild(d);setTimeout(() => {
-    document.getElementById('loginPage').style.display = 'none';
-    document.getElementById('adminPage').style.display = 'block';
-    loadProdutos();
-}, 50);
+function toast(m,t='success'){const d=document.createElement('div');d.className='toast toast-'+t;d.textContent=m;document.body.appendChild(d);setTimeout(()=>d.remove(),3000);}
 
 async function sb(path, method='GET', body=null, token=null) {
     const hdrs = {
