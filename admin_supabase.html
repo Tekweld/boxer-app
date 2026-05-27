@@ -135,6 +135,8 @@ let SESSION = null, PERFIL = null, IS_ADMIN = false;
 let allProd = [];
 
 function toast(m,t='success'){const d=document.createElement('div');d.className='toast toast-'+t;d.textContent=m;document.body.appendChild(d);setTimeout(()=>d.remove(),3000);}
+function openModal(html){document.getElementById('modalContent').innerHTML=html;document.getElementById('modalOverlay').classList.add('show');}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('show');document.getElementById('modalContent').innerHTML='';}
 
 async function sb(path, method='GET', body=null, token=null) {
     const hdrs = {
