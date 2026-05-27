@@ -189,7 +189,7 @@ function render() {
 
     if (!items.length) { a.innerHTML='<div class="empty"><p style="font-size:18px">Nenhum produto encontrado</p></div>'; }
     else {
-        Object.entries(g).forEach(([cat,ps]) => {
+        CATS.filter(c => g[c]).forEach(cat => { const ps = g[cat];
             const d = document.createElement('div'); d.className='cat-group';
             d.innerHTML = `<div class="cat-header" style="background:linear-gradient(90deg,${gr})"><span>${cat}</span><span class="cat-badge">${ps.length} itens</span></div>`;
             let r = '';
