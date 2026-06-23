@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nova Proposta — Boxer</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Outfit,sans-serif;background:#f0f4f8;color:#1a202c}
+.header{background:linear-gradient(135deg,#1d327b,#162666);border-bottom:3px solid #25bbee;padding:14px 24px;display:flex;align-items:center;justify-content:space-between}
+.header-left{display:flex;align-items:center;gap:12px}
+.header h1{font-size:18px;font-weight:700;color:#fff}
+.header p{font-size:12px;color:#93b4d4;margin-top:2px}
+.header-user{font-size:13px;color:#93b4d4;display:flex;align-items:center;gap:12px}
+.btn-logout{background:transparent;border:1px solid rgba(255,255,255,.2);color:#93b4d4;padding:6px 14px;border-radius:8px;font-family:Outfit;font-size:12px;cursor:pointer}
+.btn-logout:hover{color:#fff;border-color:rgba(255,255,255,.5)}
+.content{max-width:960px;margin:0 auto;padding:24px 16px;display:grid;grid-template-columns:1fr 1.4fr;gap:24px}
+@media(max-width:720px){.content{grid-template-columns:1fr}}
+/* Painel esquerdo — resumo dos itens */
+.painel{background:#fff;border:1px solid #d0d8e8;border-radius:12px;padding:20px}
+.painel-title{font-size:14px;font-weight:700;color:#1d327b;margin-bottom:4px}
+.painel-sub{font-size:12px;color:#718096;margin-bottom:16px}
+.politica-tag{display:inline-flex;align-items:center;gap:6px;background:#e8f0fe;color:#1d327b;border:1px solid #c3d3f5;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:14px}
+.item-lista{list-style:none;display:flex;flex-direction:column;gap:8px}
+.item-lista li{padding:10px 12px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:13px}
+.item-codigo{font-size:11px;color:#718096;margin-bottom:2px}
+.item-modelo{font-weight:600;color:#1a202c}
+.item-preco{font-size:12px;color:#1d327b;font-weight:700;margin-top:4px}
+/* Painel direito — formulário */
+.form-section{font-size:11px;font-weight:600;color:#718096;text-transform:uppercase;letter-spacing:.8px;margin:20px 0 12px;padding-bottom:6px;border-bottom:1px solid #e2e8f0}
+.form-section:first-child{margin-top:0}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12px;font-weight:500;color:#4a5568;margin-bottom:6px}
+.field label .req{color:#e30613;margin-left:2px}
+.field input,.field select,.field textarea{width:100%;padding:9px 12px;border:1px solid #c3cfe2;border-radius:8px;font-family:Outfit;font-size:13px;color:#1a202c;outline:none;transition:border-color .15s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:#25bbee;box-shadow:0 0 0 3px rgba(37,187,238,.1)}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.check-row{display:flex;align-items:center;gap:8px;margin-top:4px}
+.check-row input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:#1d327b}
+.check-row label{font-size:13px;color:#4a5568;cursor:pointer;font-weight:400;margin-bottom:0}
+.contato2-toggle{background:transparent;border:1px dashed #c3cfe2;border-radius:8px;padding:8px 14px;color:#718096;font-family:Outfit;font-size:13px;cursor:pointer;width:100%;text-align:left;margin-bottom:4px}
+.contato2-toggle:hover{border-color:#25bbee;color:#1d327b}
+#contato2Block{display:none;margin-top:12px}
+.tipo-grupo{display:flex;gap:10px;flex-wrap:wrap}
+.tipo-btn{flex:1;min-width:80px;padding:10px 8px;border:2px solid #d0d8e8;border-radius:8px;background:#fff;font-family:Outfit;font-size:13px;font-weight:600;color:#718096;cursor:pointer;text-align:center;transition:all .15s}
+.tipo-btn:hover{border-color:#1d327b;color:#1d327b}
+.tipo-btn.on{border-color:#1d327b;background:#e8f0fe;color:#1d327b}
+.autocomplete-wrap{position:relative}
+.autocomplete-list{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #c3cfe2;border-radius:8px;max-height:200px;overflow-y:auto;z-index:100;display:none;box-shadow:0 4px 16px rgba(0,0,0,.1)}
+.autocomplete-list li{padding:8px 12px;font-size:13px;cursor:pointer;list-style:none}
+.autocomplete-list li:hover{background:#f0f4f8;color:#1d327b}
+.btn-gerar{width:100%;padding:14px;background:#1d327b;color:#fff;border:none;border-radius:8px;font-family:Outfit;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;transition:background .15s}
+.btn-gerar:hover{background:#162666}
+.btn-gerar:disabled{background:#a0aec0;cursor:not-allowed}
+.msg-erro{background:#fff5f5;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;font-size:13px;color:#c53030;margin-top:12px;display:none}
+.loading-overlay{position:fixed;inset:0;background:rgba(29,50,123,.7);display:none;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:16px}
+.loading-overlay.visible{display:flex}
+.loading-spinner{width:48px;height:48px;border:4px solid rgba(255,255,255,.3);border-top-color:#25bbee;border-radius:50%;animation:spin .8s linear infinite}
+.loading-overlay p{font-size:16px;font-weight:600;color:#fff}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <img src="https://tekweld.github.io/boxer-app/Estrela-Boxer.svg" width="34" height="34">
+    <div>
+      <h1>Nova Proposta</h1>
+      <p>Preencha os dados do cliente</p>
+    </div>
+  </div>
+  <div class="header-user">
+    <span id="userEmail"></span>
+    <button class="btn-logout" onclick="logout()">Sair</button>
+  </div>
+</div>
+
+<div class="content">
+  <!-- Painel esquerdo: itens selecionados -->
+  <div class="painel">
+    <div class="painel-title">Itens selecionados</div>
+    <div class="painel-sub">Da tabela de preços industrial</div>
+    <div class="politica-tag" id="politicaTag"></div>
+    <ul class="item-lista" id="itemLista"></ul>
+  </div>
+
+  <!-- Painel direito: formulário -->
+  <div class="painel">
+    <div class="form-section">Dados do cliente</div>
+
+    <div class="field">
+      <label>Nome do cliente / empresa <span class="req">*</span></label>
+      <input type="text" id="clienteNome" placeholder="Ex: Metalúrgica ABC Ltda">
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Estado (UF) <span class="req">*</span></label>
+        <select id="clienteEstado" onchange="carregarCidades()">
+          <option value="">Selecione...</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Cidade <span class="req">*</span></label>
+        <div class="autocomplete-wrap">
+          <input type="text" id="clienteCidade" placeholder="Digite a cidade..." autocomplete="off" oninput="filtrarCidades()" disabled>
+          <ul class="autocomplete-list" id="cidadeList"></ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">Tipo de produto <span class="req" style="text-transform:none;font-size:13px">*</span></div>
+    <div class="tipo-grupo" id="tipoBtns">
+      <button class="tipo-btn" onclick="selectTipo('ROBO',this)">ROBÔ</button>
+      <button class="tipo-btn" onclick="selectTipo('LASER',this)">LASER</button>
+      <button class="tipo-btn" onclick="selectTipo('MAQUINAS',this)">MÁQUINAS</button>
+    </div>
+
+    <div class="form-section">Condições comerciais</div>
+    <div class="field">
+      <label>Prazo de pagamento <span class="req">*</span></label>
+      <input type="text" id="prazoPagamento" placeholder="Ex: 30/60/90 dias, à vista com desconto...">
+    </div>
+
+    <div class="form-section">Contatos do cliente</div>
+
+    <!-- Contato 1 -->
+    <div class="field-row">
+      <div class="field">
+        <label>Nome <span class="req">*</span></label>
+        <input type="text" id="c1Nome" placeholder="Nome completo">
+      </div>
+      <div class="field">
+        <label>Celular</label>
+        <input type="tel" id="c1Celular" placeholder="(00) 00000-0000">
+      </div>
+    </div>
+    <div class="field">
+      <label>E-mail</label>
+      <input type="email" id="c1Email" placeholder="contato@empresa.com.br">
+    </div>
+    <div class="check-row">
+      <input type="checkbox" id="c1Recebe" onchange="validarEmailRecebe('c1')">
+      <label for="c1Recebe">Recebe a proposta por e-mail</label>
+    </div>
+
+    <!-- Contato 2 -->
+    <button class="contato2-toggle" id="btn2Contato" onclick="toggleContato2()" style="margin-top:16px">+ Adicionar segundo contato</button>
+    <div id="contato2Block">
+      <div class="field-row">
+        <div class="field">
+          <label>Nome</label>
+          <input type="text" id="c2Nome" placeholder="Nome completo">
+        </div>
+        <div class="field">
+          <label>Celular</label>
+          <input type="tel" id="c2Celular" placeholder="(00) 00000-0000">
+        </div>
+      </div>
+      <div class="field">
+        <label>E-mail</label>
+        <input type="email" id="c2Email" placeholder="contato2@empresa.com.br">
+      </div>
+      <div class="check-row">
+        <input type="checkbox" id="c2Recebe" onchange="validarEmailRecebe('c2')">
+        <label for="c2Recebe">Recebe a proposta por e-mail</label>
+      </div>
+    </div>
+
+    <button class="btn-gerar" id="btnGerar" onclick="gerarProposta()">Gerar Proposta</button>
+    <div class="msg-erro" id="msgErro"></div>
+  </div>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+  <p>Gerando proposta...</p>
+</div>
+
+<script>
+const SUPABASE_URL  = 'https://bmepxcnrsofofoswubuu.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtZXB4Y25yc29mb2Zvc3d1YnV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MTczNzMsImV4cCI6MjA5NTI5MzM3M30.S55ouFczRYlUYNFf5PotYKXBPT5idypTSmbzR-x2Pk0';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+let draft = null;
+let tipoProduto = '';
+let cidades = [];
+let cidadeSelecionada = '';
+const UFS = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO'];
+
+async function init() {
+  // Verificar autenticação
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { window.location.href = 'login.html'; return; }
+  document.getElementById('userEmail').textContent = session.user.email;
+
+  // Verificar draft da tabela de preços
+  const raw = sessionStorage.getItem('proposta_draft');
+  if (!raw) {
+    alert('Nenhum item selecionado. Voltando para a tabela de preços.');
+    window.location.href = 'https://app.boxersoldas.com.br/tabela-de-precos.html?t=2';
+    return;
+  }
+
+  draft = JSON.parse(raw);
+
+  // Preencher painel de itens
+  document.getElementById('politicaTag').textContent =
+    draft.politica.uf + ' · ' + draft.politica.segmento + ' · Classe ' + draft.politica.classe;
+
+  const lista = document.getElementById('itemLista');
+  draft.itens.forEach(item => {
+    const li = document.createElement('li');
+    li.innerHTML = `<div class="item-codigo">${item.codigo} · ${item.cat}</div>
+      <div class="item-modelo">${item.modelo}</div>
+      <div class="item-preco">${fmt(item.preco_final)}</div>`;
+    lista.appendChild(li);
+  });
+
+  // Preencher UFs
+  const sel = document.getElementById('clienteEstado');
+  UFS.forEach(uf => {
+    const o = document.createElement('option');
+    o.value = uf; o.textContent = uf; sel.appendChild(o);
+  });
+}
+
+function fmt(v) {
+  return parseFloat(v).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+}
+
+async function carregarCidades() {
+  const uf = document.getElementById('clienteEstado').value;
+  const inputCidade = document.getElementById('clienteCidade');
+  if (!uf) { inputCidade.disabled = true; return; }
+
+  inputCidade.disabled = true;
+  inputCidade.placeholder = 'Carregando cidades...';
+  cidadeSelecionada = '';
+  inputCidade.value = '';
+
+  const r = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios?orderBy=nome`);
+  cidades = await r.json();
+
+  inputCidade.disabled = false;
+  inputCidade.placeholder = 'Digite a cidade...';
+  inputCidade.focus();
+}
+
+function filtrarCidades() {
+  const q = document.getElementById('clienteCidade').value.toLowerCase();
+  const list = document.getElementById('cidadeList');
+  cidadeSelecionada = '';
+
+  if (!q || q.length < 2) { list.style.display = 'none'; return; }
+
+  const matches = cidades.filter(c => c.nome.toLowerCase().includes(q)).slice(0, 8);
+  if (!matches.length) { list.style.display = 'none'; return; }
+
+  list.innerHTML = '';
+  matches.forEach(c => {
+    const li = document.createElement('li');
+    li.textContent = c.nome;
+    li.onclick = () => {
+      document.getElementById('clienteCidade').value = c.nome;
+      cidadeSelecionada = c.nome;
+      list.style.display = 'none';
+    };
+    list.appendChild(li);
+  });
+  list.style.display = 'block';
+}
+
+// Fechar autocomplete ao clicar fora
+document.addEventListener('click', e => {
+  if (!e.target.closest('.autocomplete-wrap')) {
+    document.getElementById('cidadeList').style.display = 'none';
+    // Se o usuário digitou e não selecionou da lista, usar o que digitou
+    if (!cidadeSelecionada) {
+      cidadeSelecionada = document.getElementById('clienteCidade').value.trim();
+    }
+  }
+});
+
+function selectTipo(tipo, btn) {
+  tipoProduto = tipo;
+  document.querySelectorAll('.tipo-btn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+}
+
+function toggleContato2() {
+  const block = document.getElementById('contato2Block');
+  const btn = document.getElementById('btn2Contato');
+  const aberto = block.style.display === 'block';
+  block.style.display = aberto ? 'none' : 'block';
+  btn.textContent = aberto ? '+ Adicionar segundo contato' : '− Remover segundo contato';
+}
+
+function validarEmailRecebe(prefix) {
+  const recebe = document.getElementById(prefix+'Recebe').checked;
+  const email  = document.getElementById(prefix+'Email').value.trim();
+  if (recebe && !email) {
+    mostrarErro('Para receber a proposta por e-mail, o campo de e-mail do contato deve ser preenchido.');
+    document.getElementById(prefix+'Recebe').checked = false;
+  }
+}
+
+function mostrarErro(msg) {
+  const el = document.getElementById('msgErro');
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function esconderErro() {
+  document.getElementById('msgErro').style.display = 'none';
+}
+
+async function gerarProposta() {
+  esconderErro();
+
+  // Validações
+  const clienteNome  = document.getElementById('clienteNome').value.trim();
+  const clienteUF    = document.getElementById('clienteEstado').value;
+  const clienteCidade = cidadeSelecionada || document.getElementById('clienteCidade').value.trim();
+  const prazo        = document.getElementById('prazoPagamento').value.trim();
+  const c1Nome       = document.getElementById('c1Nome').value.trim();
+  const c1Email      = document.getElementById('c1Email').value.trim();
+  const c1Recebe     = document.getElementById('c1Recebe').checked;
+
+  if (!clienteNome)  { mostrarErro('Informe o nome do cliente.'); return; }
+  if (!clienteUF)    { mostrarErro('Selecione o estado do cliente.'); return; }
+  if (!clienteCidade){ mostrarErro('Informe a cidade do cliente.'); return; }
+  if (!tipoProduto)  { mostrarErro('Selecione o tipo de produto.'); return; }
+  if (!prazo)        { mostrarErro('Informe o prazo de pagamento.'); return; }
+  if (!c1Nome)       { mostrarErro('Informe o nome do primeiro contato.'); return; }
+  if (c1Recebe && !c1Email) { mostrarErro('Contato 1 marcado para receber e-mail, mas sem e-mail preenchido.'); return; }
+
+  const c2Aberto = document.getElementById('contato2Block').style.display === 'block';
+  const c2Nome   = document.getElementById('c2Nome').value.trim();
+  const c2Email  = document.getElementById('c2Email').value.trim();
+  const c2Recebe = document.getElementById('c2Recebe').checked;
+  if (c2Aberto && c2Recebe && !c2Email) {
+    mostrarErro('Contato 2 marcado para receber e-mail, mas sem e-mail preenchido.'); return;
+  }
+
+  // Mostrar loading
+  document.getElementById('loadingOverlay').classList.add('visible');
+  document.getElementById('btnGerar').disabled = true;
+
+  const { data: { session } } = await sb.auth.getSession();
+  const user = session.user;
+
+  // Buscar nome do vendedor
+  let vendedorNome = user.email;
+  const { data: perfil } = await sb.schema('comercial').from('vendedor_perfis')
+    .select('nome_completo').eq('user_id', user.id).maybeSingle();
+  if (perfil?.nome_completo) vendedorNome = perfil.nome_completo;
+
+  // INSERT proposta
+  const { data: proposta, error: errProp } = await sb
+    .schema('comercial')
+    .from('propostas')
+    .insert({
+      vendedor_id:     user.id,
+      vendedor_nome:   vendedorNome,
+      cliente_nome:    clienteNome,
+      cliente_cidade:  clienteCidade,
+      cliente_estado:  clienteUF,
+      tipo_produto:    tipoProduto,
+      prazo_pagamento: prazo,
+      uf_politica:     draft.politica.uf,
+      segmento:        draft.politica.segmento,
+      classe:          draft.politica.classe,
+      status:          'rascunho'
+    })
+    .select()
+    .single();
+
+  if (errProp) {
+    document.getElementById('loadingOverlay').classList.remove('visible');
+    document.getElementById('btnGerar').disabled = false;
+    mostrarErro('Erro ao salvar proposta: ' + errProp.message);
+    return;
+  }
+
+  // INSERT itens
+  const itensInsert = draft.itens.map(item => ({
+    proposta_id:            proposta.id,
+    produto_codigo:         item.codigo,
+    produto_modelo:         item.modelo,
+    produto_categoria:      item.cat,
+    preco_base:             item.pv_sp,
+    multiplicador_aplicado: item.multiplicador,
+    preco_final:            item.preco_final,
+    quantidade:             1
+  }));
+  await sb.schema('comercial').from('proposta_itens').insert(itensInsert);
+
+  // INSERT contatos
+  const contatos = [{
+    proposta_id:     proposta.id,
+    nome:            c1Nome,
+    celular:         document.getElementById('c1Celular').value.trim() || null,
+    email:           c1Email || null,
+    recebe_proposta: c1Recebe
+  }];
+  if (c2Aberto && c2Nome) {
+    contatos.push({
+      proposta_id:     proposta.id,
+      nome:            c2Nome,
+      celular:         document.getElementById('c2Celular').value.trim() || null,
+      email:           c2Email || null,
+      recebe_proposta: c2Recebe
+    });
+  }
+  await sb.schema('comercial').from('proposta_contatos').insert(contatos);
+
+  // INSERT versão inicial (V1 — sem HTML por ora, preenchido na Fase 4)
+  await sb.schema('comercial').from('proposta_versoes').insert({
+    proposta_id:   proposta.id,
+    versao:        1,
+    tipo_alteracao:'criacao',
+    descricao:     'Proposta criada',
+    vendedor_id:   user.id,
+    html_snapshot: null
+  });
+
+  // Limpar draft
+  sessionStorage.removeItem('proposta_draft');
+
+  // Redirecionar para gerenciar
+  window.location.href = 'gerenciar.html?id=' + proposta.id;
+}
+
+async function logout() {
+  await sb.auth.signOut();
+  window.location.href = 'login.html';
+}
+
+init();
+</script>
+</body>
+</html>
