@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login — Propostas Boxer</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Outfit,sans-serif;background:#f0f4f8;color:#1a202c;min-height:100vh;display:flex;flex-direction:column}
+.header{background:linear-gradient(135deg,#1d327b,#162666);border-bottom:3px solid #25bbee;padding:18px 24px}
+.header-inner{max-width:480px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.header h1{font-size:20px;font-weight:700;color:#fff}
+.header p{font-size:12px;color:#93b4d4;margin-top:2px}
+.main{flex:1;display:flex;align-items:center;justify-content:center;padding:32px 16px}
+.card{background:#fff;border:1px solid #d0d8e8;border-radius:12px;padding:32px;width:100%;max-width:420px;box-shadow:0 4px 24px rgba(29,50,123,.08)}
+.card-title{font-size:18px;font-weight:700;color:#1d327b;margin-bottom:4px}
+.card-sub{font-size:13px;color:#718096;margin-bottom:28px}
+.resumo-box{background:#f0f4f8;border:1px solid #d0d8e8;border-radius:8px;padding:12px 16px;margin-bottom:24px;display:none}
+.resumo-box p{font-size:12px;color:#4a5568;font-weight:500}
+.resumo-box .resumo-count{font-size:14px;font-weight:700;color:#1d327b;margin-top:4px}
+label{display:block;font-size:12px;font-weight:500;color:#4a5568;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+input{width:100%;padding:10px 14px;border:1px solid #c3cfe2;border-radius:8px;font-family:Outfit;font-size:14px;color:#1a202c;outline:none;margin-bottom:20px;transition:border-color .15s}
+input:focus{border-color:#25bbee;box-shadow:0 0 0 3px rgba(37,187,238,.1)}
+.btn-login{width:100%;padding:12px;background:#1d327b;color:#fff;border:none;border-radius:8px;font-family:Outfit;font-size:15px;font-weight:600;cursor:pointer;transition:background .15s}
+.btn-login:hover{background:#162666}
+.btn-login:disabled{background:#a0aec0;cursor:not-allowed}
+.msg-erro{background:#fff5f5;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;font-size:13px;color:#c53030;margin-top:16px;display:none}
+.back-link{text-align:center;margin-top:20px;font-size:13px;color:#718096}
+.back-link a{color:#1d327b;text-decoration:none;font-weight:500}
+.back-link a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <img src="https://tekweld.github.io/boxer-app/Estrela-Boxer.svg" width="36" height="36">
+    <div>
+      <h1>Propostas Boxer</h1>
+      <p>Área exclusiva para vendedores</p>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="card">
+    <div class="card-title">Entrar</div>
+    <div class="card-sub">Acesse com seu e-mail corporativo</div>
+
+    <div class="resumo-box" id="resumoBox">
+      <p>Itens selecionados na tabela:</p>
+      <div class="resumo-count" id="resumoCount"></div>
+    </div>
+
+    <label for="email">E-mail</label>
+    <input type="email" id="email" placeholder="seu@boxersoldas.com.br" autocomplete="email">
+
+    <label for="senha">Senha</label>
+    <input type="password" id="senha" placeholder="••••••••" autocomplete="current-password">
+
+    <button class="btn-login" id="btnLogin" onclick="fazerLogin()">Entrar</button>
+    <div class="msg-erro" id="msgErro"></div>
+
+    <div class="back-link">
+      <a href="https://app.boxersoldas.com.br/tabela-de-precos.html?t=2">← Voltar para a tabela de preços</a>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL  = 'https://bmepxcnrsofofoswubuu.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtZXB4Y25yc29mb2Zvc3d1YnV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MTczNzMsImV4cCI6MjA5NTI5MzM3M30.S55ouFczRYlUYNFf5PotYKXBPT5idypTSmbzR-x2Pk0';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+async function init() {
+  // Mostrar resumo dos itens selecionados (se vierem da tabela)
+  const draft = sessionStorage.getItem('proposta_draft');
+  if (draft) {
+    try {
+      const d = JSON.parse(draft);
+      document.getElementById('resumoBox').style.display = 'block';
+      document.getElementById('resumoCount').textContent =
+        d.itens.length + ' produto(s) · ' + d.politica.uf + ' · ' + d.politica.segmento + ' · Classe ' + d.politica.classe;
+    } catch(e) {}
+  }
+
+  // Verificar se já está logado
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    if (draft) {
+      window.location.href = 'novo.html';
+    } else {
+      window.location.href = 'index.html';
+    }
+  }
+
+  // Enter no campo de senha faz login
+  document.getElementById('senha').addEventListener('keydown', e => {
+    if (e.key === 'Enter') fazerLogin();
+  });
+}
+
+async function fazerLogin() {
+  const email = document.getElementById('email').value.trim();
+  const senha = document.getElementById('senha').value;
+  const btn   = document.getElementById('btnLogin');
+  const erro  = document.getElementById('msgErro');
+
+  if (!email || !senha) {
+    mostrarErro('Preencha e-mail e senha.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Entrando...';
+  erro.style.display = 'none';
+
+  const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+
+  if (error) {
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
+    if (error.message.includes('Invalid login')) {
+      mostrarErro('E-mail ou senha incorretos.');
+    } else {
+      mostrarErro('Erro ao fazer login. Tente novamente.');
+    }
+    return;
+  }
+
+  const draft = sessionStorage.getItem('proposta_draft');
+  window.location.href = draft ? 'novo.html' : 'index.html';
+}
+
+function mostrarErro(msg) {
+  const el = document.getElementById('msgErro');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+init();
+</script>
+</body>
+</html>
