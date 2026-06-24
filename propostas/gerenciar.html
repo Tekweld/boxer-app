@@ -28,6 +28,12 @@ body{font-family:Outfit,sans-serif;background:#f0f4f8;color:#1a202c;height:100vh
 .info-row strong{color:#1d327b;min-width:80px;flex-shrink:0}
 .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase}
 .badge.rascunho{background:#e2e8f0;color:#4a5568}
+.link-publico-box{background:#f0f4f8;border:1px solid #d0d8e8;border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.link-publico-box span{font-size:11px;color:#4a5568;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn-copiar{background:#1d327b;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-family:Outfit;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn-copiar:hover{background:#162666}
+.btn-link-abrir{width:100%;padding:8px;background:transparent;border:1px solid #d0d8e8;border-radius:8px;color:#1d327b;font-family:Outfit;font-size:12px;font-weight:500;cursor:pointer;text-align:center}
+.btn-link-abrir:hover{background:#e8f0fe;border-color:#1d327b}
 .badge.enviada{background:#c6f6d5;color:#276749}
 .badge.aprovada{background:#bee3f8;color:#2b6cb0}
 .badge.perdida{background:#fed7d7;color:#c53030}
@@ -99,6 +105,16 @@ iframe#previewFrame{flex:1;border:none;background:#e8eaf0}
     <div class="sidebar-section" id="secDados">
       <div class="sec-title">Proposta</div>
       <div id="dadosProposta"><em style="font-size:12px;color:#718096">Carregando...</em></div>
+    </div>
+
+    <!-- Link Público -->
+    <div class="sidebar-section" id="secLinkPublico" style="display:none">
+      <div class="sec-title">Link Público</div>
+      <div class="link-publico-box">
+        <span id="linkPublicoTexto"></span>
+        <button class="btn-copiar" onclick="copiarLink()">Copiar</button>
+      </div>
+      <button class="btn-link-abrir" onclick="abrirLinkPublico()">Abrir como cliente ↗</button>
     </div>
 
     <!-- Versões -->
@@ -257,6 +273,13 @@ function renderSidebar() {
       `).join('')
     : '<li style="font-size:12px;color:#718096">Nenhum item.</li>';
 
+  // Link público
+  if (proposta.link_token) {
+    const urlPublica = location.origin + '/propostas/ver.html?token=' + proposta.link_token;
+    document.getElementById('linkPublicoTexto').textContent = urlPublica;
+    document.getElementById('secLinkPublico').style.display = 'block';
+  }
+
   // Botão enviar
   const podeEnviar = contatos.some(c => c.recebe_proposta && c.email);
   document.getElementById('btnEnviar').disabled = !podeEnviar;
@@ -347,6 +370,17 @@ function abrirNovaAba() {
   if (!versaoAtual?.html_snapshot) { toast('Aguarde o carregamento.', 'erro'); return; }
   const blob = new Blob([versaoAtual.html_snapshot], { type: 'text/html' });
   window.open(URL.createObjectURL(blob), '_blank');
+}
+
+// ─── LINK PÚBLICO ────────────────────────────────────────────────────────────
+function copiarLink() {
+  const url = document.getElementById('linkPublicoTexto').textContent;
+  navigator.clipboard.writeText(url).then(() => toast('Link copiado!', 'ok'));
+}
+
+function abrirLinkPublico() {
+  const url = document.getElementById('linkPublicoTexto').textContent;
+  window.open(url, '_blank');
 }
 
 // ─── ENVIAR PROPOSTA (placeholder Fase 6) ────────────────────────────────────
