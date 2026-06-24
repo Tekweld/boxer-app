@@ -75,7 +75,7 @@ async function init() {
   const token = new URLSearchParams(location.search).get('token');
   if (!token) { mostrar('estadoErro'); return; }
 
-  const { data, error } = await sb.rpc('buscar_proposta_publica', { p_token: token });
+  const { data, error } = await sb.schema('comercial').rpc('buscar_proposta_publica', { p_token: token });
 
   if (error || !data || data.length === 0) {
     mostrar('estadoErro');
