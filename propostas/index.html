@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Minhas Propostas — Boxer</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Outfit,sans-serif;background:#f0f4f8;color:#1a202c;min-height:100vh;display:flex;flex-direction:column}
+/* Header */
+.header{background:linear-gradient(135deg,#1d327b,#162666);border-bottom:3px solid #25bbee;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.header-left{display:flex;align-items:center;gap:12px}
+.header h1{font-size:18px;font-weight:700;color:#fff}
+.header p{font-size:12px;color:#93b4d4;margin-top:2px}
+.header-right{display:flex;align-items:center;gap:10px}
+.btn-hdr{background:transparent;border:1px solid rgba(255,255,255,.25);color:#93b4d4;padding:7px 16px;border-radius:8px;font-family:Outfit;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s}
+.btn-hdr:hover{color:#fff;border-color:rgba(255,255,255,.6)}
+.btn-nova{background:#25bbee;border:none;color:#fff;padding:9px 20px;border-radius:8px;font-family:Outfit;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
+.btn-nova:hover{background:#1ea8d8}
+/* Conteúdo */
+.content{max-width:1100px;margin:0 auto;padding:28px 16px;width:100%}
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+@media(max-width:700px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:#fff;border:1px solid #d0d8e8;border-radius:12px;padding:16px 20px}
+.kpi-label{font-size:11px;font-weight:600;color:#718096;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.kpi-valor{font-size:28px;font-weight:700;color:#1d327b}
+.kpi-valor.verde{color:#276749}
+.kpi-valor.azul{color:#2b6cb0}
+/* Barra de filtros */
+.filtros{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.filtros input{flex:1;min-width:200px;padding:9px 14px;border:1px solid #c3cfe2;border-radius:8px;font-family:Outfit;font-size:13px;color:#1a202c;outline:none}
+.filtros input:focus{border-color:#25bbee;box-shadow:0 0 0 3px rgba(37,187,238,.1)}
+.filtros select{padding:9px 12px;border:1px solid #c3cfe2;border-radius:8px;font-family:Outfit;font-size:13px;color:#1a202c;outline:none;background:#fff;cursor:pointer}
+.filtros select:focus{border-color:#25bbee}
+/* Lista de propostas */
+.propostas-grid{display:flex;flex-direction:column;gap:10px}
+.card-proposta{background:#fff;border:1px solid #d0d8e8;border-radius:12px;padding:18px 20px;display:flex;align-items:center;gap:16px;cursor:pointer;transition:all .15s;text-decoration:none;color:inherit}
+.card-proposta:hover{border-color:#25bbee;box-shadow:0 4px 16px rgba(29,50,123,.08);transform:translateY(-1px)}
+.card-codigo{font-size:12px;font-weight:700;color:#1d327b;background:#e8f0fe;border:1px solid #c3d3f5;padding:4px 10px;border-radius:20px;white-space:nowrap}
+.card-main{flex:1;min-width:0}
+.card-cliente{font-size:15px;font-weight:700;color:#1a202c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-sub{font-size:12px;color:#718096;margin-top:2px}
+.card-tags{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.tag{font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;text-transform:uppercase}
+.tag.robo{background:#fef3c7;color:#92400e}
+.tag.laser{background:#e0f2fe;color:#0c4a6e}
+.tag.maquinas{background:#f0fdf4;color:#14532d}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase}
+.badge.rascunho{background:#e2e8f0;color:#4a5568}
+.badge.enviada{background:#c6f6d5;color:#276749}
+.badge.aprovada{background:#bee3f8;color:#2b6cb0}
+.badge.perdida{background:#fed7d7;color:#c53030}
+.card-valor{text-align:right;flex-shrink:0}
+.card-valor-num{font-size:16px;font-weight:700;color:#1d327b;white-space:nowrap}
+.card-valor-data{font-size:11px;color:#718096;margin-top:3px}
+.card-arrow{color:#c3cfe2;font-size:18px;flex-shrink:0}
+/* Empty state */
+.empty{text-align:center;padding:60px 20px;color:#718096}
+.empty h3{font-size:18px;font-weight:700;color:#1d327b;margin-bottom:8px}
+.empty p{font-size:14px;margin-bottom:20px}
+.btn-empty{background:#1d327b;color:#fff;border:none;border-radius:8px;padding:12px 28px;font-family:Outfit;font-size:14px;font-weight:600;cursor:pointer}
+.btn-empty:hover{background:#162666}
+/* Loading */
+.loading{text-align:center;padding:60px;color:#718096;font-size:14px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <img src="https://tekweld.github.io/boxer-app/Estrela-Boxer.svg" width="32" height="32">
+    <div>
+      <h1>Propostas Comerciais</h1>
+      <p id="headerUser">Carregando...</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <button class="btn-hdr" onclick="irParaTabela()">← Tabela de Preços</button>
+    <button class="btn-nova" onclick="irParaTabela()">+ Nova Proposta</button>
+    <button class="btn-hdr" onclick="logout()">Sair</button>
+  </div>
+</div>
+
+<div class="content">
+  <!-- KPIs -->
+  <div class="kpis">
+    <div class="kpi">
+      <div class="kpi-label">Total</div>
+      <div class="kpi-valor" id="kpiTotal">—</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Rascunho</div>
+      <div class="kpi-valor" id="kpiRascunho">—</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Enviadas</div>
+      <div class="kpi-valor azul" id="kpiEnviadas">—</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Aprovadas</div>
+      <div class="kpi-valor verde" id="kpiAprovadas">—</div>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="filtros">
+    <input type="text" id="busca" placeholder="Buscar por cliente ou código..." oninput="filtrar()">
+    <select id="filtroStatus" onchange="filtrar()">
+      <option value="">Todos os status</option>
+      <option value="rascunho">Rascunho</option>
+      <option value="enviada">Enviada</option>
+      <option value="aprovada">Aprovada</option>
+      <option value="perdida">Perdida</option>
+    </select>
+    <select id="filtroTipo" onchange="filtrar()">
+      <option value="">Todos os tipos</option>
+      <option value="ROBO">Robô</option>
+      <option value="LASER">Laser</option>
+      <option value="MAQUINAS">Máquinas</option>
+    </select>
+  </div>
+
+  <!-- Lista -->
+  <div class="propostas-grid" id="lista">
+    <div class="loading">Carregando propostas...</div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL  = 'https://bmepxcnrsofofoswubuu.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtZXB4Y25yc29mb2Zvc3d1YnV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MTczNzMsImV4cCI6MjA5NTI5MzM3M30.S55ouFczRYlUYNFf5PotYKXBPT5idypTSmbzR-x2Pk0';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+let todasPropostas = [];
+let totaisPorProposta = {};
+
+async function init() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { window.location.href = 'login.html'; return; }
+
+  const user = session.user;
+
+  // Nome do vendedor
+  const { data: perfil } = await sb.schema('comercial').from('vendedor_perfis')
+    .select('nome_completo').eq('user_id', user.id).maybeSingle();
+  document.getElementById('headerUser').textContent =
+    (perfil?.nome_completo || user.email) + ' · ' + new Date().toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long'});
+
+  // Buscar propostas
+  const { data: propostas } = await sb.schema('comercial').from('propostas')
+    .select('id, codigo, cliente_nome, cliente_cidade, cliente_estado, tipo_produto, status, criado_em, link_token')
+    .eq('vendedor_id', user.id)
+    .eq('ativo', true)
+    .order('criado_em', { ascending: false });
+
+  todasPropostas = propostas || [];
+
+  if (todasPropostas.length > 0) {
+    // Buscar totais dos itens
+    const ids = todasPropostas.map(p => p.id);
+    const { data: itens } = await sb.schema('comercial').from('proposta_itens')
+      .select('proposta_id, preco_final, quantidade')
+      .in('proposta_id', ids);
+
+    (itens || []).forEach(item => {
+      totaisPorProposta[item.proposta_id] =
+        (totaisPorProposta[item.proposta_id] || 0) + item.preco_final * item.quantidade;
+    });
+  }
+
+  atualizarKPIs();
+  renderLista(todasPropostas);
+}
+
+function atualizarKPIs() {
+  document.getElementById('kpiTotal').textContent     = todasPropostas.length;
+  document.getElementById('kpiRascunho').textContent  = todasPropostas.filter(p => p.status === 'rascunho').length;
+  document.getElementById('kpiEnviadas').textContent  = todasPropostas.filter(p => p.status === 'enviada').length;
+  document.getElementById('kpiAprovadas').textContent = todasPropostas.filter(p => p.status === 'aprovada').length;
+}
+
+function filtrar() {
+  const busca  = document.getElementById('busca').value.toLowerCase();
+  const status = document.getElementById('filtroStatus').value;
+  const tipo   = document.getElementById('filtroTipo').value;
+
+  const filtradas = todasPropostas.filter(p => {
+    const textOk   = !busca  || p.cliente_nome.toLowerCase().includes(busca) || p.codigo.toLowerCase().includes(busca);
+    const statusOk = !status || p.status === status;
+    const tipoOk   = !tipo   || p.tipo_produto === tipo;
+    return textOk && statusOk && tipoOk;
+  });
+
+  renderLista(filtradas);
+}
+
+function renderLista(lista) {
+  const el = document.getElementById('lista');
+
+  if (lista.length === 0) {
+    if (todasPropostas.length === 0) {
+      el.innerHTML = `
+        <div class="empty">
+          <h3>Nenhuma proposta ainda</h3>
+          <p>Selecione produtos na tabela de preços e gere sua primeira proposta.</p>
+          <button class="btn-empty" onclick="irParaTabela()">Ir para a Tabela de Preços</button>
+        </div>`;
+    } else {
+      el.innerHTML = '<div class="empty"><h3>Nenhum resultado</h3><p>Tente outros filtros.</p></div>';
+    }
+    return;
+  }
+
+  const tipoLabel = { ROBO:'Robô', LASER:'Laser', MAQUINAS:'Máquinas' };
+  const tipoClass = { ROBO:'robo', LASER:'laser', MAQUINAS:'maquinas' };
+  const statusLabel = { rascunho:'Rascunho', enviada:'Enviada', aprovada:'Aprovada', perdida:'Perdida' };
+
+  el.innerHTML = lista.map(p => {
+    const total = totaisPorProposta[p.id];
+    const totalFmt = total ? 'R$ ' + total.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
+    const data = new Date(p.criado_em).toLocaleDateString('pt-BR');
+    return `
+      <a class="card-proposta" href="gerenciar.html?id=${p.id}">
+        <span class="card-codigo">${esc(p.codigo)}</span>
+        <div class="card-main">
+          <div class="card-cliente">${esc(p.cliente_nome)}</div>
+          <div class="card-sub">${esc(p.cliente_cidade || '–')} / ${esc(p.cliente_estado || '–')}</div>
+          <div class="card-tags">
+            <span class="tag ${tipoClass[p.tipo_produto] || ''}">${tipoLabel[p.tipo_produto] || p.tipo_produto}</span>
+            <span class="badge ${p.status}">${statusLabel[p.status] || p.status}</span>
+          </div>
+        </div>
+        <div class="card-valor">
+          <div class="card-valor-num">${totalFmt}</div>
+          <div class="card-valor-data">${data}</div>
+        </div>
+        <span class="card-arrow">›</span>
+      </a>`;
+  }).join('');
+}
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function irParaTabela() {
+  window.location.href = 'https://app.boxersoldas.com.br/tabela-de-precos.html?t=2';
+}
+
+async function logout() {
+  await sb.auth.signOut();
+  window.location.href = 'login.html';
+}
+
+init();
+</script>
+</body>
+</html>
