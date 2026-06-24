@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gerenciar Proposta — Boxer</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Outfit,sans-serif;background:#f0f4f8;color:#1a202c;height:100vh;display:flex;flex-direction:column}
+.header{background:linear-gradient(135deg,#1d327b,#162666);border-bottom:3px solid #25bbee;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.header-left{display:flex;align-items:center;gap:12px}
+.header h1{font-size:18px;font-weight:700;color:#fff}
+.header p{font-size:12px;color:#93b4d4;margin-top:2px}
+.header-right{display:flex;align-items:center;gap:10px}
+.btn-hdr{background:transparent;border:1px solid rgba(255,255,255,.25);color:#93b4d4;padding:7px 16px;border-radius:8px;font-family:Outfit;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s}
+.btn-hdr:hover{color:#fff;border-color:rgba(255,255,255,.6)}
+.btn-hdr.primary{background:#25bbee;border-color:#25bbee;color:#fff}
+.btn-hdr.primary:hover{background:#1ea8d8}
+.btn-hdr:disabled{opacity:.5;cursor:not-allowed}
+.layout{flex:1;display:flex;overflow:hidden}
+/* Painel lateral */
+.sidebar{width:320px;flex-shrink:0;background:#fff;border-right:1px solid #d0d8e8;display:flex;flex-direction:column;overflow-y:auto}
+.sidebar-section{padding:18px 20px;border-bottom:1px solid #e2e8f0}
+.sec-title{font-size:11px;font-weight:700;color:#718096;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px}
+.info-row{font-size:13px;color:#1a202c;margin-bottom:8px;display:flex;gap:8px}
+.info-row strong{color:#1d327b;min-width:80px;flex-shrink:0}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase}
+.badge.rascunho{background:#e2e8f0;color:#4a5568}
+.badge.enviada{background:#c6f6d5;color:#276749}
+.badge.aprovada{background:#bee3f8;color:#2b6cb0}
+.badge.perdida{background:#fed7d7;color:#c53030}
+.versoes-list{list-style:none;display:flex;flex-direction:column;gap:6px}
+.versoes-list li{padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;color:#4a5568;cursor:pointer;transition:all .15s}
+.versoes-list li:hover{border-color:#25bbee;color:#1d327b}
+.versoes-list li.ativa{border-color:#1d327b;background:#e8f0fe;color:#1d327b;font-weight:600}
+.versao-num{font-size:14px;font-weight:700;margin-right:6px}
+.versao-tipo{color:#718096}
+.contatos-list{list-style:none;display:flex;flex-direction:column;gap:8px}
+.contatos-list li{padding:8px 12px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:13px}
+.contato-nome{font-weight:600;color:#1a202c;margin-bottom:2px}
+.contato-info{font-size:11px;color:#718096}
+.contato-recebe{display:inline-block;margin-top:4px;font-size:10px;font-weight:700;background:#c6f6d5;color:#276749;padding:2px 8px;border-radius:10px}
+.itens-list{list-style:none;display:flex;flex-direction:column;gap:6px}
+.itens-list li{padding:8px 12px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:12px}
+.item-cod{color:#718096;margin-bottom:2px}
+.item-mod{font-weight:600;color:#1a202c}
+.item-preco{color:#1d327b;font-weight:700;font-size:11px;margin-top:3px}
+.btn-nova-versao{width:100%;padding:10px;background:#f0f4f8;border:1px dashed #c3cfe2;border-radius:8px;color:#718096;font-family:Outfit;font-size:13px;cursor:pointer;text-align:center;margin-top:8px;transition:all .15s}
+.btn-nova-versao:hover{border-color:#1d327b;color:#1d327b;background:#e8f0fe}
+/* Área de preview */
+.preview-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.preview-toolbar{padding:10px 20px;background:#fff;border-bottom:1px solid #d0d8e8;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.preview-label{font-size:12px;color:#718096;font-weight:500}
+.preview-label strong{color:#1d327b}
+.btn-preview{background:#f0f4f8;border:1px solid #d0d8e8;border-radius:6px;padding:5px 14px;font-family:Outfit;font-size:12px;color:#4a5568;cursor:pointer}
+.btn-preview:hover{border-color:#25bbee;color:#1d327b}
+iframe#previewFrame{flex:1;border:none;background:#e8eaf0}
+/* Overlay de loading */
+.overlay{position:fixed;inset:0;background:rgba(29,50,123,.85);display:none;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:16px}
+.overlay.visible{display:flex}
+.overlay p{color:#fff;font-size:15px;font-weight:500}
+.spinner{width:36px;height:36px;border:3px solid rgba(255,255,255,.2);border-top-color:#25bbee;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;background:#1d327b;color:#fff;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:500;display:none;z-index:1000;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.toast.visible{display:block}
+.toast.erro{background:#c53030}
+.toast.ok{background:#276749}
+/* Erro central */
+.erro-central{flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:40px}
+.erro-central h2{font-size:20px;color:#1d327b}
+.erro-central p{font-size:14px;color:#718096;text-align:center}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <img src="https://tekweld.github.io/boxer-app/Estrela-Boxer.svg" width="32" height="32">
+    <div>
+      <h1 id="headerTitulo">Proposta</h1>
+      <p id="headerSub">Carregando...</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <button class="btn-hdr" onclick="window.location.href='index.html'">← Minhas Propostas</button>
+    <button class="btn-hdr primary" id="btnEnviar" onclick="enviarProposta()" disabled>Enviar por E-mail</button>
+    <button class="btn-hdr" onclick="logout()">Sair</button>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <!-- Dados gerais -->
+    <div class="sidebar-section" id="secDados">
+      <div class="sec-title">Proposta</div>
+      <div id="dadosProposta"><em style="font-size:12px;color:#718096">Carregando...</em></div>
+    </div>
+
+    <!-- Versões -->
+    <div class="sidebar-section">
+      <div class="sec-title">Versões</div>
+      <ul class="versoes-list" id="versoesList"><li style="font-size:12px;color:#718096">Carregando...</li></ul>
+      <button class="btn-nova-versao" id="btnNovaVersao" onclick="gerarNovaVersao()" style="display:none">+ Gerar nova versão</button>
+    </div>
+
+    <!-- Contatos -->
+    <div class="sidebar-section">
+      <div class="sec-title">Contatos</div>
+      <ul class="contatos-list" id="contatosList"><li style="font-size:12px;color:#718096">Carregando...</li></ul>
+    </div>
+
+    <!-- Itens -->
+    <div class="sidebar-section">
+      <div class="sec-title">Itens da Proposta</div>
+      <ul class="itens-list" id="itensList"><li style="font-size:12px;color:#718096">Carregando...</li></ul>
+    </div>
+  </div>
+
+  <!-- Preview -->
+  <div class="preview-area">
+    <div class="preview-toolbar">
+      <span class="preview-label">Pré-visualização — <strong id="versaoAtualLabel">V1</strong></span>
+      <button class="btn-preview" onclick="abrirNovaAba()">Abrir em nova aba ↗</button>
+    </div>
+    <iframe id="previewFrame" title="Proposta"></iframe>
+    <div class="erro-central" id="erroCentral" style="display:none">
+      <h2>Proposta não encontrada</h2>
+      <p>Verifique o link ou volte para a lista de propostas.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Overlay -->
+<div class="overlay" id="overlay">
+  <div class="spinner"></div>
+  <p id="overlayMsg">Carregando...</p>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="proposta-engine.js"></script>
+<script>
+const SUPABASE_URL  = 'https://bmepxcnrsofofoswubuu.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtZXB4Y25yc29mb2Zvc3d1YnV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MTczNzMsImV4cCI6MjA5NTI5MzM3M30.S55ouFczRYlUYNFf5PotYKXBPT5idypTSmbzR-x2Pk0';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+let propostaId   = null;
+let proposta     = null;
+let itens        = [];
+let contatos     = [];
+let versoes      = [];
+let versaoAtual  = null; // objeto da versão sendo exibida
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+async function init() {
+  const params = new URLSearchParams(location.search);
+  propostaId = params.get('id');
+  if (!propostaId) { mostrarErroCentral(); return; }
+
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { window.location.href = 'login.html'; return; }
+
+  mostrarOverlay('Carregando proposta...');
+  await carregarTudo();
+  esconderOverlay();
+}
+
+async function carregarTudo() {
+  // Proposta
+  const { data: p, error } = await sb.schema('comercial').from('propostas')
+    .select('*')
+    .eq('id', propostaId)
+    .single();
+
+  if (error || !p) { mostrarErroCentral(); return; }
+  proposta = p;
+
+  // Itens
+  const { data: it } = await sb.schema('comercial').from('proposta_itens')
+    .select('*').eq('proposta_id', propostaId).order('criado_em');
+  itens = it || [];
+
+  // Contatos
+  const { data: ct } = await sb.schema('comercial').from('proposta_contatos')
+    .select('*').eq('proposta_id', propostaId).order('criado_em');
+  contatos = ct || [];
+
+  // Versões
+  const { data: vs } = await sb.schema('comercial').from('proposta_versoes')
+    .select('id, versao, tipo_alteracao, descricao, html_snapshot, criado_em')
+    .eq('proposta_id', propostaId)
+    .order('versao', { ascending: false });
+  versoes = vs || [];
+
+  renderSidebar();
+  await renderPreview();
+}
+
+// ─── RENDER SIDEBAR ──────────────────────────────────────────────────────────
+function renderSidebar() {
+  // Header
+  document.getElementById('headerTitulo').textContent = proposta.codigo;
+  document.getElementById('headerSub').textContent =
+    proposta.cliente_nome + ' · ' + proposta.tipo_produto;
+
+  // Dados
+  const statusLabel = {'rascunho':'Rascunho','enviada':'Enviada','aprovada':'Aprovada','perdida':'Perdida'}[proposta.status] || proposta.status;
+  document.getElementById('dadosProposta').innerHTML = `
+    <div class="info-row"><strong>Cliente</strong>${esc(proposta.cliente_nome)}</div>
+    <div class="info-row"><strong>Cidade</strong>${esc(proposta.cliente_cidade||'–')} / ${esc(proposta.cliente_estado||'–')}</div>
+    <div class="info-row"><strong>Tipo</strong>${esc(proposta.tipo_produto)}</div>
+    <div class="info-row"><strong>Pagamento</strong>${esc(proposta.prazo_pagamento||'–')}</div>
+    <div class="info-row"><strong>Status</strong><span class="badge ${proposta.status}">${statusLabel}</span></div>
+    <div class="info-row"><strong>Criada em</strong>${formatarData(proposta.criado_em)}</div>
+  `;
+
+  // Versões
+  const ul = document.getElementById('versoesList');
+  if (versoes.length === 0) {
+    ul.innerHTML = '<li style="font-size:12px;color:#718096">Nenhuma versão encontrada.</li>';
+  } else {
+    ul.innerHTML = versoes.map(v => `
+      <li class="${versaoAtual?.id === v.id ? 'ativa' : ''}" onclick="selecionarVersao('${v.id}')">
+        <span class="versao-num">V${v.versao}</span>
+        <span class="versao-tipo">${v.descricao || v.tipo_alteracao}</span>
+        <div style="font-size:10px;color:#a0aec0;margin-top:2px">${formatarData(v.criado_em)}</div>
+      </li>
+    `).join('');
+  }
+  document.getElementById('btnNovaVersao').style.display = 'block';
+
+  // Contatos
+  document.getElementById('contatosList').innerHTML = contatos.length
+    ? contatos.map(c => `
+        <li>
+          <div class="contato-nome">${esc(c.nome)}</div>
+          <div class="contato-info">${c.celular ? esc(c.celular) + ' · ' : ''}${c.email ? esc(c.email) : ''}</div>
+          ${c.recebe_proposta ? '<span class="contato-recebe">Recebe proposta</span>' : ''}
+        </li>
+      `).join('')
+    : '<li style="font-size:12px;color:#718096">Nenhum contato.</li>';
+
+  // Itens
+  document.getElementById('itensList').innerHTML = itens.length
+    ? itens.map(item => `
+        <li>
+          <div class="item-cod">${esc(item.produto_codigo)}</div>
+          <div class="item-mod">${esc(item.produto_modelo)}</div>
+          <div class="item-preco">R$ ${formatarValor(item.preco_final)} × ${item.quantidade}</div>
+        </li>
+      `).join('')
+    : '<li style="font-size:12px;color:#718096">Nenhum item.</li>';
+
+  // Botão enviar
+  const podeEnviar = contatos.some(c => c.recebe_proposta && c.email);
+  document.getElementById('btnEnviar').disabled = !podeEnviar;
+  if (!podeEnviar) {
+    document.getElementById('btnEnviar').title = 'Nenhum contato com e-mail marcado para receber proposta';
+  }
+}
+
+// ─── RENDER PREVIEW ──────────────────────────────────────────────────────────
+async function renderPreview() {
+  // Usa a versão mais recente por padrão (ou a selecionada)
+  if (!versaoAtual && versoes.length > 0) {
+    versaoAtual = versoes[0]; // já ordenado DESC
+  }
+
+  if (!versaoAtual) {
+    document.getElementById('previewFrame').srcdoc = '<p style="font-family:sans-serif;padding:40px;color:#718096">Nenhuma versão disponível.</p>';
+    return;
+  }
+
+  document.getElementById('versaoAtualLabel').textContent = 'V' + versaoAtual.versao;
+
+  if (versaoAtual.html_snapshot) {
+    document.getElementById('previewFrame').srcdoc = versaoAtual.html_snapshot;
+    return;
+  }
+
+  // Snapshot ainda não gerado — gerar agora
+  mostrarOverlay('Gerando pré-visualização...');
+  try {
+    const { html } = await gerarHTMLProposta(sb, proposta, itens, contatos, versaoAtual.versao);
+    // Salvar snapshot
+    await sb.schema('comercial').from('proposta_versoes')
+      .update({ html_snapshot: html })
+      .eq('id', versaoAtual.id);
+    versaoAtual.html_snapshot = html;
+    document.getElementById('previewFrame').srcdoc = html;
+  } catch(e) {
+    console.error('Erro ao gerar proposta:', e);
+    document.getElementById('previewFrame').srcdoc =
+      `<div style="font-family:sans-serif;padding:40px;color:#c53030">
+        <h3>Erro ao gerar pré-visualização</h3>
+        <p style="margin-top:8px;font-size:13px">${e.message}</p>
+       </div>`;
+  }
+  esconderOverlay();
+}
+
+async function selecionarVersao(versaoId) {
+  versaoAtual = versoes.find(v => v.id === versaoId);
+  // Atualizar highlight
+  document.querySelectorAll('.versoes-list li').forEach((li, i) => {
+    li.classList.toggle('ativa', versoes[i]?.id === versaoId);
+  });
+  await renderPreview();
+}
+
+// ─── NOVA VERSÃO ─────────────────────────────────────────────────────────────
+async function gerarNovaVersao() {
+  mostrarOverlay('Gerando nova versão...');
+  try {
+    const novoNumero = (versoes[0]?.versao || 0) + 1;
+    const { html } = await gerarHTMLProposta(sb, proposta, itens, contatos, novoNumero);
+
+    const { data: novaVersao } = await sb.schema('comercial').from('proposta_versoes').insert({
+      proposta_id:    propostaId,
+      versao:         novoNumero,
+      tipo_alteracao: 'atualizacao',
+      descricao:      'Versão atualizada manualmente',
+      vendedor_id:    (await sb.auth.getUser()).data.user.id,
+      html_snapshot:  html
+    }).select('id, versao, tipo_alteracao, descricao, html_snapshot, criado_em').single();
+
+    versoes.unshift(novaVersao);
+    versaoAtual = novaVersao;
+    renderSidebar();
+    document.getElementById('previewFrame').srcdoc = html;
+    document.getElementById('versaoAtualLabel').textContent = 'V' + novaVersao.versao;
+    toast('Nova versão V' + novaVersao.versao + ' gerada.', 'ok');
+  } catch(e) {
+    toast('Erro: ' + e.message, 'erro');
+  }
+  esconderOverlay();
+}
+
+// ─── ABRIR EM NOVA ABA ───────────────────────────────────────────────────────
+function abrirNovaAba() {
+  if (!versaoAtual?.html_snapshot) { toast('Aguarde o carregamento.', 'erro'); return; }
+  const blob = new Blob([versaoAtual.html_snapshot], { type: 'text/html' });
+  window.open(URL.createObjectURL(blob), '_blank');
+}
+
+// ─── ENVIAR PROPOSTA (placeholder Fase 6) ────────────────────────────────────
+function enviarProposta() {
+  toast('Envio por e-mail será implementado na Fase 6.', '');
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function formatarValor(v) {
+  return Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function formatarData(iso) {
+  if (!iso) return '–';
+  const d = new Date(iso);
+  return d.toLocaleDateString('pt-BR');
+}
+
+function mostrarOverlay(msg) {
+  document.getElementById('overlayMsg').textContent = msg;
+  document.getElementById('overlay').classList.add('visible');
+}
+
+function esconderOverlay() {
+  document.getElementById('overlay').classList.remove('visible');
+}
+
+function mostrarErroCentral() {
+  document.querySelector('.layout').style.display = 'none';
+  document.getElementById('erroCentral').style.display = 'flex';
+  esconderOverlay();
+}
+
+function toast(msg, tipo) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast visible' + (tipo ? ' ' + tipo : '');
+  setTimeout(() => el.classList.remove('visible'), 3500);
+}
+
+async function logout() {
+  await sb.auth.signOut();
+  window.location.href = 'login.html';
+}
+
+init();
+</script>
+</body>
+</html>
