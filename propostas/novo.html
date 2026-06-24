@@ -178,7 +178,7 @@ body{font-family:Outfit,sans-serif;background:#f0f4f8;color:#1a202c}
 
 <div class="loading-overlay" id="loadingOverlay">
   <div class="loading-spinner"></div>
-  <p>Gerando proposta...</p>
+  <p id="loadingMsg">Salvando dados...</p>
 </div>
 
 <script>
@@ -420,15 +420,29 @@ async function gerarProposta() {
   }
   await sb.schema('comercial').from('proposta_contatos').insert(contatos);
 
-  // INSERT versão inicial (V1 — sem HTML por ora, preenchido na Fase 4)
-  await sb.schema('comercial').from('proposta_versoes').insert({
+  // INSERT versão V1 (snapshot gerado em seguida)
+  const { data: versaoV1 } = await sb.schema('comercial').from('proposta_versoes').insert({
     proposta_id:   proposta.id,
     versao:        1,
     tipo_alteracao:'criacao',
     descricao:     'Proposta criada',
     vendedor_id:   user.id,
     html_snapshot: null
-  });
+  }).select('id').single();
+
+  // Gerar HTML da proposta
+  document.getElementById('loadingMsg').textContent = 'Gerando proposta...';
+  try {
+    const { html } = await gerarHTMLProposta(sb, proposta, itensInsert, contatos, 1);
+    if (versaoV1?.id) {
+      await sb.schema('comercial').from('proposta_versoes')
+        .update({ html_snapshot: html })
+        .eq('id', versaoV1.id);
+    }
+  } catch(e) {
+    console.warn('Falha ao gerar HTML snapshot:', e.message);
+    // Não bloqueia o fluxo — gerenciar.html irá regenerar se necessário
+  }
 
   // Limpar draft
   sessionStorage.removeItem('proposta_draft');
@@ -444,5 +458,6 @@ async function logout() {
 
 init();
 </script>
+<script src="proposta-engine.js"></script>
 </body>
 </html>
