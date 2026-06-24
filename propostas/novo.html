@@ -376,7 +376,8 @@ async function gerarProposta() {
       uf_politica:     draft.politica.uf,
       segmento:        draft.politica.segmento,
       classe:          draft.politica.classe,
-      status:          'rascunho'
+      status:          'rascunho',
+      link_token:      crypto.randomUUID()
     })
     .select()
     .single();
