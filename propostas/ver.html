@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proposta Técnica — Boxer Soldas</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Outfit,sans-serif;background:#e8eaf0;color:#1a202c;height:100vh;display:flex;flex-direction:column}
+.topbar{background:linear-gradient(135deg,#1d327b,#162666);border-bottom:3px solid #25bbee;padding:10px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.topbar-left img{width:28px;height:28px}
+.topbar-info{}
+.topbar-info h1{font-size:14px;font-weight:700;color:#fff}
+.topbar-info p{font-size:11px;color:#93b4d4;margin-top:1px}
+.topbar-right{font-size:11px;color:#93b4d4;text-align:right}
+.topbar-right strong{display:block;color:#fff;font-size:12px}
+iframe#frame{flex:1;border:none;width:100%;background:#e8eaf0}
+/* Telas de estado */
+.estado{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:40px;text-align:center}
+.estado img{width:48px;opacity:.4}
+.estado h2{font-size:20px;font-weight:700;color:#1d327b}
+.estado p{font-size:14px;color:#718096;max-width:400px;line-height:1.6}
+.spinner-wrap{display:flex;flex-direction:column;align-items:center;gap:16px}
+.spinner{width:36px;height:36px;border:3px solid rgba(29,50,123,.15);border-top-color:#1d327b;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner-wrap p{font-size:14px;color:#718096}
+</style>
+</head>
+<body>
+
+<div class="topbar" id="topbar" style="display:none">
+  <div class="topbar-left">
+    <img src="https://tekweld.github.io/boxer-app/Estrela-Boxer.svg">
+    <div class="topbar-info">
+      <h1 id="topCodigo">Proposta Técnica</h1>
+      <p id="topCliente"></p>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <strong id="topVersao"></strong>
+    <span id="topData"></span>
+  </div>
+</div>
+
+<iframe id="frame" title="Proposta Técnica" style="display:none"></iframe>
+
+<div class="estado" id="estadoLoading">
+  <div class="spinner-wrap">
+    <div class="spinner"></div>
+    <p>Carregando proposta...</p>
+  </div>
+</div>
+
+<div class="estado" id="estadoErro" style="display:none">
+  <img src="https://tekweld.github.io/boxer-app/Estrela-Boxer.svg">
+  <h2>Proposta não encontrada</h2>
+  <p>O link pode estar incorreto ou expirado.<br>Entre em contato com o representante Boxer Soldas.</p>
+</div>
+
+<div class="estado" id="estadoSemSnapshot" style="display:none">
+  <img src="https://tekweld.github.io/boxer-app/Estrela-Boxer.svg">
+  <h2>Proposta em preparação</h2>
+  <p>Esta proposta ainda está sendo finalizada pelo vendedor.<br>Tente novamente em alguns instantes.</p>
+</div>
+
+<script>
+const SUPABASE_URL  = 'https://bmepxcnrsofofoswubuu.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtZXB4Y25yc29mb2Zvc3d1YnV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MTczNzMsImV4cCI6MjA5NTI5MzM3M30.S55ouFczRYlUYNFf5PotYKXBPT5idypTSmbzR-x2Pk0';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+async function init() {
+  const token = new URLSearchParams(location.search).get('token');
+  if (!token) { mostrar('estadoErro'); return; }
+
+  const { data, error } = await sb.rpc('buscar_proposta_publica', { p_token: token });
+
+  if (error || !data || data.length === 0) {
+    mostrar('estadoErro');
+    return;
+  }
+
+  const row = data[0];
+
+  if (!row.html_snapshot) {
+    mostrar('estadoSemSnapshot');
+    return;
+  }
+
+  // Preencher topbar
+  document.getElementById('topCodigo').textContent  = row.codigo || 'Proposta Técnica';
+  document.getElementById('topCliente').textContent = row.cliente_nome + (row.cliente_cidade ? ' · ' + row.cliente_cidade + ' / ' + row.cliente_estado : '');
+  document.getElementById('topVersao').textContent  = 'V' + row.versao;
+  document.getElementById('topData').textContent    = 'Gerada em ' + new Date(row.criado_em).toLocaleDateString('pt-BR');
+
+  // Exibir proposta
+  const frame = document.getElementById('frame');
+  frame.srcdoc = row.html_snapshot;
+  frame.style.display = 'block';
+  document.getElementById('topbar').style.display = 'flex';
+  document.getElementById('estadoLoading').style.display = 'none';
+
+  // Atualizar título da aba
+  document.title = row.codigo + ' — ' + row.cliente_nome + ' — Boxer Soldas';
+}
+
+function mostrar(id) {
+  document.getElementById('estadoLoading').style.display = 'none';
+  document.getElementById(id).style.display = 'flex';
+}
+
+init();
+</script>
+</body>
+</html>
