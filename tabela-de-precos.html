@@ -105,7 +105,6 @@ const COMISSAO = {
 let P=[], ST=[], M={}, SEG=[], CLS=[], CATS=[];
 let cState='SP', cSeg='', cCls=0, cCat='TODAS', cSearch='';
 
-// === FASE 2: Seleção de itens para proposta ===
 const selecionados = new Map();
 
 function fmt(v){return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
@@ -221,9 +220,14 @@ function render() {
                 let pc = scm!==undefined ? `<td class="td-price-final">${fmt(tb*scm)}</td>` : `<td style="text-align:right;color:#a0aec0;font-style:italic;font-size:12px">N/D</td>`;
                 const ic = cState==='SP' ? p.icms : 4;
                 const jaSel = selecionados.has(p.codigo);
-                r += `<tr${jaSel?' class="row-sel"':''}><td class="ac"><button class="btn-sel${jaSel?' selecionado':''}" data-sel="${p.codigo}" data-modelo="${p.modelo.replace(/"/g,'&quot;')}" data-cat="${p.cat}" data-pvsp="${p.pv_sp}" data-final="${(tb*(scm||1)).toFixed(2)}" data-mult="${scm||''}" data-porte="${p.porte}" onclick="toggleSel(this)">${jaSel?'✓ Selecionado':'+ Selecionar'}</button></td><td class="td-code">${p.codigo}</td><td class="td-name">${p.modelo}</td><td class="ac"><span class="size-badge ${SZC[p.porte]||'sz-grd'}">${SZ[p.porte]||p.porte}</span></td><td class="td-price-base">${fmt(tb)}</td>${pc}<td class="td-pct">${ic}%</td><td class="td-pct">${p.ipi}%</td><td class="td-ncm">${p.ncm}</td></tr>`;
+                if (IS_AUTO) {
+                    r += `<tr${jaSel?' class="row-sel"':''}>${IS_AUTO ? `<td class="ac"><button class="btn-sel${jaSel?' selecionado':''}" data-sel="${p.codigo}" data-modelo="${p.modelo.replace(/"/g,'&quot;')}" data-cat="${p.cat}" data-pvsp="${p.pv_sp}" data-final="${(tb*(scm||1)).toFixed(2)}" data-mult="${scm||''}" data-porte="${p.porte}" onclick="toggleSel(this)">${jaSel?'✓ Selecionado':'+ Selecionar'}</button></td>` : ''}<td class="td-code">${p.codigo}</td><td class="td-name">${p.modelo}</td><td class="ac"><span class="size-badge ${SZC[p.porte]||'sz-grd'}">${SZ[p.porte]||p.porte}</span></td><td class="td-price-base">${fmt(tb)}</td>${pc}<td class="td-pct">${ic}%</td><td class="td-pct">${p.ipi}%</td><td class="td-ncm">${p.ncm}</td></tr>`;
+                } else {
+                    r += `<tr><td class="td-code">${p.codigo}</td><td class="td-name">${p.modelo}</td><td class="ac"><span class="size-badge ${SZC[p.porte]||'sz-grd'}">${SZ[p.porte]||p.porte}</span></td><td class="td-price-base">${fmt(tb)}</td>${pc}<td class="td-pct">${ic}%</td><td class="td-pct">${p.ipi}%</td><td class="td-ncm">${p.ncm}</td></tr>`;
+                }
             });
-            d.innerHTML += `<div class="tbl-wrap"><table><thead><tr><th class="ac" style="width:110px">Proposta</th><th class="al">Código</th><th class="al">Descrição</th><th class="ac">Porte</th><th class="ar">Tabela</th><th class="ar">c/ Desconto</th><th class="ar">ICMS</th><th class="ar">IPI</th><th class="al">NCM</th></tr></thead><tbody>${r}</tbody></table></div>`;
+            const propHeader = IS_AUTO ? '<th class="ac" style="width:110px">Proposta</th>' : '';
+            d.innerHTML += `<div class="tbl-wrap"><table><thead><tr>${propHeader}<th class="al">Código</th><th class="al">Descrição</th><th class="ac">Porte</th><th class="ar">Tabela</th><th class="ar">c/ Desconto</th><th class="ar">ICMS</th><th class="ar">IPI</th><th class="al">NCM</th></tr></thead><tbody>${r}</tbody></table></div>`;
             a.appendChild(d);
         });
     }
