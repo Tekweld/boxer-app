@@ -103,6 +103,7 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 <div class="panel-header"><div><div class="panel-title">Cadastro de Produtos</div><div class="panel-sub" id="prodSub"></div></div>
 <div style="display:flex;gap:8px;align-items:center">
 <select id="prodTabela" class="select-sm" onchange="loadProdutos()"><option value="1">Revendas</option><option value="2">BMAX</option></select>
+<select id="prodCatFilter" class="select-sm" onchange="filterProdutos()"><option value="TODAS">Todas as categorias</option></select>
 <input type="text" id="prodSearch" placeholder="Buscar..." style="width:200px;padding:6px 10px;font-size:12px" oninput="filterProdutos()">
 <button class="btn btn-warn btn-sm admin-only hidden" onclick="openReajusteModal()">% Reajuste em Massa</button>
 <button class="btn btn-primary btn-sm" onclick="openProdModal()">+ Novo</button>
@@ -280,12 +281,20 @@ async function loadProdutos(){
             sb('/categorias?tabela_id=eq.'+tid+'&select=id,nome&order=ordem')
         ]);
         allProd = prods.map(p => ({...p, cat: p.categorias?.nome || 'SEM CATEGORIA'}));
+        const catSel=document.getElementById('prodCatFilter');
+        catSel.innerHTML='<option value="TODAS">Todas as categorias</option>'+cats.map(c=>`<option value="${c.nome}">${c.nome}</option>`).join('');
         renderProd(allProd);
     } catch (e) {
         document.getElementById('prodTableWrap').innerHTML = `<div style="text-align:center;padding:20px;color:#dc2626">Erro ao carregar produtos: ${e.message}</div>`;
     }
 }
-function filterProdutos(){const q=document.getElementById('prodSearch').value.toLowerCase();renderProd(q?allProd.filter(p=>p.modelo.toLowerCase().includes(q)||p.codigo.toLowerCase().includes(q)):allProd);}
+function filterProdutos(){
+    const q=document.getElementById('prodSearch').value.toLowerCase();
+    const cat=document.getElementById('prodCatFilter').value;
+    let list=cat==='TODAS'?allProd:allProd.filter(p=>p.cat===cat);
+    if(q) list=list.filter(p=>p.modelo.toLowerCase().includes(q)||p.codigo.toLowerCase().includes(q));
+    renderProd(list);
+}
 function renderProd(ps){
     const sm={Pequenas:'sz-peq',Médias:'sz-med',Grandes:'sz-grd','Maquinário':'sz-maq'},sl={Pequenas:'PEQ',Médias:'MED',Grandes:'GRD','Maquinário':'MAQ'};
     let h='<table><thead><tr><th>Código</th><th>Modelo</th><th>Categoria</th><th class="text-right">PV SP</th><th class="text-center">Porte</th><th class="text-right">ICMS</th><th class="text-right">IPI</th><th>NCM</th><th class="text-center">Ações</th></tr></thead><tbody>';
