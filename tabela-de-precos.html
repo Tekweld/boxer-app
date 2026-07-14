@@ -115,7 +115,7 @@ async function load() {
         sbFetch('/tabelas?id=eq.'+TID+'&select=*'),
         sbFetch('/estados?select=uf,mult_4_icms,mult_total&order=uf'),
         sbFetch('/multiplicadores?tabela_id=eq.'+TID+'&select=segmento,classe,porte,valor'),
-        sbFetch('/produtos?tabela_id=eq.'+TID+'&ativo=eq.true&pv_sp=gt.0&select=codigo,modelo,pv_sp,porte,icms,ipi,ncm,categoria_id&order=modelo'),
+        sbFetch('/produtos?tabela_id=eq.'+TID+'&ativo=eq.true&pv_sp=gt.0&select=codigo,modelo,pv_sp,porte,icms,ipi,ncm,categoria_id&order=pv_sp'),
         sbFetch('/categorias?tabela_id=eq.'+TID+'&select=id,nome,ordem&order=ordem'),
         sbFetch('/comissoes?tabela_id=eq.'+TID+'&select=segmento,classe,rep_pct,revenda_pct')
     ]);
