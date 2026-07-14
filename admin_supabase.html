@@ -340,7 +340,7 @@ async function openReajusteModal(){
 <p style="color:#718096;font-size:13px;margin-bottom:16px">Aplicar reajuste percentual no PV SP dos produtos das categorias selecionadas da tabela <strong>${tname}</strong></p>
 <div class="form-row">
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><label style="margin:0">Categorias</label><span style="font-size:11px;color:#25bbee;cursor:pointer;text-transform:none" onclick="toggleAllCats()">Marcar/desmarcar todas</span></div>
-<div id="r_cats" style="max-height:180px;overflow:auto;border:1px solid #c3cfe2;border-radius:8px;padding:8px">${cats.map(c=>`<label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;font-weight:400;text-transform:none;letter-spacing:normal"><input type="checkbox" class="r_cat_chk" value="${c.id}"> ${c.nome}</label>`).join('')}</div>
+<div id="r_cats" style="max-height:180px;overflow:auto;border:1px solid #c3cfe2;border-radius:8px;padding:8px">${cats.map(c=>`<label style="display:flex;align-items:center;justify-content:flex-start;gap:8px;padding:4px 0;font-size:13px;font-weight:400;text-transform:none;letter-spacing:normal;text-align:left"><input type="checkbox" class="r_cat_chk" value="${c.id}" style="width:auto;flex-shrink:0"> <span>${c.nome}</span></label>`).join('')}</div>
 </div>
 <div class="form-row"><label>Percentual (%)</label><input id="r_pct" type="number" step="0.01" value="10">
 <p style="font-size:11px;color:#718096;margin-top:4px">Positivo = aumento · Negativo = redução</p></div>
