@@ -96,13 +96,7 @@ const IS_AUTO = TID === 2;
 const SZ = {Pequenas:'PEQ',Médias:'MED',Grandes:'GRD','Maquinário':'MAQ'};
 const SZC = {Pequenas:'sz-peq',Médias:'sz-med',Grandes:'sz-grd','Maquinário':'sz-maq'};
 
-const COMISSAO = {
-    'REP > IND-1':'Representante = 5%','REP > IND-2':'Representante = 6%','REP > IND-3':'Representante = 7%',
-    'REP > REV-1':'Representante = 2%','REP > REV-2':'Representante = 3%','REP > REV-3':'Representante = 4%',
-    'REP+REV > IND-1':'Representante = 3% · Revenda = 3%','REP+REV > IND-2':'Representante = 4% · Revenda = 4%','REP+REV > IND-3':'Representante = 5% · Revenda = 5%'
-};
-
-let P=[], ST=[], M={}, SEG=[], CLS=[], CATS=[];
+let P=[], ST=[], M={}, CM={}, SEG=[], CLS=[], CATS=[];
 let cState='SP', cSeg='', cCls=0, cCat='TODAS', cSearch='';
 
 const selecionados = new Map();
@@ -117,12 +111,13 @@ async function sbFetch(path) {
 }
 
 async function load() {
-    const [tabelaRes, estadosRes, multsRes, prodsRes, catsRes] = await Promise.all([
+    const [tabelaRes, estadosRes, multsRes, prodsRes, catsRes, comsRes] = await Promise.all([
         sbFetch('/tabelas?id=eq.'+TID+'&select=*'),
         sbFetch('/estados?select=uf,mult_4_icms,mult_total&order=uf'),
         sbFetch('/multiplicadores?tabela_id=eq.'+TID+'&select=segmento,classe,porte,valor'),
         sbFetch('/produtos?tabela_id=eq.'+TID+'&ativo=eq.true&pv_sp=gt.0&select=codigo,modelo,pv_sp,porte,icms,ipi,ncm,categoria_id&order=modelo'),
-        sbFetch('/categorias?tabela_id=eq.'+TID+'&select=id,nome,ordem&order=ordem')
+        sbFetch('/categorias?tabela_id=eq.'+TID+'&select=id,nome,ordem&order=ordem'),
+        sbFetch('/comissoes?tabela_id=eq.'+TID+'&select=segmento,classe,rep_pct,revenda_pct')
     ]);
 
     const tabela = tabelaRes[0];
@@ -131,6 +126,7 @@ async function load() {
     CLS = tabela.classes;
 
     multsRes.forEach(m => { M[m.segmento+m.classe+m.porte] = parseFloat(m.valor); });
+    comsRes.forEach(c => { CM[c.segmento+'-'+c.classe] = c; });
 
     const catMap = {};
     catsRes.forEach(c => { catMap[c.id] = c.nome; });
@@ -187,11 +183,12 @@ function updBtns() {
 function updateComissao() {
     const box = document.getElementById('comissaoBox');
     if (!IS_AUTO) { box.style.display='none'; return; }
-    const key = cSeg+'-'+cCls;
-    const text = COMISSAO[key];
-    if (text) {
+    const c = CM[cSeg+'-'+cCls];
+    if (c) {
+        let text = `Representante = <span>${parseFloat(c.rep_pct)}%</span>`;
+        if (c.revenda_pct !== null) text += ` · Revenda = <span>${parseFloat(c.revenda_pct)}%</span>`;
         box.style.display = 'block';
-        document.getElementById('comissaoText').innerHTML = text.replace(/([\d]+%)/g,'<span>$1</span>');
+        document.getElementById('comissaoText').innerHTML = text;
     } else { box.style.display='none'; }
 }
 

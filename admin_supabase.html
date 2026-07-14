@@ -83,7 +83,7 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 <div class="topbar-left">
 <img src="Estrela-Boxer.svg" width="32" height="32" style="display:block">
 <h1>Painel Admin Boxer</h1>
-<span style="font-size:11px;color:#a0c4ff;opacity:0.85;margin-left:24px">Principal — Razão entre o preço da tabela base e o Fís 1 é de 0.934</span>
+<span style="font-size:11px;color:#a0c4ff;opacity:0.85;margin-left:24px">Razão entre o preço da tabela base e o Fís 1 é de 0.934</span>
 </div>
 <div class="topbar-right">
 <span class="user-badge"><strong id="userName"></strong> <span class="perm-tag" id="userPerm"></span></span>
@@ -95,13 +95,14 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 <div class="tab active" onclick="showTab('produtos',this)">Produtos</div>
 <div class="tab admin-only hidden" onclick="showTab('estados',this)">Estados</div>
 <div class="tab admin-only hidden" onclick="showTab('multiplicadores',this)">Multiplicadores</div>
+<div class="tab admin-only hidden" onclick="showTab('comissoes',this)">Comissões</div>
 <div class="tab admin-only hidden" onclick="showTab('usuarios',this)">Usuários</div>
 </div>
 <div class="panel">
 <div class="panel-content" id="tab-produtos">
 <div class="panel-header"><div><div class="panel-title">Cadastro de Produtos</div><div class="panel-sub" id="prodSub"></div></div>
 <div style="display:flex;gap:8px;align-items:center">
-<select id="prodTabela" class="select-sm" onchange="loadProdutos()"><option value="1">Principal</option><option value="2">Indústria</option></select>
+<select id="prodTabela" class="select-sm" onchange="loadProdutos()"><option value="1">Revendas</option><option value="2">BMAX</option></select>
 <input type="text" id="prodSearch" placeholder="Buscar..." style="width:200px;padding:6px 10px;font-size:12px" oninput="filterProdutos()">
 <button class="btn btn-warn btn-sm admin-only hidden" onclick="openReajusteModal()">% Reajuste em Massa</button>
 <button class="btn btn-primary btn-sm" onclick="openProdModal()">+ Novo</button>
@@ -116,8 +117,14 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 
 <div class="panel-content hidden" id="tab-multiplicadores">
 <div class="panel-header"><div><div class="panel-title">Multiplicadores Comerciais</div></div>
-<select id="multTabela" class="select-sm" onchange="loadMult()"><option value="1">Principal</option><option value="2">Indústria</option></select></div>
+<select id="multTabela" class="select-sm" onchange="loadMult()"><option value="1">Revendas</option><option value="2">BMAX</option></select></div>
 <div id="multGrid"><div class="loading">Carregando...</div></div>
+</div>
+
+<div class="panel-content hidden" id="tab-comissoes">
+<div class="panel-header"><div><div class="panel-title">Comissões</div></div>
+<select id="comTabela" class="select-sm" onchange="loadComissoes()"><option value="1">Revendas</option><option value="2">BMAX</option></select></div>
+<div id="comGrid"><div class="loading">Carregando...</div></div>
 </div>
 
 <div class="panel-content hidden" id="tab-usuarios">
@@ -260,6 +267,7 @@ function showTab(n,el){
     if(n==='produtos')loadProdutos();
     if(n==='estados')loadEstados();
     if(n==='multiplicadores')loadMult();
+    if(n==='comissoes')loadComissoes();
     if(n==='usuarios')loadUsuarios();
 }
 
@@ -418,6 +426,33 @@ async function saveMult(id){
         await sb('/multiplicadores?id=eq.'+id,'PATCH',{valor:parseFloat(document.getElementById('m_v').value)});
         await sb('/tabelas?id=in.(1,2)','PATCH',{atualizado_em:new Date().toISOString()});
         toast('Multiplicador updated');closeModal();loadMult();
+    }catch(e){toast('Erro: '+e.message,'error');}
+}
+
+// COMISSÕES
+async function loadComissoes(){
+    const tid=document.getElementById('comTabela').value;
+    const d=await sb('/comissoes?tabela_id=eq.'+tid+'&select=*&order=segmento,classe');
+    let h='<table><thead><tr><th>Segmento</th><th class="text-center">Classe</th><th class="text-center">Representante %</th><th class="text-center">Revenda %</th></tr></thead><tbody>';
+    d.forEach(c=>{
+        const rp=parseFloat(c.rep_pct), vp=c.revenda_pct===null?null:parseFloat(c.revenda_pct);
+        const ck=IS_ADMIN?`onclick="editComissao(${c.id},${rp},${vp===null?'null':vp},'${c.segmento}',${c.classe})" style="cursor:pointer"`:'';
+        h+=`<tr><td style="font-weight:500">${c.segmento}</td><td class="text-center">${c.classe}</td><td class="text-center"><span class="mult-cell mult-neutral" ${ck}>${rp}%</span></td><td class="text-center">${vp===null?'—':`<span class="mult-cell mult-neutral" ${ck}>${vp}%</span>`}</td></tr>`;
+    });
+    h+='</tbody></table>'+(IS_ADMIN?'<p style="font-size:12px;color:#718096;margin-top:12px">Clique para editar</p>':'');
+    document.getElementById('comGrid').innerHTML=h;
+}
+function editComissao(id,rep,revenda,seg,cls){
+    openModal(`<h3>Editar Comissão</h3><p style="color:#718096;font-size:13px;margin-bottom:16px">${seg} · Classe ${cls}</p>
+<div class="form-row"><label>Representante %</label><input id="c_rep" type="number" step="0.01" value="${rep}"></div>
+<div class="form-row"><label>Revenda % (deixe em branco se não houver)</label><input id="c_rev" type="number" step="0.01" value="${revenda===null?'':revenda}"></div>
+<div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveComissao(${id})">Salvar</button></div>`);
+}
+async function saveComissao(id){
+    try{
+        const revStr=document.getElementById('c_rev').value.trim();
+        await sb('/comissoes?id=eq.'+id,'PATCH',{rep_pct:parseFloat(document.getElementById('c_rep').value),revenda_pct:revStr===''?null:parseFloat(revStr)});
+        toast('Comissão updated');closeModal();loadComissoes();
     }catch(e){toast('Erro: '+e.message,'error');}
 }
 
