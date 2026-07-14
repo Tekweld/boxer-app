@@ -335,8 +335,13 @@ async function delProd(id,n){
 async function openReajusteModal(){
     const tid=document.getElementById('prodTabela').value;
     const tname=document.getElementById('prodTabela').selectedOptions[0].text;
+    const cats=await sb('/categorias?tabela_id=eq.'+tid+'&select=id,nome&order=ordem');
     openModal(`<h3>Reajuste em Massa</h3>
-<p style="color:#718096;font-size:13px;margin-bottom:16px">Aplicar reajuste percentual em todos os PV SP da tabela <strong>${tname}</strong></p>
+<p style="color:#718096;font-size:13px;margin-bottom:16px">Aplicar reajuste percentual no PV SP dos produtos das categorias selecionadas da tabela <strong>${tname}</strong></p>
+<div class="form-row">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><label style="margin:0">Categorias</label><span style="font-size:11px;color:#25bbee;cursor:pointer;text-transform:none" onclick="toggleAllCats()">Marcar/desmarcar todas</span></div>
+<div id="r_cats" style="max-height:180px;overflow:auto;border:1px solid #c3cfe2;border-radius:8px;padding:8px">${cats.map(c=>`<label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;font-weight:400;text-transform:none;letter-spacing:normal"><input type="checkbox" class="r_cat_chk" value="${c.id}"> ${c.nome}</label>`).join('')}</div>
+</div>
 <div class="form-row"><label>Percentual (%)</label><input id="r_pct" type="number" step="0.01" value="10">
 <p style="font-size:11px;color:#718096;margin-top:4px">Positivo = aumento · Negativo = redução</p></div>
 <div id="r_preview" style="margin-top:12px"></div>
@@ -344,12 +349,23 @@ async function openReajusteModal(){
 <button class="btn btn-outline" onclick="previewReajuste()">Pré-visualizar</button>
 <button class="btn btn-primary hidden" id="r_apply_btn" onclick="applyReajuste()">Aplicar Reajuste</button></div>`);
 }
+function toggleAllCats(){
+    const boxes=document.querySelectorAll('.r_cat_chk');
+    const allChecked=[...boxes].every(b=>b.checked);
+    boxes.forEach(b=>b.checked=!allChecked);
+}
+function selectedCats(){
+    return [...document.querySelectorAll('.r_cat_chk:checked')].map(b=>({id:b.value,nome:b.parentElement.textContent.trim()}));
+}
 async function previewReajuste(){
     const tid=document.getElementById('prodTabela').value;
     const pct=parseFloat(document.getElementById('r_pct').value);
+    const cats=selectedCats();
     if(!pct){toast('Informe um percentual','error');return;}
-    const prods=await sb('/produtos?tabela_id=eq.'+tid+'&ativo=eq.true&pv_sp=gt.0&select=id,codigo,modelo,pv_sp&order=modelo&limit=5');
-    const count=await sb('/produtos?tabela_id=eq.'+tid+'&ativo=eq.true&pv_sp=gt.0&select=id');
+    if(!cats.length){toast('Selecione ao menos uma categoria','error');return;}
+    const filtro='&categoria_id=in.('+cats.map(c=>c.id).join(',')+')';
+    const prods=await sb('/produtos?tabela_id=eq.'+tid+filtro+'&ativo=eq.true&pv_sp=gt.0&select=id,codigo,modelo,pv_sp&order=modelo&limit=5');
+    const count=await sb('/produtos?tabela_id=eq.'+tid+filtro+'&ativo=eq.true&pv_sp=gt.0&select=id');
     let h=`<div style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:8px">
 <p style="font-size:14px;font-weight:600;color:#1d327b;margin-bottom:8px">${count.length} produtos serão reajustados em ${pct>0?'+':''}${pct}%</p>
 <p style="font-size:12px;color:#718096;margin-bottom:8px">Amostra dos primeiros 5:</p>
@@ -363,9 +379,13 @@ async function applyReajuste(){
     const tid=document.getElementById('prodTabela').value;
     const tname=document.getElementById('prodTabela').selectedOptions[0].text;
     const pct=parseFloat(document.getElementById('r_pct').value);
-    if(!confirm(`Confirma reajuste de ${pct}% em TODOS os produtos da tabela ${tname}?`))return;
+    const cats=selectedCats();
+    if(!cats.length){toast('Selecione ao menos uma categoria','error');return;}
+    const catNames=cats.map(c=>c.nome).join(', ');
+    if(!confirm(`Confirma reajuste de ${pct}% nos produtos da(s) categoria(s) ${catNames} da tabela ${tname}?`))return;
     try{
-        const prods=await sb('/produtos?tabela_id=eq.'+tid+'&ativo=eq.true&pv_sp=gt.0&select=id,pv_sp');
+        const filtro='&categoria_id=in.('+cats.map(c=>c.id).join(',')+')';
+        const prods=await sb('/produtos?tabela_id=eq.'+tid+filtro+'&ativo=eq.true&pv_sp=gt.0&select=id,pv_sp');
         let updated=0;
         const batchSize=50;
         for(let i=0;i<prods.length;i+=batchSize){
@@ -377,7 +397,7 @@ async function applyReajuste(){
             }
         }
         await sb('/tabelas?id=eq.'+tid,'PATCH',{atualizado_em:new Date().toISOString()});
-        await sb('/log_alteracoes','POST',{usuario_id:SESSION.user.id,usuario_email:SESSION.user.email,tabela_ref:'reajuste_massa',campo:'percentual',valor_novo:pct+'% ('+updated+' produtos)'});
+        await sb('/log_alteracoes','POST',{usuario_id:SESSION.user.id,usuario_email:SESSION.user.email,tabela_ref:'reajuste_massa',campo:'percentual',valor_novo:pct+'% ('+updated+' produtos, categorias: '+catNames+')'});
         toast(updated+' produtos reajustados em '+pct+'%');closeModal();loadProdutos();
     }catch(e){toast('Erro: '+e.message,'error');}
 }
