@@ -445,7 +445,8 @@ async function loadMult(){
     const filtro=isBmax?'&categoria_grupo=not.is.null':'';
     const d=await sb('/multiplicadores?tabela_id=eq.'+tid+filtro+'&select=*&order=segmento,classe');
     const dimOf=m=>isBmax?m.categoria_grupo:m.porte;
-    const dims=[...new Set(d.map(dimOf))],segs=[...new Set(d.map(m=>m.segmento))],cls=[...new Set(d.map(m=>m.classe))].sort(),lk={};
+    const ORDEM_GRUPO={'Robô':0,'Laser':1,'Máquinas':2,'Outros':3};
+    const dims=[...new Set(d.map(dimOf))].sort((a,b)=>isBmax?(ORDEM_GRUPO[a]??9)-(ORDEM_GRUPO[b]??9):0),segs=[...new Set(d.map(m=>m.segmento))],cls=[...new Set(d.map(m=>m.classe))].sort(),lk={};
     d.forEach(m=>{lk[m.segmento+'-'+m.classe+'-'+dimOf(m)]=m;});
     let h='<table><thead><tr><th>Segmento</th><th class="text-center">Classe</th>';dims.forEach(p=>{h+=`<th class="text-center">${p}</th>`;});h+='</tr></thead><tbody>';
     segs.forEach(seg=>{cls.forEach(c=>{h+=`<tr><td style="font-weight:500">${seg}</td><td class="text-center">${c}</td>`;dims.forEach(dim=>{const m=lk[seg+'-'+c+'-'+dim];if(m){const v=parseFloat(m.valor);const cl=v<1?'mult-discount':v>1?'mult-markup':'mult-neutral';const ck=IS_ADMIN?`onclick="editMult(${m.id},${v},'${seg}',${c},'${dim}')" style="cursor:pointer"`:'';h+=`<td class="text-center"><span class="mult-cell ${cl}" ${ck}>${v.toFixed(4)}</span></td>`;}else{h+=`<td class="text-center"><span class="mult-cell mult-na">N/D</span></td>`;}});h+='</tr>';});});
