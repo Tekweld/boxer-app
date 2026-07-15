@@ -18,7 +18,14 @@ async function gerarHTMLProposta(sb, proposta, itens, contatos, versao) {
 
   const cf = tpl?.conteudo_fixo || {};
 
-  // 2 — Imagem de capa
+  // 2 — Detalhes dos produtos (para Escopo de Fornecimento e seleção de capa)
+  const codigos = [...new Set(itens.map(i => i.produto_codigo))];
+  const { data: prods } = await sb.from('produtos')
+    .select('codigo, modelo, descricao_completa, caracteristicas, imagem_url')
+    .in('codigo', codigos);
+  const prodMap = Object.fromEntries((prods || []).map(p => [p.codigo, p]));
+
+  // 3 — Imagem de capa
   let imagemCapa = cf.imagem_capa || cf.imagem_capa_fallback || '';
 
   if (proposta.tipo_produto === 'ROBO') {
@@ -43,14 +50,12 @@ async function gerarHTMLProposta(sb, proposta, itens, contatos, versao) {
         break;
       }
     }
+  } else {
+    // Demais tipos (Laser, Máquinas...): capa usa a foto do item de maior valor selecionado.
+    const itemMaisCaro = [...itens].sort((a, b) => (parseFloat(b.preco_final) || 0) - (parseFloat(a.preco_final) || 0))[0];
+    const fotoItemMaisCaro = itemMaisCaro && prodMap[itemMaisCaro.produto_codigo]?.imagem_url;
+    if (fotoItemMaisCaro) imagemCapa = fotoItemMaisCaro;
   }
-
-  // 3 — Detalhes dos produtos (para Escopo de Fornecimento)
-  const codigos = [...new Set(itens.map(i => i.produto_codigo))];
-  const { data: prods } = await sb.from('produtos')
-    .select('codigo, modelo, descricao_completa, caracteristicas, imagem_url')
-    .in('codigo', codigos);
-  const prodMap = Object.fromEntries((prods || []).map(p => [p.codigo, p]));
 
   // 4 — Dados derivados
   const contPrinc = contatos.find(c => c.recebe_proposta) || contatos[0] || {};
