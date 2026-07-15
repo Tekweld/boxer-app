@@ -69,6 +69,7 @@ tbody tr.row-sel{background:#e8f0fe !important}
 <div><label class="filter-label">Estado</label><select id="selState" class="state-select"></select></div>
 <div><label class="filter-label" id="segLabel">Segmento</label><div id="segBtns" class="btn-group"></div></div>
 <div><label class="filter-label">Classe</label><div id="clsBtns" class="btn-group"></div></div>
+<div id="catGrupoWrap" style="display:none"><label class="filter-label">Categoria</label><div id="catGrupoBtns" class="btn-group"></div></div>
 <div class="comissao-box" id="comissaoBox"><label class="filter-label">Comissionamento</label><div class="comissao-text" id="comissaoText"></div></div>
 </div></div></div>
 <div class="content">
@@ -96,8 +97,9 @@ const IS_AUTO = TID === 2;
 const SZ = {Pequenas:'PEQ',Médias:'MED',Grandes:'GRD','Maquinário':'MAQ'};
 const SZC = {Pequenas:'sz-peq',Médias:'sz-med',Grandes:'sz-grd','Maquinário':'sz-maq'};
 
-let P=[], ST=[], M={}, CM={}, SEG=[], CLS=[], CATS=[], catGroupById={}, catGroupByName={};
-let cState='SP', cSeg='', cCls=0, cCat='TODAS', cSearch='';
+let P=[], ST=[], M={}, CM={}, SEG=[], CLS=[], CATS=[], GRUPOS=[], catGroupById={}, catGroupByName={};
+let cState='SP', cSeg='', cCls=0, cCat='TODAS', cCatGrupo='', cSearch='';
+const ORDEM_GRUPO = {'Robô':0,'Laser':1,'Máquinas':2,'Outros':3};
 
 const selecionados = new Map();
 
@@ -131,11 +133,12 @@ async function load() {
     const catMap = {};
     catsRes.forEach(c => { catMap[c.id] = c.nome; catGroupById[c.id] = c.categoria_grupo; catGroupByName[c.nome] = c.categoria_grupo; });
     CATS = catsRes.map(c => c.nome);
+    GRUPOS = [...new Set(catsRes.map(c => c.categoria_grupo).filter(Boolean))].sort((a,b) => (ORDEM_GRUPO[a]??9)-(ORDEM_GRUPO[b]??9));
 
     P = prodsRes.map(p => ({...p, cat: catMap[p.categoria_id] || 'SEM CATEGORIA', catGroup: catGroupById[p.categoria_id] || null}));
 
-    cSeg = SEG[0];
-    cCls = IS_AUTO ? CLS[0] : CLS[CLS.length-1];
+    if (IS_AUTO) { cSeg=''; cCls=0; cCatGrupo=''; }
+    else { cSeg = SEG[0]; cCls = CLS[CLS.length-1]; }
 
     const atualizado = new Date(tabela.atualizado_em).toLocaleDateString('pt-BR');
     document.getElementById('pageSubtitle').textContent = `Atualizado em ${atualizado} · ${P.length} produtos`;
@@ -147,6 +150,7 @@ async function load() {
         document.getElementById('navBtn').innerHTML = '&#10132; Tabela Revendas';
         document.title = 'Tabela de Preços Boxer - Automação';
         document.getElementById('segLabel').textContent = 'Origem do lead';
+        document.getElementById('catGrupoWrap').style.display = '';
     } else {
         document.getElementById('navBtn').href = 'tabela-de-precos.html?t=2';
         document.getElementById('navBtn').innerHTML = '<img src="bmax-logo.png" height="32" style="display:block">';
@@ -168,24 +172,35 @@ function buildFilters() {
     const cd = document.getElementById('clsBtns');
     CLS.forEach(c => { const b=document.createElement('button'); b.className='fb fb-classe'+(c===cCls?' on':''); b.textContent=c; b.addEventListener('click',()=>{cCls=c;updBtns();render();}); cd.appendChild(b); });
 
-    const cs = document.getElementById('selCat');
-    const oA = document.createElement('option'); oA.value='TODAS'; oA.textContent=`Todas as categorias (${P.length})`; cs.appendChild(oA);
-    CATS.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; cs.appendChild(o); });
-    cs.addEventListener('change', () => { cCat=cs.value; render(); });
+    const gd = document.getElementById('catGrupoBtns');
+    GRUPOS.forEach(g => { const b=document.createElement('button'); b.className='fb'+(g===cCatGrupo?' on':''); b.textContent=g; b.addEventListener('click',()=>{cCatGrupo=g;refreshCatSelect();updBtns();render();}); gd.appendChild(b); });
 
     document.getElementById('searchInput').addEventListener('input', e => { cSearch=e.target.value; render(); });
+    refreshCatSelect();
+}
+
+function refreshCatSelect() {
+    const cs = document.getElementById('selCat');
+    cs.innerHTML = '';
+    if (IS_AUTO && !cCatGrupo) { cs.disabled = true; cCat = 'TODAS'; return; }
+    cs.disabled = false;
+    const opts = IS_AUTO ? CATS.filter(c => catGroupByName[c] === cCatGrupo) : CATS;
+    const oA = document.createElement('option'); oA.value='TODAS'; oA.textContent = IS_AUTO ? `Todas de ${cCatGrupo} (${opts.length})` : `Todas as categorias (${P.length})`; cs.appendChild(oA);
+    opts.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; cs.appendChild(o); });
+    cCat = 'TODAS';
+    cs.onchange = () => { cCat=cs.value; render(); };
 }
 
 function updBtns() {
     document.querySelectorAll('#segBtns .fb').forEach(b => b.className='fb'+(b.textContent===cSeg?' on':''));
     document.querySelectorAll('#clsBtns .fb').forEach(b => b.className='fb fb-classe'+(parseInt(b.textContent)===cCls?' on':''));
+    document.querySelectorAll('#catGrupoBtns .fb').forEach(b => b.className='fb'+(b.textContent===cCatGrupo?' on':''));
 }
 
 function updateComissao() {
     const box = document.getElementById('comissaoBox');
-    if (!IS_AUTO || cCat === 'TODAS') { box.style.display='none'; return; }
-    const grupo = catGroupByName[cCat];
-    const c = CM[cSeg+'-'+cCls+'-'+grupo];
+    if (!IS_AUTO || !cCatGrupo) { box.style.display='none'; return; }
+    const c = CM[cSeg+'-'+cCls+'-'+cCatGrupo];
     if (c) {
         let text = `Representante = <span>${parseFloat(c.rep_pct)}%</span>`;
         if (c.revenda_pct !== null) text += ` · Revenda = <span>${parseFloat(c.revenda_pct)}%</span>`;
@@ -196,14 +211,26 @@ function updateComissao() {
 
 function render() {
     const st = ST.find(s => s.uf===cState);
+    const a = document.getElementById('tableArea');
+
+    if (IS_AUTO && (!cSeg || !cCls || !cCatGrupo)) {
+        a.innerHTML = '<div class="empty"><p style="font-size:18px">Selecione Origem do lead, Categoria e Classe para ver os preços</p></div>';
+        document.getElementById('footState').textContent = cState;
+        document.getElementById('footSeg').textContent = cSeg || '—';
+        document.getElementById('footCls').textContent = cCls || '—';
+        updateComissao();
+        return;
+    }
+
     let items = P;
+    if (IS_AUTO) items = items.filter(p => p.catGroup === cCatGrupo);
     if (cCat !== 'TODAS') items = items.filter(p => p.cat===cCat);
     if (cSearch.trim()) { const q=cSearch.toLowerCase(); items=items.filter(p=>p.modelo.toLowerCase().includes(q)||p.codigo.toLowerCase().includes(q)); }
 
     const g = {};
     items.forEach(p => { if(!g[p.cat]) g[p.cat]=[]; g[p.cat].push(p); });
 
-    const a = document.getElementById('tableArea'); a.innerHTML='';
+    a.innerHTML='';
     const gr = IS_AUTO ? '#1d327b,#e30613' : '#1d327b,#25bbee';
 
     if (!items.length) { a.innerHTML='<div class="empty"><p style="font-size:18px">Nenhum produto encontrado</p></div>'; }
@@ -287,7 +314,7 @@ function gerarProposta() {
     if (selecionados.size === 0) return;
     sessionStorage.setItem('proposta_draft', JSON.stringify({
         itens:    [...selecionados.values()],
-        politica: { uf: cState, segmento: cSeg, classe: cCls }
+        politica: { uf: cState, segmento: cSeg, classe: cCls, categoria_grupo: cCatGrupo || null }
     }));
     window.location.href = '/propostas/login.html';
 }
