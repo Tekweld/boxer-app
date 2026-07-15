@@ -124,7 +124,11 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 
 <div class="panel-content hidden" id="tab-comissoes">
 <div class="panel-header"><div><div class="panel-title">Comissões</div></div>
-<select id="comTabela" class="select-sm" onchange="loadComissoes()"><option value="1">Revendas</option><option value="2">BMAX</option></select></div>
+<div style="display:flex;gap:8px">
+<select id="comTabela" class="select-sm" onchange="loadComissoes()"><option value="1">Revendas</option><option value="2">BMAX</option></select>
+<select id="comSegFilter" class="select-sm" onchange="renderComissoes()"><option value="TODOS">Todos os segmentos</option></select>
+<span id="comCatFilterWrap" style="display:none"><select id="comCatFilter" class="select-sm" onchange="renderComissoes()"><option value="TODOS">Todas as categorias</option></select></span>
+</div></div>
 <div id="comGrid"><div class="loading">Carregando...</div></div>
 </div>
 
@@ -462,11 +466,31 @@ async function saveMult(id){
 }
 
 // COMISSÕES
-async function loadComissoes(){
+let allCom=[];
+async function fetchCom(){
     const tid=document.getElementById('comTabela').value;
     const isBmax=tid==='2';
     const filtro=isBmax?'&categoria_grupo=not.is.null':'';
-    const d=await sb('/comissoes?tabela_id=eq.'+tid+filtro+'&select=*&order=segmento,classe');
+    allCom=await sb('/comissoes?tabela_id=eq.'+tid+filtro+'&select=*&order=segmento,classe');
+}
+async function loadComissoes(){
+    await fetchCom();
+    const isBmax=document.getElementById('comTabela').value==='2';
+    const segs=[...new Set(allCom.map(c=>c.segmento))];
+    document.getElementById('comSegFilter').innerHTML='<option value="TODOS">Todos os segmentos</option>'+segs.map(s=>`<option value="${s}">${s}</option>`).join('');
+    const catWrap=document.getElementById('comCatFilterWrap');
+    if(isBmax){
+        catWrap.style.display='';
+        const cats=[...new Set(allCom.map(c=>c.categoria_grupo))];
+        document.getElementById('comCatFilter').innerHTML='<option value="TODOS">Todas as categorias</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+    } else { catWrap.style.display='none'; }
+    renderComissoes();
+}
+function renderComissoes(){
+    const isBmax=document.getElementById('comTabela').value==='2';
+    const segF=document.getElementById('comSegFilter').value;
+    const catF=isBmax?document.getElementById('comCatFilter').value:'TODOS';
+    const d=allCom.filter(c=>(segF==='TODOS'||c.segmento===segF)&&(catF==='TODOS'||c.categoria_grupo===catF));
     let h='<table><thead><tr><th>Segmento</th>'+(isBmax?'<th>Categoria</th>':'')+'<th class="text-center">Classe</th><th class="text-center">Representante %</th><th class="text-center">Revenda %</th></tr></thead><tbody>';
     d.forEach(c=>{
         const rp=parseFloat(c.rep_pct), vp=c.revenda_pct===null?null:parseFloat(c.revenda_pct);
@@ -487,7 +511,7 @@ async function saveComissao(id){
     try{
         const revStr=document.getElementById('c_rev').value.trim();
         await sb('/comissoes?id=eq.'+id,'PATCH',{rep_pct:parseFloat(document.getElementById('c_rep').value),revenda_pct:revStr===''?null:parseFloat(revStr)});
-        toast('Comissão updated');closeModal();loadComissoes();
+        toast('Comissão updated');closeModal();await fetchCom();renderComissoes();
     }catch(e){toast('Erro: '+e.message,'error');}
 }
 
