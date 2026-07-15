@@ -437,16 +437,19 @@ async function saveEst(id){
 // MULTIPLICADORES
 async function loadMult(){
     const tid=document.getElementById('multTabela').value;
-    const d=await sb('/multiplicadores?tabela_id=eq.'+tid+'&select=*&order=segmento,classe,porte');
-    const portes=[...new Set(d.map(m=>m.porte))],segs=[...new Set(d.map(m=>m.segmento))],cls=[...new Set(d.map(m=>m.classe))].sort(),lk={};
-    d.forEach(m=>{lk[m.segmento+'-'+m.classe+'-'+m.porte]=m;});
-    let h='<table><thead><tr><th>Segmento</th><th class="text-center">Classe</th>';portes.forEach(p=>{h+=`<th class="text-center">${p}</th>`;});h+='</tr></thead><tbody>';
-    segs.forEach(seg=>{cls.forEach(c=>{h+=`<tr><td style="font-weight:500">${seg}</td><td class="text-center">${c}</td>`;portes.forEach(porte=>{const m=lk[seg+'-'+c+'-'+porte];if(m){const v=parseFloat(m.valor);const cl=v<1?'mult-discount':v>1?'mult-markup':'mult-neutral';const ck=IS_ADMIN?`onclick="editMult(${m.id},${v},'${seg}',${c},'${porte}')" style="cursor:pointer"`:'';h+=`<td class="text-center"><span class="mult-cell ${cl}" ${ck}>${v.toFixed(4)}</span></td>`;}else{h+=`<td class="text-center"><span class="mult-cell mult-na">N/D</span></td>`;}});h+='</tr>';});});
+    const isBmax=tid==='2';
+    const filtro=isBmax?'&categoria_grupo=not.is.null':'';
+    const d=await sb('/multiplicadores?tabela_id=eq.'+tid+filtro+'&select=*&order=segmento,classe');
+    const dimOf=m=>isBmax?m.categoria_grupo:m.porte;
+    const dims=[...new Set(d.map(dimOf))],segs=[...new Set(d.map(m=>m.segmento))],cls=[...new Set(d.map(m=>m.classe))].sort(),lk={};
+    d.forEach(m=>{lk[m.segmento+'-'+m.classe+'-'+dimOf(m)]=m;});
+    let h='<table><thead><tr><th>Segmento</th><th class="text-center">Classe</th>';dims.forEach(p=>{h+=`<th class="text-center">${p}</th>`;});h+='</tr></thead><tbody>';
+    segs.forEach(seg=>{cls.forEach(c=>{h+=`<tr><td style="font-weight:500">${seg}</td><td class="text-center">${c}</td>`;dims.forEach(dim=>{const m=lk[seg+'-'+c+'-'+dim];if(m){const v=parseFloat(m.valor);const cl=v<1?'mult-discount':v>1?'mult-markup':'mult-neutral';const ck=IS_ADMIN?`onclick="editMult(${m.id},${v},'${seg}',${c},'${dim}')" style="cursor:pointer"`:'';h+=`<td class="text-center"><span class="mult-cell ${cl}" ${ck}>${v.toFixed(4)}</span></td>`;}else{h+=`<td class="text-center"><span class="mult-cell mult-na">N/D</span></td>`;}});h+='</tr>';});});
     h+='</tbody></table><p style="font-size:12px;color:#718096;margin-top:12px">Verde=desconto · Vermelho=acréscimo'+(IS_ADMIN?' · Clique para editar':'')+'</p>';
     document.getElementById('multGrid').innerHTML=h;
 }
-function editMult(id,v,seg,cls,porte){
-    openModal(`<h3>Editar Multiplicador</h3><p style="color:#718096;font-size:13px;margin-bottom:16px">${seg} · Classe ${cls} · ${porte}</p>
+function editMult(id,v,seg,cls,dim){
+    openModal(`<h3>Editar Multiplicador</h3><p style="color:#718096;font-size:13px;margin-bottom:16px">${seg} · Classe ${cls} · ${dim}</p>
 <div class="form-row"><label>Valor</label><input id="m_v" type="number" step="0.0001" value="${v}"></div>
 <div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveMult(${id})">Salvar</button></div>`);
 }
@@ -461,18 +464,21 @@ async function saveMult(id){
 // COMISSÕES
 async function loadComissoes(){
     const tid=document.getElementById('comTabela').value;
-    const d=await sb('/comissoes?tabela_id=eq.'+tid+'&select=*&order=segmento,classe');
-    let h='<table><thead><tr><th>Segmento</th><th class="text-center">Classe</th><th class="text-center">Representante %</th><th class="text-center">Revenda %</th></tr></thead><tbody>';
+    const isBmax=tid==='2';
+    const filtro=isBmax?'&categoria_grupo=not.is.null':'';
+    const d=await sb('/comissoes?tabela_id=eq.'+tid+filtro+'&select=*&order=segmento,classe');
+    let h='<table><thead><tr><th>Segmento</th>'+(isBmax?'<th>Categoria</th>':'')+'<th class="text-center">Classe</th><th class="text-center">Representante %</th><th class="text-center">Revenda %</th></tr></thead><tbody>';
     d.forEach(c=>{
         const rp=parseFloat(c.rep_pct), vp=c.revenda_pct===null?null:parseFloat(c.revenda_pct);
-        const ck=IS_ADMIN?`onclick="editComissao(${c.id},${rp},${vp===null?'null':vp},'${c.segmento}',${c.classe})" style="cursor:pointer"`:'';
-        h+=`<tr><td style="font-weight:500">${c.segmento}</td><td class="text-center">${c.classe}</td><td class="text-center"><span class="mult-cell mult-neutral" ${ck}>${rp}%</span></td><td class="text-center">${vp===null?'—':`<span class="mult-cell mult-neutral" ${ck}>${vp}%</span>`}</td></tr>`;
+        const ck=IS_ADMIN?`onclick="editComissao(${c.id},${rp},${vp===null?'null':vp},'${c.segmento}',${c.classe},'${c.categoria_grupo||''}')" style="cursor:pointer"`:'';
+        h+=`<tr><td style="font-weight:500">${c.segmento}</td>`+(isBmax?`<td>${c.categoria_grupo||'—'}</td>`:'')+`<td class="text-center">${c.classe}</td><td class="text-center"><span class="mult-cell mult-neutral" ${ck}>${rp}%</span></td><td class="text-center">${vp===null?'—':`<span class="mult-cell mult-neutral" ${ck}>${vp}%</span>`}</td></tr>`;
     });
     h+='</tbody></table>'+(IS_ADMIN?'<p style="font-size:12px;color:#718096;margin-top:12px">Clique para editar</p>':'');
     document.getElementById('comGrid').innerHTML=h;
 }
-function editComissao(id,rep,revenda,seg,cls){
-    openModal(`<h3>Editar Comissão</h3><p style="color:#718096;font-size:13px;margin-bottom:16px">${seg} · Classe ${cls}</p>
+function editComissao(id,rep,revenda,seg,cls,categoria){
+    const subtitle = categoria ? `${seg} · ${categoria} · Classe ${cls}` : `${seg} · Classe ${cls}`;
+    openModal(`<h3>Editar Comissão</h3><p style="color:#718096;font-size:13px;margin-bottom:16px">${subtitle}</p>
 <div class="form-row"><label>Representante %</label><input id="c_rep" type="number" step="0.01" value="${rep}"></div>
 <div class="form-row"><label>Revenda % (deixe em branco se não houver)</label><input id="c_rev" type="number" step="0.01" value="${revenda===null?'':revenda}"></div>
 <div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveComissao(${id})">Salvar</button></div>`);

@@ -67,7 +67,7 @@ tbody tr.row-sel{background:#e8f0fe !important}
 <div><h1 id="pageTitle">Tabela de Preços Boxer</h1><p id="pageSubtitle">Carregando...</p></div></div>
 <div class="filters-row">
 <div><label class="filter-label">Estado</label><select id="selState" class="state-select"></select></div>
-<div><label class="filter-label">Segmento</label><div id="segBtns" class="btn-group"></div></div>
+<div><label class="filter-label" id="segLabel">Segmento</label><div id="segBtns" class="btn-group"></div></div>
 <div><label class="filter-label">Classe</label><div id="clsBtns" class="btn-group"></div></div>
 <div class="comissao-box" id="comissaoBox"><label class="filter-label">Comissionamento</label><div class="comissao-text" id="comissaoText"></div></div>
 </div></div></div>
@@ -96,7 +96,7 @@ const IS_AUTO = TID === 2;
 const SZ = {Pequenas:'PEQ',Médias:'MED',Grandes:'GRD','Maquinário':'MAQ'};
 const SZC = {Pequenas:'sz-peq',Médias:'sz-med',Grandes:'sz-grd','Maquinário':'sz-maq'};
 
-let P=[], ST=[], M={}, CM={}, SEG=[], CLS=[], CATS=[];
+let P=[], ST=[], M={}, CM={}, SEG=[], CLS=[], CATS=[], catGroupById={}, catGroupByName={};
 let cState='SP', cSeg='', cCls=0, cCat='TODAS', cSearch='';
 
 const selecionados = new Map();
@@ -114,10 +114,10 @@ async function load() {
     const [tabelaRes, estadosRes, multsRes, prodsRes, catsRes, comsRes] = await Promise.all([
         sbFetch('/tabelas?id=eq.'+TID+'&select=*'),
         sbFetch('/estados?select=uf,mult_4_icms,mult_total&order=uf'),
-        sbFetch('/multiplicadores?tabela_id=eq.'+TID+'&select=segmento,classe,porte,valor'),
+        sbFetch('/multiplicadores?tabela_id=eq.'+TID+'&select=segmento,classe,porte,categoria_grupo,valor'),
         sbFetch('/produtos?tabela_id=eq.'+TID+'&ativo=eq.true&pv_sp=gt.0&select=codigo,modelo,pv_sp,porte,icms,ipi,ncm,categoria_id&order=pv_sp'),
-        sbFetch('/categorias?tabela_id=eq.'+TID+'&select=id,nome,ordem&order=ordem'),
-        sbFetch('/comissoes?tabela_id=eq.'+TID+'&select=segmento,classe,rep_pct,revenda_pct')
+        sbFetch('/categorias?tabela_id=eq.'+TID+'&select=id,nome,ordem,categoria_grupo&order=ordem'),
+        sbFetch('/comissoes?tabela_id=eq.'+TID+'&select=segmento,classe,categoria_grupo,rep_pct,revenda_pct')
     ]);
 
     const tabela = tabelaRes[0];
@@ -125,14 +125,14 @@ async function load() {
     SEG = tabela.segmentos;
     CLS = tabela.classes;
 
-    multsRes.forEach(m => { M[m.segmento+m.classe+m.porte] = parseFloat(m.valor); });
-    comsRes.forEach(c => { CM[c.segmento+'-'+c.classe] = c; });
+    multsRes.forEach(m => { const dim = m.categoria_grupo || m.porte; M[m.segmento+m.classe+dim] = parseFloat(m.valor); });
+    comsRes.forEach(c => { CM[c.segmento+'-'+c.classe+'-'+c.categoria_grupo] = c; });
 
     const catMap = {};
-    catsRes.forEach(c => { catMap[c.id] = c.nome; });
+    catsRes.forEach(c => { catMap[c.id] = c.nome; catGroupById[c.id] = c.categoria_grupo; catGroupByName[c.nome] = c.categoria_grupo; });
     CATS = catsRes.map(c => c.nome);
 
-    P = prodsRes.map(p => ({...p, cat: catMap[p.categoria_id] || 'SEM CATEGORIA'}));
+    P = prodsRes.map(p => ({...p, cat: catMap[p.categoria_id] || 'SEM CATEGORIA', catGroup: catGroupById[p.categoria_id] || null}));
 
     cSeg = SEG[0];
     cCls = IS_AUTO ? CLS[0] : CLS[CLS.length-1];
@@ -146,6 +146,7 @@ async function load() {
         document.getElementById('navBtn').href = 'tabela-de-precos.html?t=1';
         document.getElementById('navBtn').innerHTML = '&#10132; Tabela Revendas';
         document.title = 'Tabela de Preços Boxer - Automação';
+        document.getElementById('segLabel').textContent = 'Origem do lead';
     } else {
         document.getElementById('navBtn').href = 'tabela-de-precos.html?t=2';
         document.getElementById('navBtn').innerHTML = '<img src="bmax-logo.png" height="32" style="display:block">';
@@ -182,8 +183,9 @@ function updBtns() {
 
 function updateComissao() {
     const box = document.getElementById('comissaoBox');
-    if (!IS_AUTO) { box.style.display='none'; return; }
-    const c = CM[cSeg+'-'+cCls];
+    if (!IS_AUTO || cCat === 'TODAS') { box.style.display='none'; return; }
+    const grupo = catGroupByName[cCat];
+    const c = CM[cSeg+'-'+cCls+'-'+grupo];
     if (c) {
         let text = `Representante = <span>${parseFloat(c.rep_pct)}%</span>`;
         if (c.revenda_pct !== null) text += ` · Revenda = <span>${parseFloat(c.revenda_pct)}%</span>`;
@@ -212,7 +214,8 @@ function render() {
             let r = '';
             ps.forEach(p => {
                 const tb = p.pv_sp * parseFloat(st.mult_4_icms) / (1 - parseFloat(st.mult_total)/100);
-                const k = cSeg+cCls+p.porte;
+                const dim = IS_AUTO ? p.catGroup : p.porte;
+                const k = cSeg+cCls+dim;
                 const scm = M[k];
                 let pc = scm!==undefined ? `<td class="td-price-final">${fmt(tb*scm)}</td>` : `<td style="text-align:right;color:#a0aec0;font-style:italic;font-size:12px">N/D</td>`;
                 const ic = cState==='SP' ? p.icms : 4;
