@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Catálogo de Produtos — Marketing Boxer</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:Outfit,sans-serif;background:#f0f4f8;color:#1a202c}
+.topbar{background:linear-gradient(135deg,#1d327b,#162666);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #25bbee}
+.topbar-left{display:flex;align-items:center;gap:12px}.topbar h1{color:#fff;font-size:18px;font-weight:700}
+.topbar-right{display:flex;align-items:center;gap:16px}.user-badge{color:#93b4d4;font-size:13px}.user-badge strong{color:#fff}
+.logout-btn{color:#93b4d4;text-decoration:none;font-size:13px;padding:6px 12px;border:1px solid rgba(255,255,255,.2);border-radius:6px;cursor:pointer}
+.logout-btn:hover{background:rgba(255,255,255,.1);color:#fff}
+.panel{max-width:1200px;margin:24px auto;padding:0 24px}
+.panel-content{background:#fff;border:1px solid #d0d8e8;border-radius:8px;padding:20px}
+.panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.panel-title{font-size:16px;font-weight:600}.panel-sub{font-size:13px;color:#718096;margin-top:2px}
+.btn{padding:8px 16px;border-radius:8px;border:1px solid;font-family:Outfit;font-size:13px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:4px}
+.btn-primary{background:#1d327b;color:#fff;border-color:#1d327b}.btn-primary:hover{background:#162666}
+.btn-sm{padding:4px 10px;font-size:12px}.btn-outline{background:#fff;color:#4a5568;border-color:#c3cfe2}.btn-outline:hover{border-color:#25bbee;color:#1d327b}
+select,input,textarea{font-family:Outfit;font-size:13px;padding:8px 12px;border:1px solid #c3cfe2;border-radius:6px;outline:none}
+select:focus,input:focus,textarea:focus{border-color:#25bbee}
+.select-sm{padding:6px 10px;font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{padding:8px 12px;text-align:left;color:#718096;font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #e2e8f0;background:#f7fafc}
+tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}tbody tr:hover{background:#f0f7ff}
+.text-center{text-align:center}
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}.modal{background:#fff;border-radius:12px;padding:24px;width:100%;max-width:550px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal h3{font-size:18px;margin-bottom:16px;color:#1d327b}
+.form-row{margin-bottom:14px}.form-row label{display:block;font-size:12px;font-weight:500;color:#4a5568;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.form-row input,.form-row select,.form-row textarea{width:100%}.form-row-inline{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid #e2e8f0}
+.toast{position:fixed;top:20px;right:20px;padding:12px 20px;border-radius:8px;color:#fff;font-family:Outfit;font-size:13px;font-weight:500;z-index:2000;animation:slideIn .3s;box-shadow:0 4px 12px rgba(0,0,0,.15)}
+.toast-success{background:#16a34a}.toast-error{background:#dc2626}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+.hidden{display:none !important}.loading{text-align:center;padding:40px;color:#718096}
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f0f4f8}
+.login-card{background:#fff;border-radius:12px;padding:40px;width:100%;max-width:400px;box-shadow:0 4px 24px rgba(0,0,0,.08);border:1px solid #e2e8f0}
+.login-card h1{font-size:20px;color:#1d327b;font-weight:700;text-align:center;margin:12px 0 4px}
+.login-card p{font-size:13px;color:#718096;text-align:center;margin-bottom:24px}
+.field{margin-bottom:16px}.field label{display:block;font-size:12px;font-weight:500;color:#4a5568;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.field input{width:100%;padding:10px 14px;border:1px solid #c3cfe2;border-radius:8px;font-size:14px;font-family:Outfit;outline:none}
+.field input:focus{border-color:#25bbee}
+.btn-login{width:100%;padding:12px;background:#1d327b;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:Outfit}
+.btn-login:hover{background:#162666}
+.err-msg{background:#fee2e2;color:#991b1b;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;border:1px solid #fecaca}
+</style>
+</head>
+<body>
+
+<div id="loginPage" class="login-wrap">
+<div class="login-card">
+<div style="text-align:center">
+<img src="Estrela-Boxer.svg" width="50" height="50" style="display:block">
+</div>
+<h1>Catálogo de Produtos</h1>
+<p>Marketing — Boxer Soldas</p>
+<div id="loginErr" class="err-msg hidden"></div>
+<div class="field"><label>Email</label><input id="loginEmail" type="email" placeholder="seu@email.com"></div>
+<div class="field"><label>Senha</label><input id="loginPass" type="password" placeholder="••••••••"></div>
+<button class="btn-login" onclick="doLogin()">Entrar</button>
+</div>
+</div>
+
+<div id="appPage" class="hidden">
+<div class="topbar">
+<div class="topbar-left">
+<img src="Estrela-Boxer.svg" width="32" height="32" style="display:block">
+<h1>Catálogo de Produtos — Marketing</h1>
+</div>
+<div class="topbar-right">
+<span class="user-badge"><strong id="userName"></strong></span>
+<span class="logout-btn" onclick="doLogout()">Sair</span>
+</div>
+</div>
+
+<div class="panel">
+<div class="panel-content">
+<div class="panel-header"><div><div class="panel-title">Produtos</div><div class="panel-sub">Edite imagem de capa, descrição e características técnicas</div></div>
+<div style="display:flex;gap:8px;align-items:center">
+<select id="prodTabela" class="select-sm" onchange="loadProdutos()"><option value="1">Revendas</option><option value="2">BMAX</option></select>
+<select id="prodCatFilter" class="select-sm" onchange="filterProdutos()"><option value="TODAS">Todas as categorias</option></select>
+<input type="text" id="prodSearch" placeholder="Buscar..." style="width:200px;padding:6px 10px;font-size:12px" oninput="filterProdutos()">
+</div></div>
+<div style="overflow:auto;max-height:650px" id="prodTableWrap"><div class="loading">Carregando...</div></div>
+</div>
+</div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay"><div class="modal" id="modalBody"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SB_URL  = 'https://bmepxcnrsofofoswubuu.supabase.co';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtZXB4Y25yc29mb2Zvc3d1YnV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MTczNzMsImV4cCI6MjA5NTI5MzM3M30.S55ouFczRYlUYNFf5PotYKXBPT5idypTSmbzR-x2Pk0';
+
+let SESSION = null, allProd = [];
+
+async function sb(path, method='GET', body=null, token=null) {
+    const hdrs = {
+        'apikey': SB_ANON,
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer '+(token || SESSION?.access_token || SB_ANON),
+        'Prefer': method==='POST' ? 'return=representation' : method==='PATCH' ? 'return=minimal' : ''
+    };
+    const opts = {method, headers: hdrs};
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(SB_URL+'/rest/v1'+path, opts);
+    if (!r.ok) { const e = await r.text(); throw new Error(e); }
+    return method==='GET' || method==='POST' ? r.json() : r;
+}
+
+async function sbAuth(path, body) {
+    const r = await fetch(SB_URL+'/auth/v1'+path, {
+        method:'POST', headers:{'Content-Type':'application/json','apikey':SB_ANON},
+        body: JSON.stringify(body)
+    });
+    return r.json();
+}
+
+async function doLogin() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPass').value;
+    const errEl = document.getElementById('loginErr');
+
+    if (!email || !pass) {
+        errEl.textContent = 'Preencha todos os campos';
+        errEl.classList.remove('hidden');
+        return;
+    }
+    errEl.classList.add('hidden');
+
+    try {
+        const res = await sbAuth('/token?grant_type=password', {email, password: pass});
+        if (res.error || !res.access_token) {
+            errEl.textContent = 'Email ou senha incorretos';
+            errEl.classList.remove('hidden');
+            return;
+        }
+        SESSION = res;
+
+        let permissao = 'marketing';
+        if (email.toLowerCase() !== 'bruno@boxersoldas.com.br') {
+            try {
+                const perfis = await sb('/perfis?id=eq.'+res.user.id+'&select=*');
+                permissao = perfis[0]?.permissao || null;
+            } catch(e) { permissao = null; }
+        } else {
+            permissao = 'admin';
+        }
+
+        if (permissao !== 'marketing' && permissao !== 'admin') {
+            errEl.textContent = 'Este login não tem acesso a esta ferramenta.';
+            errEl.classList.remove('hidden');
+            SESSION = null;
+            return;
+        }
+
+        document.getElementById('userName').textContent = email;
+        document.getElementById('loginPage').classList.add('hidden');
+        document.getElementById('appPage').classList.remove('hidden');
+        loadProdutos();
+    } catch (e) {
+        console.error(e);
+        errEl.textContent = 'Erro de conexão com o servidor. Tente novamente.';
+        errEl.classList.remove('hidden');
+    }
+}
+
+function doLogout() {
+    SESSION = null;
+    document.getElementById('appPage').classList.add('hidden');
+    document.getElementById('loginPage').classList.remove('hidden');
+}
+
+async function loadProdutos(){
+    try {
+        const tid = document.getElementById('prodTabela').value;
+        const [prods, cats] = await Promise.all([
+            sb('/produtos?tabela_id=eq.'+tid+'&ativo=eq.true&select=*,categorias(nome)&order=modelo'),
+            sb('/categorias?tabela_id=eq.'+tid+'&select=id,nome&order=ordem')
+        ]);
+        allProd = prods.map(p => ({...p, cat: p.categorias?.nome || 'SEM CATEGORIA'}));
+        const catSel=document.getElementById('prodCatFilter');
+        catSel.innerHTML='<option value="TODAS">Todas as categorias</option>'+cats.map(c=>`<option value="${c.nome}">${c.nome}</option>`).join('');
+        renderProd(allProd);
+    } catch (e) {
+        document.getElementById('prodTableWrap').innerHTML = `<div style="text-align:center;padding:20px;color:#dc2626">Erro ao carregar produtos: ${e.message}</div>`;
+    }
+}
+function filterProdutos(){
+    const q=document.getElementById('prodSearch').value.toLowerCase();
+    const cat=document.getElementById('prodCatFilter').value;
+    let list=cat==='TODAS'?allProd:allProd.filter(p=>p.cat===cat);
+    if(q) list=list.filter(p=>p.modelo.toLowerCase().includes(q)||p.codigo.toLowerCase().includes(q));
+    renderProd(list);
+}
+function renderProd(ps){
+    let h='<table><thead><tr><th>Código</th><th>Modelo</th><th>Categoria</th><th class="text-center">Imagem</th><th class="text-center">Ações</th></tr></thead><tbody>';
+    ps.forEach(p=>{
+        const thumb = p.imagem_url ? `<img src="${p.imagem_url}" style="width:40px;height:40px;object-fit:contain;border:1px solid #e2e8f0;border-radius:4px">` : '<span style="color:#a0aec0;font-size:11px">— sem imagem</span>';
+        h+=`<tr><td style="font-family:monospace;font-size:12px">${p.codigo}</td><td>${p.modelo}</td><td style="color:#718096;font-size:12px">${p.cat}</td><td class="text-center">${thumb}</td><td class="text-center"><button class="btn btn-outline btn-sm" onclick="openProdModal(${p.id})">Editar</button></td></tr>`;
+    });
+    h+='</tbody></table>';
+    document.getElementById('prodTableWrap').innerHTML=h;
+}
+
+let CUR_PROD_IMG = null;
+function openProdModal(id){
+    const p=allProd.find(x=>x.id===id);
+    if(!p){toast('Produto não encontrado','error');return;}
+    CUR_PROD_IMG = p.imagem_url || null;
+    const carac = Array.isArray(p.caracteristicas) ? p.caracteristicas : [];
+    const caracRowsHTML = carac.map(c=>caracRowHTML(c.label||c.chave||'', c.valor||c.value||'')).join('');
+    openModal(`<h3>Editar Produto</h3>
+<p style="color:#718096;font-size:13px;margin-bottom:16px">${p.codigo} · ${p.modelo} · ${p.cat}</p>
+<div class="form-row"><label>Imagem de Capa</label>
+<div id="imgPreview" style="margin-bottom:8px">${p.imagem_url ? `<img src="${p.imagem_url}" style="max-width:200px;max-height:150px;display:block;border:1px solid #e2e8f0;border-radius:6px;object-fit:contain">` : '<p style="color:#a0aec0;font-size:12px">Nenhuma imagem cadastrada</p>'}</div>
+<input type="file" id="f_img" accept="image/*" onchange="previewImgFile(this)"></div>
+<div class="form-row"><label>Descrição Completa</label><textarea id="f_desc" rows="4" style="resize:vertical">${(p.descricao_completa||'').replace(/</g,'&lt;')}</textarea></div>
+<div class="form-row"><label>Características Técnicas</label>
+<div id="caracList">${caracRowsHTML}</div>
+<button type="button" class="btn btn-outline btn-sm" onclick="addCaracRow()">+ Adicionar característica</button>
+</div>
+<div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveProd(${id})">Salvar</button></div>`);
+}
+function caracRowHTML(label,valor){
+    return `<div class="form-row-inline carac-row" style="margin-bottom:8px"><input placeholder="Característica (ex: Potência)" class="carac-label" value="${String(label).replace(/"/g,'&quot;')}"><div style="display:flex;gap:6px"><input placeholder="Valor (ex: 2000W)" class="carac-valor" value="${String(valor).replace(/"/g,'&quot;')}"><button type="button" class="btn btn-outline btn-sm" onclick="this.closest('.carac-row').remove()">✕</button></div></div>`;
+}
+function addCaracRow(){
+    document.getElementById('caracList').insertAdjacentHTML('beforeend', caracRowHTML('',''));
+}
+function collectCaracRows(){
+    const labels=[...document.querySelectorAll('.carac-label')], valores=[...document.querySelectorAll('.carac-valor')];
+    const out=[];
+    labels.forEach((el,i)=>{const label=el.value.trim(), valor=valores[i].value.trim(); if(label||valor) out.push({label,valor});});
+    return out;
+}
+function previewImgFile(input){
+    const file=input.files[0];
+    if(!file)return;
+    const url=URL.createObjectURL(file);
+    document.getElementById('imgPreview').innerHTML=`<img src="${url}" style="max-width:200px;max-height:150px;display:block;border:1px solid #e2e8f0;border-radius:6px;object-fit:contain">`;
+}
+async function saveProd(id){
+    try{
+        let imagemUrl = CUR_PROD_IMG;
+        const file = document.getElementById('f_img').files[0];
+        if(file){
+            const p = allProd.find(x=>x.id===id);
+            const ext = (file.name.split('.').pop()||'jpg').toLowerCase();
+            const path = (p?.codigo||id)+'-'+Date.now()+'.'+ext;
+            const up = await fetch(SB_URL+'/storage/v1/object/produtos-imagens/'+path,{
+                method:'POST',
+                headers:{'Content-Type':file.type||'application/octet-stream','Authorization':'Bearer '+SESSION.access_token,'apikey':SB_ANON},
+                body:file
+            });
+            if(!up.ok){const e=await up.text();throw new Error('Falha no upload da imagem: '+e);}
+            imagemUrl = SB_URL+'/storage/v1/object/public/produtos-imagens/'+path;
+        }
+        const body={descricao_completa:document.getElementById('f_desc').value, caracteristicas:collectCaracRows()};
+        if(imagemUrl) body.imagem_url = imagemUrl;
+        await sb('/produtos?id=eq.'+id,'PATCH',body);
+        await sb('/log_alteracoes','POST',{usuario_id:SESSION.user.id,usuario_email:SESSION.user.email,tabela_ref:'produtos',registro_id:id,campo:'marketing_update',valor_novo:'imagem/descrição/características'});
+        toast('Produto atualizado');closeModal();loadProdutos();
+    }catch(e){toast('Erro ao salvar: '+e.message,'error');}
+}
+
+function openModal(html){document.getElementById('modalBody').innerHTML=html;document.getElementById('modalOverlay').classList.add('show');}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('show');}
+function toast(msg,type='success'){
+    const t=document.getElementById('toast');
+    t.textContent=msg;t.className='toast toast-'+type;t.style.display='block';
+    setTimeout(()=>t.style.display='none',3000);
+}
+</script>
+</body>
+</html>

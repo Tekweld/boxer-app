@@ -144,11 +144,11 @@ iframe#previewFrame{flex:1;border:none;background:#e8eaf0}
       <button class="btn-preview" onclick="abrirNovaAba()">Abrir em nova aba ↗</button>
     </div>
     <iframe id="previewFrame" title="Proposta"></iframe>
-    <div class="erro-central" id="erroCentral" style="display:none">
-      <h2>Proposta não encontrada</h2>
-      <p>Verifique o link ou volte para a lista de propostas.</p>
-    </div>
   </div>
+</div>
+<div class="erro-central" id="erroCentral" style="display:none">
+  <h2>Proposta não encontrada</h2>
+  <p>Verifique o link ou volte para a lista de propostas.</p>
 </div>
 
 <!-- Overlay -->
@@ -416,6 +416,7 @@ function esconderOverlay() {
 function mostrarErroCentral() {
   document.querySelector('.layout').style.display = 'none';
   document.getElementById('erroCentral').style.display = 'flex';
+  document.getElementById('headerSub').textContent = 'Proposta não encontrada';
   esconderOverlay();
 }
 

@@ -146,7 +146,7 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 const SB_URL = 'https://bmepxcnrsofofoswubuu.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtZXB4Y25yc29mb2Zvc3d1YnV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MTczNzMsImV4cCI6MjA5NTI5MzM3M30.S55ouFczRYlUYNFf5PotYKXBPT5idypTSmbzR-x2Pk0';
 
-let SESSION = null, PERFIL = null, IS_ADMIN = false, IS_MARKETING = false;
+let SESSION = null, PERFIL = null, IS_ADMIN = false;
 let allProd = [];
 
 function toast(m,t='success'){const d=document.createElement('div');d.className='toast toast-'+t;d.textContent=m;document.body.appendChild(d);setTimeout(()=>d.remove(),3000);}
@@ -176,16 +176,15 @@ async function sbAuth(path, body) {
 }
 
 function setupAdminSession(nome, permissao) {
+    if (permissao === 'marketing') { window.location.href = 'marketing.html'; return; }
     IS_ADMIN = permissao === 'admin';
-    IS_MARKETING = permissao === 'marketing';
     document.getElementById('userName').textContent = nome;
     const pt = document.getElementById('userPerm');
     pt.textContent = permissao.toUpperCase();
     pt.className = 'perm-tag perm-' + permissao;
 
-    document.getElementById('prodSub').textContent = IS_ADMIN ? 'Admin: edita tudo' : IS_MARKETING ? 'Marketing: edita imagem, descrição e características técnicas' : 'Editor: edita tudo exceto PV SP';
+    document.getElementById('prodSub').textContent = IS_ADMIN ? 'Admin: edita tudo' : 'Editor: edita tudo exceto PV SP';
     document.querySelectorAll('.admin-only').forEach(el => IS_ADMIN ? el.classList.remove('hidden') : el.classList.add('hidden'));
-    document.getElementById('btnNovoProd').classList.toggle('hidden', IS_MARKETING);
     
 setTimeout(() => {
     document.getElementById('loginPage').classList.add('hidden');
@@ -241,7 +240,7 @@ async function doLogin() {
 }
 
 function doLogout() {
-   SESSION = null; PERFIL = null; IS_ADMIN = false; IS_MARKETING = false;
+   SESSION = null; PERFIL = null; IS_ADMIN = false;
     document.getElementById('adminPage').style.display = 'none';
     document.getElementById('loginPage').style.display = 'flex';
     if(window.location.hash) window.location.hash = '';
@@ -302,25 +301,13 @@ function filterProdutos(){
     renderProd(list);
 }
 function renderProd(ps){
-    if(IS_MARKETING) return renderProdMarketing(ps);
     const sm={Pequenas:'sz-peq',Médias:'sz-med',Grandes:'sz-grd','Maquinário':'sz-maq'},sl={Pequenas:'PEQ',Médias:'MED',Grandes:'GRD','Maquinário':'MAQ'};
     let h='<table><thead><tr><th>Código</th><th>Modelo</th><th>Categoria</th><th class="text-right">PV SP</th><th class="text-center">Porte</th><th class="text-right">ICMS</th><th class="text-right">IPI</th><th>NCM</th><th class="text-center">Ações</th></tr></thead><tbody>';
     ps.forEach(p=>{h+=`<tr><td style="font-family:monospace;font-size:12px">${p.codigo}</td><td>${p.modelo}</td><td style="color:#718096;font-size:12px">${p.cat}</td><td class="text-right" style="font-weight:600">R$ ${parseFloat(p.pv_sp).toFixed(2)}</td><td class="text-center"><span class="size-badge ${sm[p.porte]||''}">${sl[p.porte]||p.porte}</span></td><td class="text-right">${p.icms}%</td><td class="text-right">${p.ipi}%</td><td style="color:#a0aec0;font-size:11px">${p.ncm}</td><td class="text-center" style="white-space:nowrap"><button class="btn btn-outline btn-sm" onclick="openProdModal(${p.id})">Editar</button>${IS_ADMIN?` <button class="btn btn-danger btn-sm" onclick="delProd(${p.id},'${p.modelo.replace(/'/g,"\\'")}')">Excluir</button>`:''}</td></tr>`;});
     h+='</tbody></table>';
     document.getElementById('prodTableWrap').innerHTML=h;
 }
-function renderProdMarketing(ps){
-    let h='<table><thead><tr><th>Código</th><th>Modelo</th><th>Categoria</th><th class="text-center">Imagem</th><th class="text-center">Ações</th></tr></thead><tbody>';
-    ps.forEach(p=>{
-        const thumb = p.imagem_url ? `<img src="${p.imagem_url}" style="width:40px;height:40px;object-fit:contain;border:1px solid #e2e8f0;border-radius:4px">` : '<span style="color:#a0aec0;font-size:11px">— sem imagem</span>';
-        h+=`<tr><td style="font-family:monospace;font-size:12px">${p.codigo}</td><td>${p.modelo}</td><td style="color:#718096;font-size:12px">${p.cat}</td><td class="text-center">${thumb}</td><td class="text-center"><button class="btn btn-outline btn-sm" onclick="openProdModal(${p.id})">Editar</button></td></tr>`;
-    });
-    h+='</tbody></table>';
-    document.getElementById('prodTableWrap').innerHTML=h;
-}
-let CUR_PROD_IMG = null;
 async function openProdModal(id=null){
-    if(IS_MARKETING) return openProdModalMarketing(id);
     const tid=document.getElementById('prodTabela').value;
     const cats=await sb('/categorias?tabela_id=eq.'+tid+'&select=id,nome&order=ordem');
     let p={codigo:'',modelo:'',pv_sp:'',porte:'Pequenas',icms:'8.8',ipi:'0',ncm:'',categoria_id:null};
@@ -347,65 +334,6 @@ async function saveProd(id){
         await sb('/log_alteracoes','POST',{usuario_id:SESSION.user.id,usuario_email:SESSION.user.email,tabela_ref:'produtos',registro_id:id,campo:id?'update':'create',valor_novo:body.modelo});
         await sb('/tabelas?id=eq.'+tid,'PATCH',{atualizado_em:new Date().toISOString()});
         toast(id?'Produto updated':'Produto criado');closeModal();loadProdutos();
-    }catch(e){toast('Erro ao salvar: '+e.message,'error');}
-}
-function openProdModalMarketing(id){
-    const p=allProd.find(x=>x.id===id);
-    if(!p){toast('Produto não encontrado','error');return;}
-    CUR_PROD_IMG = p.imagem_url || null;
-    const carac = Array.isArray(p.caracteristicas) ? p.caracteristicas : [];
-    const caracRowsHTML = carac.map(c=>caracRowHTML(c.label||c.chave||'', c.valor||c.value||'')).join('');
-    openModal(`<h3>Editar Produto — Marketing</h3>
-<p style="color:#718096;font-size:13px;margin-bottom:16px">${p.codigo} · ${p.modelo} · ${p.cat}</p>
-<div class="form-row"><label>Imagem de Capa</label>
-<div id="imgPreview" style="margin-bottom:8px">${p.imagem_url ? `<img src="${p.imagem_url}" style="max-width:200px;max-height:150px;display:block;border:1px solid #e2e8f0;border-radius:6px;object-fit:contain">` : '<p style="color:#a0aec0;font-size:12px">Nenhuma imagem cadastrada</p>'}</div>
-<input type="file" id="f_img" accept="image/*" onchange="previewImgFile(this)"></div>
-<div class="form-row"><label>Descrição Completa</label><textarea id="f_desc" rows="4" style="width:100%;font-family:Outfit;font-size:13px;padding:8px 12px;border:1px solid #c3cfe2;border-radius:6px;resize:vertical">${(p.descricao_completa||'').replace(/</g,'&lt;')}</textarea></div>
-<div class="form-row"><label>Características Técnicas</label>
-<div id="caracList">${caracRowsHTML}</div>
-<button type="button" class="btn btn-outline btn-sm" onclick="addCaracRow()">+ Adicionar característica</button>
-</div>
-<div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveProdMarketing(${id})">Salvar</button></div>`);
-}
-function caracRowHTML(label,valor){
-    return `<div class="form-row-inline carac-row" style="margin-bottom:8px"><input placeholder="Característica (ex: Potência)" class="carac-label" value="${String(label).replace(/"/g,'&quot;')}"><div style="display:flex;gap:6px"><input placeholder="Valor (ex: 2000W)" class="carac-valor" value="${String(valor).replace(/"/g,'&quot;')}"><button type="button" class="btn btn-outline btn-sm" onclick="this.closest('.carac-row').remove()">✕</button></div></div>`;
-}
-function addCaracRow(){
-    document.getElementById('caracList').insertAdjacentHTML('beforeend', caracRowHTML('',''));
-}
-function collectCaracRows(){
-    const labels=[...document.querySelectorAll('.carac-label')], valores=[...document.querySelectorAll('.carac-valor')];
-    const out=[];
-    labels.forEach((el,i)=>{const label=el.value.trim(), valor=valores[i].value.trim(); if(label||valor) out.push({label,valor});});
-    return out;
-}
-function previewImgFile(input){
-    const file=input.files[0];
-    if(!file)return;
-    const url=URL.createObjectURL(file);
-    document.getElementById('imgPreview').innerHTML=`<img src="${url}" style="max-width:200px;max-height:150px;display:block;border:1px solid #e2e8f0;border-radius:6px;object-fit:contain">`;
-}
-async function saveProdMarketing(id){
-    try{
-        let imagemUrl = CUR_PROD_IMG;
-        const file = document.getElementById('f_img').files[0];
-        if(file){
-            const p = allProd.find(x=>x.id===id);
-            const ext = (file.name.split('.').pop()||'jpg').toLowerCase();
-            const path = (p?.codigo||id)+'-'+Date.now()+'.'+ext;
-            const up = await fetch(SB_URL+'/storage/v1/object/produtos-imagens/'+path,{
-                method:'POST',
-                headers:{'Content-Type':file.type||'application/octet-stream','Authorization':'Bearer '+SESSION.access_token,'apikey':SB_ANON},
-                body:file
-            });
-            if(!up.ok){const e=await up.text();throw new Error('Falha no upload da imagem: '+e);}
-            imagemUrl = SB_URL+'/storage/v1/object/public/produtos-imagens/'+path;
-        }
-        const body={descricao_completa:document.getElementById('f_desc').value, caracteristicas:collectCaracRows()};
-        if(imagemUrl) body.imagem_url = imagemUrl;
-        await sb('/produtos?id=eq.'+id,'PATCH',body);
-        await sb('/log_alteracoes','POST',{usuario_id:SESSION.user.id,usuario_email:SESSION.user.email,tabela_ref:'produtos',registro_id:id,campo:'marketing_update',valor_novo:'imagem/descrição/características'});
-        toast('Produto atualizado');closeModal();loadProdutos();
     }catch(e){toast('Erro ao salvar: '+e.message,'error');}
 }
 async function delProd(id,n){
