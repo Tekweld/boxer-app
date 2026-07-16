@@ -172,6 +172,7 @@ let itens        = [];
 let contatos     = [];
 let versoes      = [];
 let versaoAtual  = null; // objeto da versão sendo exibida
+let vendedorId   = null;
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
 async function init() {
@@ -181,6 +182,7 @@ async function init() {
 
   const { data: { session } } = await sb.auth.getSession();
   if (!session) { window.location.href = 'login.html'; return; }
+  vendedorId = session.user.id;
 
   mostrarOverlay('Carregando proposta...');
   await carregarTudo();
@@ -349,7 +351,7 @@ async function gerarNovaVersao() {
       versao:         novoNumero,
       tipo_alteracao: 'atualizacao',
       descricao:      'Versão atualizada manualmente',
-      vendedor_id:    (await sb.auth.getUser()).data.user.id,
+      vendedor_id:    vendedorId,
       html_snapshot:  html
     }).select('id, versao, tipo_alteracao, descricao, html_snapshot, criado_em').single();
 
