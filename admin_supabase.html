@@ -307,27 +307,43 @@ function renderProd(ps){
     h+='</tbody></table>';
     document.getElementById('prodTableWrap').innerHTML=h;
 }
+let PROD_CATS_GRUPO = {};
 async function openProdModal(id=null){
     const tid=document.getElementById('prodTabela').value;
-    const cats=await sb('/categorias?tabela_id=eq.'+tid+'&select=id,nome&order=ordem');
+    const cats=await sb('/categorias?tabela_id=eq.'+tid+'&select=id,nome,categoria_grupo&order=ordem');
+    PROD_CATS_GRUPO=Object.fromEntries(cats.map(c=>[c.id,c.categoria_grupo]));
     let p={codigo:'',modelo:'',pv_sp:'',porte:'Pequenas',icms:'8.8',ipi:'0',ncm:'',categoria_id:null};
     if(id){const r=await sb('/produtos?id=eq.'+id+'&select=*');p=r[0];}
-    const pvD=!IS_ADMIN?'disabled style="background:#f1f5f9"':'';
     openModal(`<h3>${id?'Editar':'Novo'} Produto</h3>
 <div class="form-row-inline"><div class="form-row"><label>Código</label><input id="f_cod" value="${p.codigo}"></div>
-<div class="form-row"><label>Categoria</label><select id="f_cat">${cats.map(c=>`<option value="${c.id}" ${c.id==p.categoria_id?'selected':''}>${c.nome}</option>`).join('')}</select></div></div>
+<div class="form-row"><label>Categoria</label><select id="f_cat" onchange="atualizarBloqueioPvSp()">${cats.map(c=>`<option value="${c.id}" ${c.id==p.categoria_id?'selected':''}>${c.nome}</option>`).join('')}</select></div></div>
 <div class="form-row"><label>Modelo</label><input id="f_mod" value="${(p.modelo||'').replace(/"/g,'&quot;')}"></div>
-<div class="form-row-inline"><div class="form-row"><label>PV SP ${!IS_ADMIN?'🔒':''}</label><input id="f_pv" type="number" step="0.01" value="${p.pv_sp}" ${pvD}></div>
+<div class="form-row-inline"><div class="form-row"><label id="f_pv_label">PV SP</label><input id="f_pv" type="number" step="0.01" value="${p.pv_sp}"><p id="f_pv_hint" style="font-size:11px;color:#718096;margin-top:4px;display:none">Sincronizado automaticamente com a Revendas (×1.308) — edite o produto na tabela Revendas.</p></div>
 <div class="form-row"><label>Porte</label><select id="f_po"><option ${p.porte==='Pequenas'?'selected':''}>Pequenas</option><option ${p.porte==='Médias'?'selected':''}>Médias</option><option ${p.porte==='Grandes'?'selected':''}>Grandes</option><option ${p.porte==='Maquinário'?'selected':''}>Maquinário</option></select></div></div>
 <div class="form-row-inline"><div class="form-row"><label>ICMS %</label><input id="f_ic" type="number" step="0.01" value="${p.icms}"></div>
 <div class="form-row"><label>IPI %</label><input id="f_ip" type="number" step="0.01" value="${p.ipi}"></div></div>
 <div class="form-row"><label>NCM</label><input id="f_nc" value="${p.ncm}"></div>
 <div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveProd(${id||'null'})">Salvar</button></div>`);
+    atualizarBloqueioPvSp();
+}
+function pvSpEhDerivado(){
+    const tid=document.getElementById('prodTabela').value;
+    const catId=parseInt(document.getElementById('f_cat').value);
+    return tid==='2' && PROD_CATS_GRUPO[catId]==='Máquinas';
+}
+function atualizarBloqueioPvSp(){
+    const derivado=pvSpEhDerivado();
+    const input=document.getElementById('f_pv');
+    const trava=!IS_ADMIN||derivado;
+    input.disabled=trava;
+    input.style.background=trava?'#f1f5f9':'';
+    document.getElementById('f_pv_label').innerHTML='PV SP '+(trava?'🔒':'');
+    document.getElementById('f_pv_hint').style.display=derivado?'block':'none';
 }
 async function saveProd(id){
     const tid=document.getElementById('prodTabela').value;
     const body={tabela_id:parseInt(tid),codigo:document.getElementById('f_cod').value,modelo:document.getElementById('f_mod').value,porte:document.getElementById('f_po').value,icms:parseFloat(document.getElementById('f_ic').value),ipi:parseFloat(document.getElementById('f_ip').value),ncm:document.getElementById('f_nc').value,categoria_id:parseInt(document.getElementById('f_cat').value)};
-    if(IS_ADMIN) body.pv_sp=parseFloat(document.getElementById('f_pv').value);
+    if(IS_ADMIN && !pvSpEhDerivado()) body.pv_sp=parseFloat(document.getElementById('f_pv').value);
     try{
         if(id){await sb('/produtos?id=eq.'+id,'PATCH',body);}
         else{await sb('/produtos','POST',body);}
@@ -349,9 +365,12 @@ async function delProd(id,n){
 async function openReajusteModal(){
     const tid=document.getElementById('prodTabela').value;
     const tname=document.getElementById('prodTabela').selectedOptions[0].text;
-    const cats=await sb('/categorias?tabela_id=eq.'+tid+'&select=id,nome&order=ordem');
+    let cats=await sb('/categorias?tabela_id=eq.'+tid+'&select=id,nome,categoria_grupo&order=ordem');
+    const catsExcluidas=tid==='2'?cats.filter(c=>c.categoria_grupo==='Máquinas'):[];
+    if(tid==='2') cats=cats.filter(c=>c.categoria_grupo!=='Máquinas');
     openModal(`<h3>Reajuste em Massa</h3>
 <p style="color:#718096;font-size:13px;margin-bottom:16px">Aplicar reajuste percentual no PV SP dos produtos das categorias selecionadas da tabela <strong>${tname}</strong></p>
+${catsExcluidas.length?`<p style="font-size:11px;color:#718096;margin-bottom:12px">As categorias de Máquinas não aparecem aqui — o PV SP delas é sincronizado automaticamente a partir da Revendas (×1.308). Ajuste na Revendas.</p>`:''}
 <div class="form-row">
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><label style="margin:0">Categorias</label><span style="font-size:11px;color:#25bbee;cursor:pointer;text-transform:none" onclick="toggleAllCats()">Marcar/desmarcar todas</span></div>
 <div id="r_cats" style="max-height:180px;overflow:auto;border:1px solid #c3cfe2;border-radius:8px;padding:8px">${cats.map(c=>`<label style="display:flex;align-items:center;justify-content:flex-start;gap:8px;padding:4px 0;font-size:13px;font-weight:400;text-transform:none;letter-spacing:normal;text-align:left"><input type="checkbox" class="r_cat_chk" value="${c.id}" style="width:auto;flex-shrink:0"> <span>${c.nome}</span></label>`).join('')}</div>
