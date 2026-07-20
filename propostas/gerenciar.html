@@ -78,6 +78,35 @@ iframe#previewFrame{flex:1;border:none;background:#e8eaf0}
 .erro-central{flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:40px}
 .erro-central h2{font-size:20px;color:#1d327b}
 .erro-central p{font-size:14px;color:#718096;text-align:center}
+/* Botões de edição */
+.btn-editar{width:100%;padding:9px 12px;background:#f0f4f8;border:1px solid #d0d8e8;border-radius:8px;color:#1d327b;font-family:Outfit;font-size:13px;font-weight:500;cursor:pointer;text-align:left;transition:all .15s}
+.btn-editar:hover{border-color:#25bbee;background:#e8f0fe}
+/* Modal */
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:#fff;border-radius:12px;padding:24px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal h3{font-size:18px;margin-bottom:16px;color:#1d327b}
+.form-row{margin-bottom:14px}
+.form-row label{display:block;font-size:12px;font-weight:500;color:#4a5568;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.form-row input,.form-row select{width:100%;font-family:Outfit;font-size:13px;padding:8px 12px;border:1px solid #c3cfe2;border-radius:6px;outline:none}
+.form-row input:focus,.form-row select:focus{border-color:#25bbee}
+.form-row-inline{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid #e2e8f0}
+.btn{padding:8px 16px;border-radius:8px;border:1px solid;font-family:Outfit;font-size:13px;font-weight:500;cursor:pointer}
+.btn-primary{background:#1d327b;color:#fff;border-color:#1d327b}.btn-primary:hover{background:#162666}
+.btn-outline{background:#fff;color:#4a5568;border-color:#c3cfe2}.btn-outline:hover{border-color:#25bbee;color:#1d327b}
+.btn-sm{padding:4px 10px;font-size:12px}
+.item-edit-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:6px;font-size:13px}
+.item-edit-row .ie-info{flex:1;min-width:0}
+.item-edit-row .ie-cod{font-size:11px;color:#718096}
+.item-edit-row .ie-mod{font-weight:600;color:#1a202c;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item-edit-row .ie-preco{font-size:11px;color:#1d327b;font-weight:600}
+.item-edit-row input[type=number]{width:60px;text-align:center;font-family:Outfit;font-size:13px;padding:6px;border:1px solid #c3cfe2;border-radius:6px}
+.autocomplete-wrap{position:relative}
+.autocomplete-list{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #c3cfe2;border-radius:8px;max-height:220px;overflow-y:auto;z-index:1100;display:none;box-shadow:0 4px 16px rgba(0,0,0,.1)}
+.autocomplete-list li{padding:8px 12px;font-size:13px;cursor:pointer;list-style:none;border-bottom:1px solid #f0f4f8}
+.autocomplete-list li:hover{background:#f0f4f8;color:#1d327b}
 </style>
 </head>
 <body>
@@ -107,6 +136,17 @@ iframe#previewFrame{flex:1;border:none;background:#e8eaf0}
       <div id="dadosProposta"><em style="font-size:12px;color:#718096">Carregando...</em></div>
     </div>
 
+    <!-- Editar proposta -->
+    <div class="sidebar-section">
+      <div class="sec-title">Editar Proposta</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <button class="btn-editar" onclick="abrirEditarItens()">✎ Itens da Proposta</button>
+        <button class="btn-editar" onclick="abrirEditarPolitica()">✎ Política Comercial</button>
+        <button class="btn-editar" onclick="abrirEditarDados()">✎ Dados Gerais</button>
+      </div>
+      <p style="font-size:11px;color:#a0aec0;margin-top:8px">Cada alteração salva gera uma nova versão da proposta.</p>
+    </div>
+
     <!-- Link Público -->
     <div class="sidebar-section" id="secLinkPublico" style="display:none">
       <div class="sec-title">Link Público</div>
@@ -121,7 +161,6 @@ iframe#previewFrame{flex:1;border:none;background:#e8eaf0}
     <div class="sidebar-section">
       <div class="sec-title">Versões</div>
       <ul class="versoes-list" id="versoesList"><li style="font-size:12px;color:#718096">Carregando...</li></ul>
-      <button class="btn-nova-versao" id="btnNovaVersao" onclick="gerarNovaVersao()" style="display:none">+ Gerar nova versão</button>
     </div>
 
     <!-- Contatos -->
@@ -159,6 +198,9 @@ iframe#previewFrame{flex:1;border:none;background:#e8eaf0}
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay"><div class="modal" id="modalBody"></div></div>
 
 <script src="proposta-engine.js"></script>
 <script>
@@ -251,7 +293,6 @@ function renderSidebar() {
       </li>
     `).join('');
   }
-  document.getElementById('btnNovaVersao').style.display = 'block';
 
   // Contatos
   document.getElementById('contatosList').innerHTML = contatos.length
@@ -339,31 +380,227 @@ async function selecionarVersao(versaoId) {
   await renderPreview();
 }
 
-// ─── NOVA VERSÃO ─────────────────────────────────────────────────────────────
-async function gerarNovaVersao() {
-  mostrarOverlay('Gerando nova versão...');
-  try {
-    const novoNumero = (versoes[0]?.versao || 0) + 1;
-    const { html } = await gerarHTMLProposta(sb, proposta, itens, contatos, novoNumero);
+// ─── CRIAR NOVA VERSÃO (compartilhado pelas 3 edições) ──────────────────────
+async function criarVersao(tipoAlteracao, descricao) {
+  const novoNumero = (versoes[0]?.versao || 0) + 1;
+  const { html } = await gerarHTMLProposta(sb, proposta, itens, contatos, novoNumero);
 
-    const { data: novaVersao, error } = await sb.schema('comercial').from('proposta_versoes').insert({
-      proposta_id:    propostaId,
-      versao:         novoNumero,
-      tipo_alteracao: 'edicao_dados',
-      descricao:      'Versão atualizada manualmente',
-      vendedor_id:    vendedorId,
-      html_snapshot:  html
-    }).select('id, versao, tipo_alteracao, descricao, html_snapshot, criado_em').single();
+  const { data: novaVersao, error } = await sb.schema('comercial').from('proposta_versoes').insert({
+    proposta_id:    propostaId,
+    versao:         novoNumero,
+    tipo_alteracao: tipoAlteracao,
+    descricao:      descricao,
+    vendedor_id:    vendedorId,
+    html_snapshot:  html
+  }).select('id, versao, tipo_alteracao, descricao, html_snapshot, criado_em').single();
+  if (error) throw error;
+
+  versoes.unshift(novaVersao);
+  versaoAtual = novaVersao;
+  renderSidebar();
+  document.getElementById('previewFrame').srcdoc = html;
+  document.getElementById('versaoAtualLabel').textContent = 'V' + novaVersao.versao;
+  toast('Nova versão V' + novaVersao.versao + ' gerada.', 'ok');
+}
+
+function openModal(html) { document.getElementById('modalBody').innerHTML = html; document.getElementById('modalOverlay').classList.add('show'); }
+function closeModal() { document.getElementById('modalOverlay').classList.remove('show'); }
+
+// ─── EDITAR ITENS ────────────────────────────────────────────────────────────
+let itensEdit = [];
+async function abrirEditarItens() {
+  itensEdit = itens.map(i => ({ ...i }));
+  openModal(`<h3>Editar Itens da Proposta</h3>
+<div class="form-row">
+  <label>Adicionar produto</label>
+  <div class="autocomplete-wrap">
+    <input type="text" id="itemBusca" placeholder="Buscar por código ou modelo..." autocomplete="off" oninput="buscarProdutoParaItem()">
+    <ul class="autocomplete-list" id="itemBuscaList"></ul>
+  </div>
+</div>
+<div id="itensEditList"></div>
+<div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="salvarItens()">Salvar</button></div>`);
+  renderItensEditList();
+}
+function renderItensEditList() {
+  const el = document.getElementById('itensEditList');
+  if (!itensEdit.length) { el.innerHTML = '<p style="font-size:12px;color:#718096;padding:8px 0">Nenhum item. Use a busca acima para adicionar.</p>'; return; }
+  el.innerHTML = itensEdit.map((it, i) => `
+    <div class="item-edit-row">
+      <div class="ie-info">
+        <div class="ie-cod">${esc(it.produto_codigo)} · ${esc(it.produto_categoria||'')}</div>
+        <div class="ie-mod">${esc(it.produto_modelo)}</div>
+        <div class="ie-preco">R$ ${formatarValor(it.preco_final)} / un.</div>
+      </div>
+      <input type="number" min="1" value="${it.quantidade}" onchange="itensEdit[${i}].quantidade=parseInt(this.value)||1">
+      <button type="button" class="btn btn-outline btn-sm" onclick="itensEdit.splice(${i},1);renderItensEditList()">✕</button>
+    </div>
+  `).join('');
+}
+let buscaProdutoTimer = null;
+function buscarProdutoParaItem() {
+  clearTimeout(buscaProdutoTimer);
+  const q = document.getElementById('itemBusca').value.trim();
+  const list = document.getElementById('itemBuscaList');
+  if (q.length < 2) { list.style.display = 'none'; return; }
+  buscaProdutoTimer = setTimeout(async () => {
+    const { data } = await sb.from('produtos')
+      .select('codigo, modelo, pv_sp, categoria_id, categorias(nome, categoria_grupo)')
+      .eq('tabela_id', 2).eq('ativo', true)
+      .or(`modelo.ilike.%${q}%,codigo.ilike.%${q}%`)
+      .limit(10);
+    if (!data || !data.length) { list.innerHTML = '<li style="color:#a0aec0">Nenhum produto encontrado</li>'; list.style.display = 'block'; return; }
+    list.innerHTML = data.map(p => `<li onclick='adicionarItemBusca(${JSON.stringify(p).replace(/'/g,"&apos;")})'>${esc(p.codigo)} · ${esc(p.modelo)}</li>`).join('');
+    list.style.display = 'block';
+  }, 300);
+}
+async function adicionarItemBusca(p) {
+  document.getElementById('itemBuscaList').style.display = 'none';
+  document.getElementById('itemBusca').value = '';
+  const precoFinal = await calcularPrecoItem(p.pv_sp, p.categorias?.categoria_grupo);
+  itensEdit.push({
+    produto_codigo: p.codigo,
+    produto_modelo: p.modelo,
+    produto_categoria: p.categorias?.nome || '',
+    preco_base: p.pv_sp,
+    multiplicador_aplicado: precoFinal.multiplicador,
+    preco_final: precoFinal.valor,
+    quantidade: 1
+  });
+  renderItensEditList();
+}
+async function calcularPrecoItem(pvSp, categoriaGrupo) {
+  const [{ data: estRows }, { data: multRows }] = await Promise.all([
+    sb.from('estados').select('uf, mult_4_icms, mult_total').eq('uf', proposta.uf_politica).single(),
+    sb.from('multiplicadores').select('valor').eq('tabela_id', 2).eq('segmento', proposta.segmento).eq('classe', proposta.classe).eq('categoria_grupo', categoriaGrupo).maybeSingle()
+  ]);
+  const est = estRows;
+  const tb = pvSp * parseFloat(est.mult_4_icms) / (1 - parseFloat(est.mult_total) / 100);
+  const scm = multRows?.valor ? parseFloat(multRows.valor) : undefined;
+  return { valor: Math.round(tb * (scm || 1) * 100) / 100, multiplicador: scm ?? null };
+}
+async function salvarItens() {
+  if (!itensEdit.length) { toast('A proposta precisa ter ao menos um item.', 'erro'); return; }
+  mostrarOverlay('Salvando itens...');
+  try {
+    await sb.schema('comercial').from('proposta_itens').delete().eq('proposta_id', propostaId);
+    const { error } = await sb.schema('comercial').from('proposta_itens').insert(
+      itensEdit.map(it => ({
+        proposta_id: propostaId,
+        produto_codigo: it.produto_codigo,
+        produto_modelo: it.produto_modelo,
+        produto_categoria: it.produto_categoria,
+        preco_base: it.preco_base,
+        multiplicador_aplicado: it.multiplicador_aplicado,
+        preco_final: it.preco_final,
+        quantidade: it.quantidade
+      }))
+    );
     if (error) throw error;
 
-    versoes.unshift(novaVersao);
-    versaoAtual = novaVersao;
-    renderSidebar();
-    document.getElementById('previewFrame').srcdoc = html;
-    document.getElementById('versaoAtualLabel').textContent = 'V' + novaVersao.versao;
-    toast('Nova versão V' + novaVersao.versao + ' gerada.', 'ok');
-  } catch(e) {
-    toast('Erro: ' + e.message, 'erro');
+    const { data: it } = await sb.schema('comercial').from('proposta_itens').select('*').eq('proposta_id', propostaId).order('criado_em');
+    itens = it || [];
+    closeModal();
+    await criarVersao('edicao_itens', 'Itens da proposta alterados');
+  } catch (e) {
+    toast('Erro ao salvar itens: ' + e.message, 'erro');
+  }
+  esconderOverlay();
+}
+
+// ─── EDITAR POLÍTICA COMERCIAL ───────────────────────────────────────────────
+let TABELA_INFO = null, ESTADOS_LIST = null;
+async function abrirEditarPolitica() {
+  if (!TABELA_INFO) {
+    const { data } = await sb.from('tabelas').select('segmentos, classes').eq('id', 2).single();
+    TABELA_INFO = data;
+  }
+  if (!ESTADOS_LIST) {
+    const { data } = await sb.from('estados').select('uf').order('uf');
+    ESTADOS_LIST = data || [];
+  }
+  openModal(`<h3>Editar Política Comercial</h3>
+<p style="color:#718096;font-size:13px;margin-bottom:16px">Isso recalcula o preço de todos os itens da proposta.</p>
+<div class="form-row-3">
+  <div class="form-row"><label>Segmento</label><select id="p_seg">${TABELA_INFO.segmentos.map(s=>`<option ${s===proposta.segmento?'selected':''}>${s}</option>`).join('')}</select></div>
+  <div class="form-row"><label>Classe</label><select id="p_cls">${TABELA_INFO.classes.map(c=>`<option value="${c}" ${c===proposta.classe?'selected':''}>${c}</option>`).join('')}</select></div>
+  <div class="form-row"><label>UF (política)</label><select id="p_uf">${ESTADOS_LIST.map(e=>`<option ${e.uf===proposta.uf_politica?'selected':''}>${e.uf}</option>`).join('')}</select></div>
+</div>
+<div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="salvarPolitica()">Salvar e Recalcular</button></div>`);
+}
+async function salvarPolitica() {
+  const novoSeg = document.getElementById('p_seg').value;
+  const novaCls = parseInt(document.getElementById('p_cls').value);
+  const novaUf  = document.getElementById('p_uf').value;
+
+  mostrarOverlay('Recalculando preços...');
+  try {
+    const { data: est } = await sb.from('estados').select('uf, mult_4_icms, mult_total').eq('uf', novaUf).single();
+    const codigos = [...new Set(itens.map(i => i.produto_codigo))];
+    const { data: prods } = await sb.from('produtos').select('codigo, categorias(categoria_grupo)').in('codigo', codigos).eq('tabela_id', 2);
+    const catGrupoByCodigo = Object.fromEntries((prods||[]).map(p => [p.codigo, p.categorias?.categoria_grupo]));
+    const { data: mults } = await sb.from('multiplicadores').select('categoria_grupo, valor').eq('tabela_id', 2).eq('segmento', novoSeg).eq('classe', novaCls);
+    const multByGrupo = Object.fromEntries((mults||[]).map(m => [m.categoria_grupo, parseFloat(m.valor)]));
+
+    for (const item of itens) {
+      const grupo = catGrupoByCodigo[item.produto_codigo];
+      const scm = multByGrupo[grupo];
+      const tb = parseFloat(item.preco_base) * parseFloat(est.mult_4_icms) / (1 - parseFloat(est.mult_total) / 100);
+      const novoFinal = Math.round(tb * (scm || 1) * 100) / 100;
+      await sb.schema('comercial').from('proposta_itens').update({
+        multiplicador_aplicado: scm ?? null,
+        preco_final: novoFinal
+      }).eq('id', item.id);
+    }
+
+    const { error: errProp } = await sb.schema('comercial').from('propostas').update({
+      segmento: novoSeg, classe: novaCls, uf_politica: novaUf
+    }).eq('id', propostaId);
+    if (errProp) throw errProp;
+
+    const { data: it } = await sb.schema('comercial').from('proposta_itens').select('*').eq('proposta_id', propostaId).order('criado_em');
+    itens = it || [];
+    proposta.segmento = novoSeg; proposta.classe = novaCls; proposta.uf_politica = novaUf;
+    closeModal();
+    await criarVersao('edicao_politica', `Política alterada: ${novoSeg} · Classe ${novaCls} · ${novaUf}`);
+  } catch (e) {
+    toast('Erro ao recalcular política: ' + e.message, 'erro');
+  }
+  esconderOverlay();
+}
+
+// ─── EDITAR DADOS GERAIS ─────────────────────────────────────────────────────
+const TIPOS_PRODUTO = { ROBO: 'Robô', LASER: 'Laser', MAQUINAS: 'Máquinas' };
+function abrirEditarDados() {
+  openModal(`<h3>Editar Dados Gerais</h3>
+<div class="form-row"><label>Cliente</label><input id="d_nome" value="${esc(proposta.cliente_nome)}"></div>
+<div class="form-row-inline">
+  <div class="form-row"><label>Cidade</label><input id="d_cidade" value="${esc(proposta.cliente_cidade||'')}"></div>
+  <div class="form-row"><label>Estado</label><input id="d_estado" maxlength="2" style="text-transform:uppercase" value="${esc(proposta.cliente_estado||'')}"></div>
+</div>
+<div class="form-row"><label>Tipo de Produto</label><select id="d_tipo">${Object.entries(TIPOS_PRODUTO).map(([k,v])=>`<option value="${k}" ${k===proposta.tipo_produto?'selected':''}>${v}</option>`).join('')}</select></div>
+<div class="form-row"><label>Prazo de Pagamento</label><input id="d_prazo" value="${esc(proposta.prazo_pagamento||'')}"></div>
+<div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="salvarDados()">Salvar</button></div>`);
+}
+async function salvarDados() {
+  const body = {
+    cliente_nome: document.getElementById('d_nome').value.trim(),
+    cliente_cidade: document.getElementById('d_cidade').value.trim(),
+    cliente_estado: document.getElementById('d_estado').value.trim().toUpperCase(),
+    tipo_produto: document.getElementById('d_tipo').value,
+    prazo_pagamento: document.getElementById('d_prazo').value.trim()
+  };
+  if (!body.cliente_nome) { toast('Informe o nome do cliente.', 'erro'); return; }
+
+  mostrarOverlay('Salvando dados...');
+  try {
+    const { error } = await sb.schema('comercial').from('propostas').update(body).eq('id', propostaId);
+    if (error) throw error;
+    Object.assign(proposta, body);
+    closeModal();
+    await criarVersao('edicao_dados', 'Dados gerais da proposta alterados');
+  } catch (e) {
+    toast('Erro ao salvar dados: ' + e.message, 'erro');
   }
   esconderOverlay();
 }
