@@ -346,14 +346,15 @@ async function gerarNovaVersao() {
     const novoNumero = (versoes[0]?.versao || 0) + 1;
     const { html } = await gerarHTMLProposta(sb, proposta, itens, contatos, novoNumero);
 
-    const { data: novaVersao } = await sb.schema('comercial').from('proposta_versoes').insert({
+    const { data: novaVersao, error } = await sb.schema('comercial').from('proposta_versoes').insert({
       proposta_id:    propostaId,
       versao:         novoNumero,
-      tipo_alteracao: 'atualizacao',
+      tipo_alteracao: 'edicao_dados',
       descricao:      'Versão atualizada manualmente',
       vendedor_id:    vendedorId,
       html_snapshot:  html
     }).select('id, versao, tipo_alteracao, descricao, html_snapshot, criado_em').single();
+    if (error) throw error;
 
     versoes.unshift(novaVersao);
     versaoAtual = novaVersao;
