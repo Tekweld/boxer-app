@@ -21,7 +21,7 @@ async function gerarHTMLProposta(sb, proposta, itens, contatos, versao) {
   // 2 — Detalhes dos produtos (para Escopo de Fornecimento e seleção de capa)
   const codigos = [...new Set(itens.map(i => i.produto_codigo))];
   const { data: prods } = await sb.from('produtos')
-    .select('codigo, modelo, descricao_completa, caracteristicas, imagem_url')
+    .select('codigo, modelo, descricao_completa, caracteristicas, imagem_url, acessorios_padrao, espessura_solda')
     .in('codigo', codigos);
   const prodMap = Object.fromEntries((prods || []).map(p => [p.codigo, p]));
 
@@ -69,6 +69,19 @@ async function gerarHTMLProposta(sb, proposta, itens, contatos, versao) {
     .replace(/\{\{tipo_titulo\}\}/g,  tituloCapa);
 
   // 5 — Montar HTML
+  const cssUsado = proposta.tipo_produto === 'LASER' ? CSS_PROP_LASER : CSS_PROP;
+
+  let corpo;
+  if (proposta.tipo_produto === 'LASER') {
+    corpo = await montarCorpoLaser({ proposta, cf, itens, prodMap, contatos, contPrinc, hoje, tituloCapa, rep });
+  } else {
+    corpo = `
+${pgObjetivo(cf, rep)}
+${pgEquipamentos(itens)}
+${pgEscopo(itens, prodMap)}
+${pgAcordo(cf, proposta.tipo_produto)}`;
+  }
+
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -76,15 +89,15 @@ async function gerarHTMLProposta(sb, proposta, itens, contatos, versao) {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(tituloCapa)} — ${esc(proposta.codigo || '')}</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<style>${CSS_PROP}</style>
+<style>${cssUsado}</style>
 </head>
 <body>
+<div id="pg-stack">
 ${pgCapa(proposta, cf, imagemCapa, contPrinc, hoje, tituloCapa)}
-${pgObjetivo(cf, rep)}
-${pgEquipamentos(itens)}
-${pgEscopo(itens, prodMap)}
-${pgAcordo(cf, proposta.tipo_produto)}
+${corpo}
 ${pgResumo(proposta, contatos, valorFmt, versao)}
+</div>
+${proposta.tipo_produto === 'LASER' ? SCRIPT_SCALE_TO_FIT : ''}
 </body>
 </html>`;
 
@@ -205,6 +218,87 @@ body{font-family:Outfit,sans-serif;background:#f0f4f8;color:#1a202c;font-size:14
 .env-nome{font-weight:700;font-size:15px;color:#1a202c;margin-bottom:4px}
 .env-cargo{font-size:12px;color:#718096}
 `;
+
+// ─────────────────────────────────────────────────────────────
+// CSS DA PROPOSTA LASER (tom mais sério, páginas de tamanho fixo)
+// Cópia derivada de CSS_PROP: mesmo #1d327b como único destaque de
+// cor; remove o #25bbee (bolinhas, linha divisória colorida, bullets,
+// bordas de garantia) por tons neutros; .pg vira tamanho fixo (A4).
+// ─────────────────────────────────────────────────────────────
+
+const PAGE_W = 900;
+const PAGE_H = Math.round(PAGE_W * (297 / 210)); // proporção A4 ≈ 1273px
+
+const CSS_PROP_LASER = CSS_PROP
+  .replace('.pg{background:#fff;max-width:900px;margin:0 auto 28px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08)}',
+            `.pg{background:#fff;width:${PAGE_W}px;height:${PAGE_H}px;margin:0 auto 24px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08)}`)
+  .replace('.pg-circle{position:absolute;top:28px;right:48px;width:26px;height:26px;background:#25bbee;border-radius:50%}',
+            '.pg-circle{display:none}')
+  .replace('.pg-linha{height:3px;background:linear-gradient(90deg,#25bbee 60%,#25bbee22);margin:10px 48px 28px}',
+            '.pg-linha{height:1px;background:#d0d8e8;margin:10px 48px 28px}')
+  .replace('.capa-linha-azul{height:2px;background:#25bbee;margin:0 44px 0}',
+            '.capa-linha-azul{height:2px;background:#1d327b;margin:0 44px 0}')
+  .replace('.dif-dot{width:14px;height:14px;border-radius:50%;background:#25bbee;flex-shrink:0}',
+            '.dif-dot{width:14px;height:14px;border-radius:50%;background:#1d327b;flex-shrink:0}')
+  .replace('.eq-num{color:#25bbee;font-weight:600;width:52px}',
+            '.eq-num{color:#1d327b;font-weight:600;width:52px}')
+  .replace('.gar-item{border:2px solid #25bbee;border-radius:8px;padding:14px;text-align:center}',
+            '.gar-item{border:1px solid #d0d8e8;border-radius:8px;padding:14px;text-align:center}')
+  .replace('.resp-dot.az{background:#25bbee}', '.resp-dot.az{background:#1d327b}')
+  .replace('.env-col{padding:18px 24px;border-bottom:3px solid #25bbee}',
+            '.env-col{padding:18px 24px;border-bottom:2px solid #d0d8e8}')
+  + `
+/* Cabeçalho de continuação (seções paginadas em mais de uma página) */
+.pg-header-cont{padding:20px 48px 0}
+.pg-secao-num-cont{font-size:14px;font-weight:600;color:#4a5568;letter-spacing:-.2px}
+
+/* Acessórios Padrão */
+.acessorio-card{margin-bottom:18px}
+.acessorio-card-tit{background:#1d327b;color:#fff;font-size:11px;font-weight:700;letter-spacing:.5px;padding:9px 14px}
+.acessorio-lista{border:1px solid #d0d8e8;border-top:none;padding:14px}
+.acessorio-item{display:flex;gap:14px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #edf2f7}
+.acessorio-item:last-child{border-bottom:none}
+.acessorio-foto{width:72px;height:72px;min-width:72px;background:#f7f9fc;border:1px solid #e2e8f0;border-radius:6px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.acessorio-foto img{max-width:100%;max-height:100%;object-fit:contain}
+.acessorio-foto-vazio{color:#a0aec0;font-size:9px;text-align:center}
+.acessorio-desc-txt{font-size:12.5px;color:#2d3748;line-height:1.5;padding-top:4px}
+
+/* Espessura de solda */
+.espessura-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:8px}
+.espessura-table thead tr{background:#1d327b}
+.espessura-table thead th{color:#fff;padding:9px 12px;text-align:center;font-size:10.5px;letter-spacing:.5px}
+.espessura-table tbody tr:nth-child(even){background:#f7f9fc}
+.espessura-table tbody td{padding:8px 12px;border-bottom:1px solid #edf2f7;text-align:center}
+.espessura-table tbody td:first-child{text-align:left;font-weight:600;color:#1a202c}
+`;
+
+// ─────────────────────────────────────────────────────────────
+// SCRIPT DE AJUSTE DE ZOOM (view-time, embutido na proposta Laser)
+// Nunca re-pagina — só encaixa a pilha de páginas de tamanho fixo
+// na largura de quem está vendo (mesma ideia de um leitor de PDF).
+// ─────────────────────────────────────────────────────────────
+
+const SCRIPT_SCALE_TO_FIT = `<script>
+(function(){
+  var PAGE_W = ${PAGE_W};
+  var stack = document.getElementById('pg-stack');
+  if (!stack) return;
+  function fit(){
+    var vw = document.documentElement.clientWidth;
+    if (!vw) return;
+    var scale = Math.min(1, vw / PAGE_W);
+    stack.style.transform = 'scale(' + scale + ')';
+    stack.style.transformOrigin = 'top center';
+    document.body.style.height = (stack.scrollHeight * scale) + 'px';
+  }
+  // Execução adiada: este script roda durante o parse do HTML (fim do
+  // <body>), antes do layout existir — document.documentElement.clientWidth
+  // ainda seria 0 se chamado de forma síncrona aqui.
+  setTimeout(fit, 0);
+  window.addEventListener('load', fit);
+  window.addEventListener('resize', fit);
+})();
+<\/script>`;
 
 // ─────────────────────────────────────────────────────────────
 // PÁGINAS
@@ -417,7 +511,8 @@ function pgAcordoRobo(cf) {
 </div>`;
 }
 
-function pgAcordoGenerico(cf) {
+function pgAcordoGenerico(cf, opts = {}) {
+  const secNum = opts.secNum || 4;
   const gar  = cf.garantia || {};
   const rBox = cf.responsabilidades_boxer    || [];
   const rCom = cf.responsabilidades_comprador || [];
@@ -432,14 +527,19 @@ function pgAcordoGenerico(cf) {
       </div>`).join('')}
     </div>` : '';
 
+  const entregaTecnicaHTML = opts.entregaTecnica ? `
+    <div class="subsec-bar">ENTREGA TÉCNICA</div>
+    <div class="content-box">A entrega técnica presencial do equipamento é item obrigatório da venda. O valor é calculado conforme a distância entre a sede da Boxer Soldas e o endereço do cliente, e será informado separadamente pelo vendedor responsável.</div>` : '';
+
   return `<div class="pg">
   <div class="pg-header">
-    <div class="pg-secao-num">4. ACORDO DE COMPRA E VENDA</div>
+    <div class="pg-secao-num">${secNum}. ACORDO DE COMPRA E VENDA</div>
     <div class="pg-circle"></div>
   </div>
   <div class="pg-linha"></div>
   <div class="pg-body">
     ${garHTML}
+    ${entregaTecnicaHTML}
     <div class="subsec-bar">RESUMO DAS RESPONSABILIDADES</div>
     <div class="resp-grid">
       <div>
@@ -502,4 +602,201 @@ function pgResumo(proposta, contatos, valorFmt, versao) {
     </div>
   </div>
 </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────
+// PROPOSTA LASER — corpo com numeração dinâmica + paginação de
+// tamanho fixo (Escopo, Acessórios Padrão, Espessura de Solda).
+// Isolado do fluxo legado (ROBO/MÁQUINAS) para não gerar risco de
+// regressão nesses tipos — nada abaixo é usado fora do tipo LASER.
+// ─────────────────────────────────────────────────────────────
+
+async function montarCorpoLaser({ proposta, cf, itens, prodMap, rep }) {
+  const itensComEscopo = itens.filter(i => prodMap[i.produto_codigo]?.descricao_completa);
+  const itensComAcessorios = itens.filter(i => (prodMap[i.produto_codigo]?.acessorios_padrao || []).length);
+  const itensComEspessura = itens.filter(i => {
+    const e = prodMap[i.produto_codigo]?.espessura_solda;
+    return e && (e.aco_carbono || e.aco_inox || e.aluminio);
+  });
+
+  let n = 2; // 1 = Objetivo, 2 = Equipamentos (fixos, sempre presentes)
+  const secEscopo     = itensComEscopo.length     ? ++n : null;
+  const secAcessorios = itensComAcessorios.length ? ++n : null;
+  const secEspessura  = itensComEspessura.length  ? ++n : null;
+  const secAcordo = ++n;
+
+  const objetivoHTML     = pgObjetivo(cf, rep);
+  const equipamentosHTML = pgEquipamentos(itens);
+
+  let escopoHTML = '', acessoriosHTML = '', espessuraHTML = '';
+  const frame = await prepararMedidor();
+  try {
+    if (secEscopo) {
+      const blocos = montarBlocosEscopo(itensComEscopo, prodMap, secEscopo);
+      escopoHTML = await paginar(frame, blocos, secaoOpts(secEscopo, 'ESCOPO DE FORNECIMENTO'));
+    }
+    if (secAcessorios) {
+      const blocos = montarBlocosAcessorios(itensComAcessorios, prodMap);
+      acessoriosHTML = await paginar(frame, blocos, secaoOpts(secAcessorios, 'ACESSÓRIOS PADRÃO'));
+    }
+    if (secEspessura) {
+      const linhas = montarLinhasEspessura(itensComEspessura, prodMap);
+      espessuraHTML = await paginar(frame, linhas, {
+        ...secaoOpts(secEspessura, 'ESPESSURA DE SOLDA'),
+        wrap: rows => `<table class="espessura-table"><thead><tr><th>Modelo</th><th>Aço Carbono</th><th>Aço Inox</th><th>Alumínio</th></tr></thead><tbody>${rows}</tbody></table>`
+      });
+    }
+  } finally {
+    frame.remove();
+  }
+
+  const acordoHTML = pgAcordoGenerico(cf, { secNum: secAcordo, entregaTecnica: true });
+
+  return `${objetivoHTML}\n${equipamentosHTML}\n${escopoHTML}\n${acessoriosHTML}\n${espessuraHTML}\n${acordoHTML}`;
+}
+
+function secaoOpts(secNum, titulo) {
+  return {
+    headerHTML: `<div class="pg-secao-num">${secNum}. ${titulo}</div><div class="pg-circle"></div>`,
+    headerContHTML: `<div class="pg-secao-num-cont">${secNum}. ${titulo} (cont.)</div>`
+  };
+}
+
+function montarBlocosEscopo(itensComDetalhe, prodMap, secNum) {
+  return itensComDetalhe.map((item, i) => {
+    const p    = prodMap[item.produto_codigo] || {};
+    const num  = `${secNum}.${i + 1}`;
+    const tit  = esc((p.modelo || item.produto_modelo || item.produto_codigo || '').toUpperCase());
+    const desc = esc(p.descricao_completa || '');
+
+    const carac = Array.isArray(p.caracteristicas) ? p.caracteristicas : [];
+    const caracHTML = carac.length ? `
+      <table class="carac-table">
+        <thead><tr><th colspan="2">C A R A C T E R Í S T I C A S &nbsp; T É C N I C A S</th></tr></thead>
+        <tbody>${carac.map(c => `<tr>
+          <td class="carac-label">${esc(c.label || c.chave || '')}</td>
+          <td class="carac-valor">${esc(c.valor || c.value || '')}</td>
+        </tr>`).join('')}</tbody>
+      </table>` : '';
+
+    const html = p.imagem_url ? `<div class="escopo-bloco">
+  <div class="escopo-header">${esc(num)} &nbsp; ${tit}</div>
+  <div class="escopo-inner">
+    <div class="escopo-foto"><img src="${esc(p.imagem_url)}" alt="${tit}"></div>
+    <div class="escopo-right">
+      <div class="escopo-desc">${desc}</div>
+      ${caracHTML}
+    </div>
+  </div>
+</div>` : `<div class="escopo-bloco">
+  <div class="escopo-header">${esc(num)} &nbsp; ${tit}</div>
+  <div class="escopo-mini">
+    <div class="escopo-desc">${desc}</div>
+    ${caracHTML}
+  </div>
+</div>`;
+
+    return { key: item.produto_codigo, html };
+  });
+}
+
+function montarBlocosAcessorios(itensComAcessorios, prodMap) {
+  return itensComAcessorios.map(item => {
+    const p   = prodMap[item.produto_codigo] || {};
+    const tit = esc((p.modelo || item.produto_modelo || item.produto_codigo || '').toUpperCase());
+    const acessorios = Array.isArray(p.acessorios_padrao) ? p.acessorios_padrao : [];
+
+    const itensHTML = acessorios.map(a => {
+      const foto = a.imagem_url
+        ? `<div class="acessorio-foto"><img src="${esc(a.imagem_url)}" alt=""></div>`
+        : `<div class="acessorio-foto"><span class="acessorio-foto-vazio">Sem foto</span></div>`;
+      return `<div class="acessorio-item">${foto}<div class="acessorio-desc-txt">${esc(a.descricao || '')}</div></div>`;
+    }).join('');
+
+    const html = `<div class="acessorio-card">
+  <div class="acessorio-card-tit">${esc(item.produto_codigo)} &nbsp; ${tit}</div>
+  <div class="acessorio-lista">${itensHTML}</div>
+</div>`;
+
+    return { key: item.produto_codigo, html };
+  });
+}
+
+function montarLinhasEspessura(itensComEspessura, prodMap) {
+  return itensComEspessura.map(item => {
+    const p = prodMap[item.produto_codigo] || {};
+    const e = p.espessura_solda || {};
+    const modelo = esc(p.modelo || item.produto_modelo || item.produto_codigo || '');
+    const html = `<tr><td>${modelo}</td><td>${esc(e.aco_carbono || '—')}</td><td>${esc(e.aco_inox || '—')}</td><td>${esc(e.aluminio || '—')}</td></tr>`;
+    return { key: item.produto_codigo, html };
+  });
+}
+
+// ─── MOTOR DE PAGINAÇÃO (medição real em iframe oculto) ─────────────────────
+
+function criarMeasureFrame() {
+  const f = document.createElement('iframe');
+  f.style.cssText = 'position:fixed;left:-99999px;top:0;width:' + PAGE_W + 'px;height:0;border:0;visibility:hidden';
+  document.body.appendChild(f);
+  const doc = f.contentDocument;
+  doc.open();
+  doc.write(`<!DOCTYPE html><html><head>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>${CSS_PROP_LASER}</style></head>
+<body><div id="measure-root" style="width:${PAGE_W}px"></div></body></html>`);
+  doc.close();
+  return f;
+}
+
+async function prepararMedidor() {
+  const f = criarMeasureFrame();
+  try {
+    if (f.contentDocument.fonts?.ready) await f.contentDocument.fonts.ready;
+  } catch (e) { /* segue com o melhor esforço se a API não estiver disponível */ }
+  // Espera curta para o layout assentar — evitamos requestAnimationFrame aqui
+  // porque não dispara de forma confiável em todo contexto (ex.: abas/iframes
+  // fora de foco ou não visíveis durante a geração automática da proposta).
+  await new Promise(r => setTimeout(r, 60));
+  return f;
+}
+
+function medir(doc, innerHTML) {
+  const root = doc.getElementById('measure-root');
+  root.innerHTML = innerHTML;
+  return root.getBoundingClientRect().height;
+}
+
+async function paginar(frame, blocks, opts) {
+  const doc = frame.contentDocument;
+  const SAFETY = 20;
+
+  const headerH     = medir(doc, `<div class="pg-header">${opts.headerHTML}</div><div class="pg-linha"></div>`);
+  const headerContH = medir(doc, `<div class="pg-header-cont">${opts.headerContHTML}</div><div class="pg-linha"></div>`);
+  const heights = blocks.map(b => medir(doc, `<div class="pg-body">${opts.wrap ? opts.wrap(b.html) : b.html}</div>`));
+
+  const pages = [];
+  let current = [], used = 0, first = true;
+
+  for (let i = 0; i < blocks.length; i++) {
+    const budget = (first ? PAGE_H - headerH : PAGE_H - headerContH) - SAFETY;
+    const h = heights[i];
+    if (current.length && used + h > budget) {
+      pages.push(current);
+      current = []; used = 0; first = false;
+    }
+    if (!current.length && h > budget) {
+      console.warn(`[proposta] bloco "${blocks[i].key}" excede o orçamento da página (${Math.round(h)}px > ${Math.round(budget)}px) — permitindo overflow controlado.`);
+    }
+    current.push(blocks[i]); used += h;
+  }
+  if (current.length) pages.push(current);
+
+  return pages.map((pageBlocks, idx) => {
+    const bodyInner = pageBlocks.map(b => b.html).join('');
+    const body = opts.wrap ? opts.wrap(bodyInner) : bodyInner;
+    const headerHTML = idx === 0
+      ? `<div class="pg-header">${opts.headerHTML}</div>`
+      : `<div class="pg-header-cont">${opts.headerContHTML}</div>`;
+    return `<div class="pg">${headerHTML}<div class="pg-linha"></div><div class="pg-body">${body}</div></div>`;
+  }).join('\n');
 }

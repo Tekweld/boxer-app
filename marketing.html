@@ -233,6 +233,9 @@ function openProdModal(id){
     CUR_PROD_IMG = p.imagem_url || null;
     const carac = Array.isArray(p.caracteristicas) ? p.caracteristicas : [];
     const caracRowsHTML = carac.map(c=>caracRowHTML(c.label||c.chave||'', c.valor||c.value||'')).join('');
+    const acessorios = Array.isArray(p.acessorios_padrao) ? p.acessorios_padrao : [];
+    const acessorioRowsHTML = acessorios.map(a=>acessorioRowHTML(a.imagem_url||'', a.descricao||'')).join('');
+    const esp = p.espessura_solda || {};
     openModal(`<h3>Editar Produto</h3>
 <p style="color:#718096;font-size:13px;margin-bottom:16px">${p.codigo} · ${p.modelo} · ${p.cat}</p>
 <div class="form-row"><label>Imagem de Capa</label>
@@ -243,7 +246,19 @@ function openProdModal(id){
 <div id="caracList">${caracRowsHTML}</div>
 <button type="button" class="btn btn-outline btn-sm" onclick="addCaracRow()">+ Adicionar característica</button>
 </div>
+<div class="form-row"><label>Espessura Máxima de Solda</label>
+<div class="form-row-inline" style="grid-template-columns:1fr 1fr 1fr">
+<div><label style="font-weight:400;text-transform:none;font-size:11px">Aço Carbono</label><input id="f_esp_carbono" placeholder="ex: 3mm" value="${String(esp.aco_carbono||'').replace(/"/g,'&quot;')}"></div>
+<div><label style="font-weight:400;text-transform:none;font-size:11px">Aço Inox</label><input id="f_esp_inox" placeholder="ex: 2mm" value="${String(esp.aco_inox||'').replace(/"/g,'&quot;')}"></div>
+<div><label style="font-weight:400;text-transform:none;font-size:11px">Alumínio</label><input id="f_esp_aluminio" placeholder="ex: 1.5mm" value="${String(esp.aluminio||'').replace(/"/g,'&quot;')}"></div>
+</div>
+</div>
+<div class="form-row"><label>Acessórios Padrão <span style="font-weight:400;text-transform:none">(até 5, com foto e descrição)</span></label>
+<div id="acessorioList">${acessorioRowsHTML}</div>
+<button type="button" class="btn btn-outline btn-sm" id="btnAddAcessorio" onclick="addAcessorioRow()">+ Adicionar acessório</button>
+</div>
 <div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveProd(${id})">Salvar</button></div>`);
+    atualizarBotaoAcessorio();
 }
 function caracRowHTML(label,valor){
     return `<div class="form-row-inline carac-row" style="margin-bottom:8px"><input placeholder="Característica (ex: Potência)" class="carac-label" value="${String(label).replace(/"/g,'&quot;')}"><div style="display:flex;gap:6px"><input placeholder="Valor (ex: 2000W)" class="carac-valor" value="${String(valor).replace(/"/g,'&quot;')}"><button type="button" class="btn btn-outline btn-sm" onclick="this.closest('.carac-row').remove()">✕</button></div></div>`;
@@ -255,6 +270,54 @@ function collectCaracRows(){
     const labels=[...document.querySelectorAll('.carac-label')], valores=[...document.querySelectorAll('.carac-valor')];
     const out=[];
     labels.forEach((el,i)=>{const label=el.value.trim(), valor=valores[i].value.trim(); if(label||valor) out.push({label,valor});});
+    return out;
+}
+function acessorioRowHTML(url, descricao){
+    const preview = url
+        ? `<img src="${url}" style="width:56px;height:56px;object-fit:contain;border:1px solid #e2e8f0;border-radius:6px">`
+        : `<div style="width:56px;height:56px;display:flex;align-items:center;justify-content:center;border:1px dashed #c3cfe2;border-radius:6px;color:#a0aec0;font-size:10px;text-align:center">sem foto</div>`;
+    return `<div class="acessorio-row" data-url="${String(url).replace(/"/g,'&quot;')}" style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;padding:8px;border:1px solid #e2e8f0;border-radius:8px">
+<div class="acessorio-img-preview">${preview}</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px">
+<input type="file" class="acessorio-img-input" accept="image/*" onchange="previewAcessorioImg(this)" style="font-size:11px">
+<textarea class="acessorio-desc" placeholder="Descrição do acessório" rows="2" style="resize:vertical">${String(descricao).replace(/</g,'&lt;')}</textarea>
+</div>
+<button type="button" class="btn btn-outline btn-sm" onclick="this.closest('.acessorio-row').remove();atualizarBotaoAcessorio()">✕</button>
+</div>`;
+}
+function addAcessorioRow(){
+    if(document.querySelectorAll('.acessorio-row').length>=5) return;
+    document.getElementById('acessorioList').insertAdjacentHTML('beforeend', acessorioRowHTML('',''));
+    atualizarBotaoAcessorio();
+}
+function atualizarBotaoAcessorio(){
+    const n=document.querySelectorAll('.acessorio-row').length;
+    const btn=document.getElementById('btnAddAcessorio');
+    btn.disabled = n>=5;
+    btn.textContent = n>=5 ? 'Máximo de 5 acessórios' : '+ Adicionar acessório';
+}
+function previewAcessorioImg(input){
+    const file=input.files[0];
+    if(!file)return;
+    const url=URL.createObjectURL(file);
+    input.closest('.acessorio-row').querySelector('.acessorio-img-preview').innerHTML=`<img src="${url}" style="width:56px;height:56px;object-fit:contain;border:1px solid #e2e8f0;border-radius:6px">`;
+}
+async function collectAcessoriosParaSalvar(codigo){
+    const rows=[...document.querySelectorAll('.acessorio-row')];
+    const out=[];
+    for(let i=0;i<rows.length;i++){
+        const row=rows[i];
+        const descricao=row.querySelector('.acessorio-desc').value.trim();
+        let imagemUrl=row.dataset.url||'';
+        const file=row.querySelector('.acessorio-img-input').files[0];
+        if(file){
+            const ext=(file.name.split('.').pop()||'jpg').toLowerCase();
+            const path=codigo+'-acessorio'+(i+1)+'-'+Date.now()+'.'+ext;
+            await uploadImagem(path, file);
+            imagemUrl=SB_URL+'/storage/v1/object/public/produtos-imagens/'+path;
+        }
+        if(imagemUrl||descricao) out.push({imagem_url:imagemUrl, descricao});
+    }
     return out;
 }
 function previewImgFile(input){
@@ -286,10 +349,22 @@ async function saveProd(id){
             await uploadImagem(path, file);
             imagemUrl = SB_URL+'/storage/v1/object/public/produtos-imagens/'+path;
         }
-        const body={descricao_completa:document.getElementById('f_desc').value, caracteristicas:collectCaracRows()};
+        const p = allProd.find(x=>x.id===id);
+        const acessorios = await collectAcessoriosParaSalvar(p?.codigo||id);
+        const espessura = {
+            aco_carbono: document.getElementById('f_esp_carbono').value.trim(),
+            aco_inox: document.getElementById('f_esp_inox').value.trim(),
+            aluminio: document.getElementById('f_esp_aluminio').value.trim()
+        };
+        const body={
+            descricao_completa:document.getElementById('f_desc').value,
+            caracteristicas:collectCaracRows(),
+            acessorios_padrao: acessorios,
+            espessura_solda: espessura
+        };
         if(imagemUrl) body.imagem_url = imagemUrl;
         await sb('/produtos?id=eq.'+id,'PATCH',body);
-        await sb('/log_alteracoes','POST',{usuario_id:SESSION.user.id,usuario_email:SESSION.user.email,tabela_ref:'produtos',registro_id:id,campo:'marketing_update',valor_novo:'imagem/descrição/características'});
+        await sb('/log_alteracoes','POST',{usuario_id:SESSION.user.id,usuario_email:SESSION.user.email,tabela_ref:'produtos',registro_id:id,campo:'marketing_update',valor_novo:'imagem/descrição/características/acessórios/espessura'});
         toast('Produto atualizado');closeModal();loadProdutos();
     }catch(e){toast('Erro ao salvar: '+e.message,'error');}
 }
