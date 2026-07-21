@@ -88,8 +88,9 @@ iframe#previewFrame{flex:1;border:none;background:#e8eaf0}
 .modal h3{font-size:18px;margin-bottom:16px;color:#1d327b}
 .form-row{margin-bottom:14px}
 .form-row label{display:block;font-size:12px;font-weight:500;color:#4a5568;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
-.form-row input,.form-row select{width:100%;font-family:Outfit;font-size:13px;padding:8px 12px;border:1px solid #c3cfe2;border-radius:6px;outline:none}
-.form-row input:focus,.form-row select:focus{border-color:#25bbee}
+.form-row input,.form-row select,.form-row textarea{width:100%;font-family:Outfit;font-size:13px;padding:8px 12px;border:1px solid #c3cfe2;border-radius:6px;outline:none}
+.form-row textarea{resize:vertical}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:#25bbee}
 .form-row-inline{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
 .form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid #e2e8f0}
@@ -579,7 +580,7 @@ function abrirEditarDados() {
   <div class="form-row"><label>Estado</label><input id="d_estado" maxlength="2" style="text-transform:uppercase" value="${esc(proposta.cliente_estado||'')}"></div>
 </div>
 <div class="form-row"><label>Tipo de Produto</label><select id="d_tipo">${Object.entries(TIPOS_PRODUTO).map(([k,v])=>`<option value="${k}" ${k===proposta.tipo_produto?'selected':''}>${v}</option>`).join('')}</select></div>
-<div class="form-row"><label>Prazo de Pagamento</label><input id="d_prazo" value="${esc(proposta.prazo_pagamento||'')}"></div>
+<div class="form-row"><label>Prazo de Pagamento</label><textarea id="d_prazo" rows="5">${esc(proposta.prazo_pagamento||'')}</textarea></div>
 <div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="salvarDados()">Salvar</button></div>`);
 }
 async function salvarDados() {
