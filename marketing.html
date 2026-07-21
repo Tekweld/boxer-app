@@ -99,7 +99,19 @@ const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsIn
 
 let SESSION = null, allProd = [];
 
-async function sb(path, method='GET', body=null, token=null) {
+async function refreshSession() {
+    if (!SESSION?.refresh_token) return false;
+    try {
+        const r = await fetch(SB_URL+'/auth/v1/token?grant_type=refresh_token', {
+            method:'POST', headers:{'Content-Type':'application/json','apikey':SB_ANON},
+            body: JSON.stringify({refresh_token: SESSION.refresh_token})
+        });
+        const data = await r.json();
+        if (data.access_token) { SESSION = {...SESSION, ...data}; return true; }
+    } catch(e) { console.error('Falha ao renovar sessão', e); }
+    return false;
+}
+async function sb(path, method='GET', body=null, token=null, _retry=true) {
     const hdrs = {
         'apikey': SB_ANON,
         'Content-Type': 'application/json',
@@ -109,7 +121,13 @@ async function sb(path, method='GET', body=null, token=null) {
     const opts = {method, headers: hdrs};
     if (body) opts.body = JSON.stringify(body);
     const r = await fetch(SB_URL+'/rest/v1'+path, opts);
-    if (!r.ok) { const e = await r.text(); throw new Error(e); }
+    if (!r.ok) {
+        const e = await r.text();
+        if (_retry && !token && /JWT expired|PGRST303/.test(e) && await refreshSession()) {
+            return sb(path, method, body, null, false);
+        }
+        throw new Error(e);
+    }
     return method==='GET' || method==='POST' ? r.json() : r;
 }
 
@@ -245,6 +263,18 @@ function previewImgFile(input){
     const url=URL.createObjectURL(file);
     document.getElementById('imgPreview').innerHTML=`<img src="${url}" style="max-width:200px;max-height:150px;display:block;border:1px solid #e2e8f0;border-radius:6px;object-fit:contain">`;
 }
+async function uploadImagem(path, file, _retry=true){
+    const up = await fetch(SB_URL+'/storage/v1/object/produtos-imagens/'+path,{
+        method:'POST',
+        headers:{'Content-Type':file.type||'application/octet-stream','Authorization':'Bearer '+SESSION.access_token,'apikey':SB_ANON},
+        body:file
+    });
+    if(!up.ok){
+        const e = await up.text();
+        if(_retry && /JWT expired|PGRST303/.test(e) && await refreshSession()) return uploadImagem(path, file, false);
+        throw new Error('Falha no upload da imagem: '+e);
+    }
+}
 async function saveProd(id){
     try{
         let imagemUrl = CUR_PROD_IMG;
@@ -253,12 +283,7 @@ async function saveProd(id){
             const p = allProd.find(x=>x.id===id);
             const ext = (file.name.split('.').pop()||'jpg').toLowerCase();
             const path = (p?.codigo||id)+'-'+Date.now()+'.'+ext;
-            const up = await fetch(SB_URL+'/storage/v1/object/produtos-imagens/'+path,{
-                method:'POST',
-                headers:{'Content-Type':file.type||'application/octet-stream','Authorization':'Bearer '+SESSION.access_token,'apikey':SB_ANON},
-                body:file
-            });
-            if(!up.ok){const e=await up.text();throw new Error('Falha no upload da imagem: '+e);}
+            await uploadImagem(path, file);
             imagemUrl = SB_URL+'/storage/v1/object/public/produtos-imagens/'+path;
         }
         const body={descricao_completa:document.getElementById('f_desc').value, caracteristicas:collectCaracRows()};

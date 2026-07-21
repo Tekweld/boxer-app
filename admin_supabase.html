@@ -153,7 +153,19 @@ function toast(m,t='success'){const d=document.createElement('div');d.className=
 function openModal(html){document.getElementById('modalContent').innerHTML=html;document.getElementById('modalOverlay').classList.add('show');}
 function closeModal(){document.getElementById('modalOverlay').classList.remove('show');document.getElementById('modalContent').innerHTML='';}
 
-async function sb(path, method='GET', body=null, token=null) {
+async function refreshSession() {
+    if (!SESSION?.refresh_token) return false;
+    try {
+        const r = await fetch(SB_URL+'/auth/v1/token?grant_type=refresh_token', {
+            method:'POST', headers:{'Content-Type':'application/json','apikey':SB_ANON},
+            body: JSON.stringify({refresh_token: SESSION.refresh_token})
+        });
+        const data = await r.json();
+        if (data.access_token) { SESSION = {...SESSION, ...data}; return true; }
+    } catch(e) { console.error('Falha ao renovar sessão', e); }
+    return false;
+}
+async function sb(path, method='GET', body=null, token=null, _retry=true) {
     const hdrs = {
         'Content-Type':'application/json',
         'apikey': SB_ANON,
@@ -163,7 +175,13 @@ async function sb(path, method='GET', body=null, token=null) {
     const opts = {method, headers: hdrs};
     if (body) opts.body = JSON.stringify(body);
     const r = await fetch(SB_URL+'/rest/v1'+path, opts);
-    if (!r.ok) { const e = await r.text(); throw new Error(e); }
+    if (!r.ok) {
+        const e = await r.text();
+        if (_retry && !token && /JWT expired|PGRST303/.test(e) && await refreshSession()) {
+            return sb(path, method, body, null, false);
+        }
+        throw new Error(e);
+    }
     return method==='GET' || method==='POST' ? r.json() : r;
 }
 
