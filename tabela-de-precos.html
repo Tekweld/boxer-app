@@ -119,7 +119,7 @@ async function load() {
         sbFetch('/multiplicadores?tabela_id=eq.'+TID+'&select=segmento,classe,porte,categoria_grupo,valor'),
         sbFetch('/produtos?tabela_id=eq.'+TID+'&ativo=eq.true&pv_sp=gt.0&select=codigo,modelo,pv_sp,porte,icms,ipi,ncm,categoria_id&order=pv_sp'),
         sbFetch('/categorias?tabela_id=eq.'+TID+'&select=id,nome,ordem,categoria_grupo&order=ordem'),
-        sbFetch('/comissoes?tabela_id=eq.'+TID+'&select=segmento,classe,categoria_grupo,rep_pct,revenda_pct')
+        sbFetch('/comissoes?tabela_id=eq.'+TID+'&select=segmento,classe,categoria_grupo,rep_pct,revenda_pct,vendedor_tecnico_pct')
     ]);
 
     const tabela = tabelaRes[0];
@@ -204,6 +204,7 @@ function updateComissao() {
     if (c) {
         let text = `Representante = <span>${parseFloat(c.rep_pct)}%</span>`;
         if (c.revenda_pct !== null) text += ` · Revenda = <span>${parseFloat(c.revenda_pct)}%</span>`;
+        if (c.vendedor_tecnico_pct !== null) text += ` · Vendedor Técnico = <span>${parseFloat(c.vendedor_tecnico_pct)}%</span>`;
         box.style.display = 'block';
         document.getElementById('comissaoText').innerHTML = text;
     } else { box.style.display='none'; }
