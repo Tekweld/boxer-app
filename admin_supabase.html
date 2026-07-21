@@ -78,6 +78,20 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 </div>
 </div>
 
+<div id="recoveryPage" class="login-wrap hidden">
+<div class="login-card">
+<div style="text-align:center">
+<img src="Estrela-Boxer.svg" width="50" height="50" style="display:block">
+</div>
+<h1>Definir Nova Senha</h1>
+<p id="recoveryEmail">Carregando conta...</p>
+<div id="recoveryErr" class="err-msg hidden"></div>
+<div class="field"><label>Nova senha</label><input id="recoveryPass1" type="password" placeholder="••••••••"></div>
+<div class="field"><label>Confirmar nova senha</label><input id="recoveryPass2" type="password" placeholder="••••••••"></div>
+<button class="btn-login" onclick="doDefinirNovaSenha()">Salvar senha e entrar</button>
+</div>
+</div>
+
 <div id="adminPage" class="hidden">
 <div class="topbar">
 <div class="topbar-left">
@@ -212,44 +226,46 @@ setTimeout(() => {
 
 }
 
+async function resolverPerfilEEntrar(email, userId) {
+    if (email.toLowerCase() === 'bruno@boxersoldas.com.br') {
+        PERFIL = { permissao: 'admin', nome: 'Bruno Boxer (CEO)' };
+    } else {
+        try {
+            const perfis = await sb('/perfis?id=eq.'+userId+'&select=*');
+            PERFIL = perfis[0] || {permissao:'editor', nome: email};
+        } catch(e) {
+            PERFIL = {permissao:'editor', nome: email};
+        }
+    }
+    setupAdminSession(PERFIL.nome, PERFIL.permissao);
+}
+
 async function doLogin() {
     const email = document.getElementById('loginEmail').value.trim();
     const pass = document.getElementById('loginPass').value;
     const errEl = document.getElementById('loginErr');
-    
+
     if (!email || !pass) {
         errEl.textContent = 'Preencha todos os campos';
         errEl.classList.remove('hidden');
         return;
     }
-    
+
     errEl.classList.add('hidden');
-    
+
 // login via Supabase Auth abaixo
-    
+
     try {
         const res = await sbAuth('/token?grant_type=password', {email, password: pass});
-        
-        if (res.error || !res.access_token) { 
-            errEl.textContent = 'Email ou senha incorretos'; 
-            errEl.classList.remove('hidden'); 
-            return; 
+
+        if (res.error || !res.access_token) {
+            errEl.textContent = 'Email ou senha incorretos';
+            errEl.classList.remove('hidden');
+            return;
         }
-        
+
         SESSION = res;
-        
-        if (email.toLowerCase() === 'bruno@boxersoldas.com.br') {
-            PERFIL = { permissao: 'admin', nome: 'Bruno Boxer (CEO)' };
-        } else {
-            try {
-                const perfis = await sb('/perfis?id=eq.'+res.user.id+'&select=*');
-                PERFIL = perfis[0] || {permissao:'editor', nome: email};
-            } catch(e) {
-                PERFIL = {permissao:'editor', nome: email};
-            }
-        }
-        
-        setupAdminSession(PERFIL.nome, PERFIL.permissao);
+        await resolverPerfilEEntrar(email, res.user.id);
     } catch (e) {
         console.error(e);
         errEl.textContent = 'Erro de conexão com o servidor. Tente novamente.';
@@ -264,21 +280,68 @@ function doLogout() {
     if(window.location.hash) window.location.hash = '';
 }
 
+let RECOVERY_TOKEN = null;
 async function checkHashLogin() {
     const hash = window.location.hash;
-    if (hash && hash.includes('access_token=')) {
-        try {
-            const params = new URLSearchParams(hash.replace('#', '?'));
-            const token = params.get('access_token');
-            if (token) {
-                SESSION = { access_token: token, user: { id: 'recovery-user', email: 'bruno@boxersoldas.com.br' } };
-                setupAdminSession('Bruno Boxer (Link)', 'admin');
-                toast('Logado com sucesso via link de e-mail!');
-                history.replaceState(null, null, window.location.pathname);
-            }
-        } catch(e) {
-            console.error('Erro ao ler token do hash', e);
+    if (!hash || !hash.includes('access_token=')) return;
+    const params = new URLSearchParams(hash.replace('#', '?'));
+    const token = params.get('access_token');
+    const type = params.get('type');
+    history.replaceState(null, null, window.location.pathname);
+    if (!token) return;
+
+    try {
+        const r = await fetch(SB_URL+'/auth/v1/user', {headers:{'apikey':SB_ANON,'Authorization':'Bearer '+token}});
+        const u = await r.json();
+        if (!r.ok || !u.email) {
+            document.getElementById('loginPage').classList.remove('hidden');
+            document.getElementById('loginErr').textContent = 'Link inválido ou expirado. Peça um novo link de recuperação.';
+            document.getElementById('loginErr').classList.remove('hidden');
+            return;
         }
+
+        if (type === 'recovery') {
+            RECOVERY_TOKEN = token;
+            document.getElementById('recoveryEmail').textContent = 'Conta: ' + u.email;
+            document.getElementById('loginPage').classList.add('hidden');
+            document.getElementById('recoveryPage').classList.remove('hidden');
+        } else {
+            SESSION = { access_token: token, user: u };
+            await resolverPerfilEEntrar(u.email, u.id);
+        }
+    } catch(e) {
+        console.error('Erro ao processar link de acesso', e);
+        document.getElementById('loginPage').classList.remove('hidden');
+        document.getElementById('loginErr').textContent = 'Erro de conexão ao validar o link. Tente novamente.';
+        document.getElementById('loginErr').classList.remove('hidden');
+    }
+}
+
+async function doDefinirNovaSenha() {
+    const p1 = document.getElementById('recoveryPass1').value;
+    const p2 = document.getElementById('recoveryPass2').value;
+    const errEl = document.getElementById('recoveryErr');
+    errEl.classList.add('hidden');
+
+    if (!p1 || p1.length < 6) { errEl.textContent = 'A senha deve ter ao menos 6 caracteres.'; errEl.classList.remove('hidden'); return; }
+    if (p1 !== p2) { errEl.textContent = 'As senhas não coincidem.'; errEl.classList.remove('hidden'); return; }
+
+    try {
+        const r = await fetch(SB_URL+'/auth/v1/user', {
+            method:'PUT',
+            headers:{'Content-Type':'application/json','apikey':SB_ANON,'Authorization':'Bearer '+RECOVERY_TOKEN},
+            body: JSON.stringify({password: p1})
+        });
+        const u = await r.json();
+        if (!r.ok) { errEl.textContent = u.msg || u.message || 'Erro ao salvar a nova senha.'; errEl.classList.remove('hidden'); return; }
+
+        SESSION = { access_token: RECOVERY_TOKEN, user: u };
+        document.getElementById('recoveryPage').classList.add('hidden');
+        await resolverPerfilEEntrar(u.email, u.id);
+        toast('Senha atualizada com sucesso!');
+    } catch(e) {
+        errEl.textContent = 'Erro de conexão: ' + e.message;
+        errEl.classList.remove('hidden');
     }
 }
 
