@@ -227,10 +227,12 @@ function renderProd(ps){
 }
 
 let CUR_PROD_IMG = null;
+let CUR_PROD_IMG2 = null;
 function openProdModal(id){
     const p=allProd.find(x=>x.id===id);
     if(!p){toast('Produto não encontrado','error');return;}
     CUR_PROD_IMG = p.imagem_url || null;
+    CUR_PROD_IMG2 = p.imagem_secundaria_url || null;
     const carac = Array.isArray(p.caracteristicas) ? p.caracteristicas : [];
     const caracRowsHTML = carac.map(c=>caracRowHTML(c.label||c.chave||'', c.valor||c.value||'')).join('');
     const acessorios = Array.isArray(p.acessorios_padrao) ? p.acessorios_padrao : [];
@@ -243,6 +245,9 @@ function openProdModal(id){
 <div class="form-row"><label>Imagem de Capa</label>
 <div id="imgPreview" style="margin-bottom:8px">${p.imagem_url ? `<img src="${p.imagem_url}" style="max-width:200px;max-height:150px;display:block;border:1px solid #e2e8f0;border-radius:6px;object-fit:contain">` : '<p style="color:#a0aec0;font-size:12px">Nenhuma imagem cadastrada</p>'}</div>
 <input type="file" id="f_img" accept="image/*" onchange="previewImgFile(this)"></div>
+<div class="form-row"><label>Imagem Secundária <span style="font-weight:400;text-transform:none">(usada na seção Escopo de Fornecimento da proposta; se não cadastrada, usa a Imagem de Capa)</span></label>
+<div id="imgPreview2" style="margin-bottom:8px">${p.imagem_secundaria_url ? `<img src="${p.imagem_secundaria_url}" style="max-width:200px;max-height:150px;display:block;border:1px solid #e2e8f0;border-radius:6px;object-fit:contain">` : '<p style="color:#a0aec0;font-size:12px">Nenhuma imagem cadastrada</p>'}</div>
+<input type="file" id="f_img2" accept="image/*" onchange="previewImgFile2(this)"></div>
 <div class="form-row"><label>Descrição Completa</label><textarea id="f_desc" rows="4" style="resize:vertical">${(p.descricao_completa||'').replace(/</g,'&lt;')}</textarea></div>
 <div class="form-row"><label>Características Técnicas</label>
 <div id="caracList">${caracRowsHTML}</div>
@@ -386,6 +391,12 @@ function previewImgFile(input){
     const url=URL.createObjectURL(file);
     document.getElementById('imgPreview').innerHTML=`<img src="${url}" style="max-width:200px;max-height:150px;display:block;border:1px solid #e2e8f0;border-radius:6px;object-fit:contain">`;
 }
+function previewImgFile2(input){
+    const file=input.files[0];
+    if(!file)return;
+    const url=URL.createObjectURL(file);
+    document.getElementById('imgPreview2').innerHTML=`<img src="${url}" style="max-width:200px;max-height:150px;display:block;border:1px solid #e2e8f0;border-radius:6px;object-fit:contain">`;
+}
 async function uploadImagem(path, file, _retry=true){
     const up = await fetch(SB_URL+'/storage/v1/object/produtos-imagens/'+path,{
         method:'POST',
@@ -409,6 +420,15 @@ async function saveProd(id){
             await uploadImagem(path, file);
             imagemUrl = SB_URL+'/storage/v1/object/public/produtos-imagens/'+path;
         }
+        let imagemUrl2 = CUR_PROD_IMG2;
+        const file2 = document.getElementById('f_img2').files[0];
+        if(file2){
+            const p = allProd.find(x=>x.id===id);
+            const ext2 = (file2.name.split('.').pop()||'jpg').toLowerCase();
+            const path2 = (p?.codigo||id)+'-secundaria-'+Date.now()+'.'+ext2;
+            await uploadImagem(path2, file2);
+            imagemUrl2 = SB_URL+'/storage/v1/object/public/produtos-imagens/'+path2;
+        }
         const p = allProd.find(x=>x.id===id);
         const acessorios = await collectAcessoriosParaSalvar(p?.codigo||id);
         const equipInclusos = await collectEquipItensParaSalvar(p?.codigo||id);
@@ -425,6 +445,7 @@ async function saveProd(id){
             espessura_solda: espessura
         };
         if(imagemUrl) body.imagem_url = imagemUrl;
+        if(imagemUrl2) body.imagem_secundaria_url = imagemUrl2;
         await sb('/produtos?id=eq.'+id,'PATCH',body);
         await sb('/log_alteracoes','POST',{usuario_id:SESSION.user.id,usuario_email:SESSION.user.email,tabela_ref:'produtos',registro_id:id,campo:'marketing_update',valor_novo:'imagem/descrição/características/equipamentos inclusos/acessórios/espessura'});
         toast('Produto atualizado');closeModal();loadProdutos();

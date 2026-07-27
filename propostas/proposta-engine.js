@@ -21,7 +21,7 @@ async function gerarHTMLProposta(sb, proposta, itens, contatos, versao) {
   // 2 — Detalhes dos produtos (para Escopo de Fornecimento e seleção de capa)
   const codigos = [...new Set(itens.map(i => i.produto_codigo))];
   const { data: prods } = await sb.from('produtos')
-    .select('codigo, modelo, descricao_completa, caracteristicas, imagem_url, acessorios_padrao, espessura_solda, equipamentos_inclusos')
+    .select('codigo, modelo, descricao_completa, caracteristicas, imagem_url, imagem_secundaria_url, acessorios_padrao, espessura_solda, equipamentos_inclusos')
     .in('codigo', codigos);
   const prodMap = Object.fromEntries((prods || []).map(p => [p.codigo, p]));
 
@@ -310,7 +310,7 @@ const CSS_PROP_LASER = CSS_PROP
    INCLUSOS" logo abaixo de 1. OBJETIVO) — mesmo peso visual de um
    cabeçalho de página (.pg-secao-num), para não parecer uma subseção. */
 .sec-header-inline{font-size:22px;font-weight:700;color:#1d327b;letter-spacing:-.3px;margin-top:32px}
-.sec-divisor-inline{height:1px;background:#d0d8e8;margin:10px 0 24px}
+.sec-divisor-inline{height:2px;background:#25bbee;margin:10px 0 24px}
 
 /* Foto pequena por linha em Equipamentos Inclusos */
 .eq-foto{width:40px;height:40px;display:flex;align-items:center;justify-content:center}
@@ -903,10 +903,11 @@ function montarBlocosEscopo(itensComDetalhe, prodMap, secNum) {
         </tr>`).join('')}</tbody>
       </table>` : '';
 
-    const html = p.imagem_url ? `<div class="escopo-bloco">
+    const fotoEscopo = p.imagem_secundaria_url || p.imagem_url;
+    const html = fotoEscopo ? `<div class="escopo-bloco">
   <div class="escopo-header">${esc(num)} &nbsp; ${tit}</div>
   <div class="escopo-inner">
-    <div class="escopo-foto"><img src="${esc(p.imagem_url)}" alt="${tit}"></div>
+    <div class="escopo-foto"><img src="${esc(fotoEscopo)}" alt="${tit}"></div>
     <div class="escopo-right">
       <div class="escopo-desc">${desc}</div>
       ${caracHTML}
