@@ -27,6 +27,7 @@ async function gerarHTMLProposta(sb, proposta, itens, contatos, versao) {
 
   // 3 — Imagem de capa
   let imagemCapa = cf.imagem_capa || cf.imagem_capa_fallback || '';
+  let modeloDestaque = '';
 
   if (proposta.tipo_produto === 'ROBO') {
     const { data: regras } = await sb.schema('comercial')
@@ -55,6 +56,10 @@ async function gerarHTMLProposta(sb, proposta, itens, contatos, versao) {
     const itemMaisCaro = [...itens].sort((a, b) => (parseFloat(b.preco_final) || 0) - (parseFloat(a.preco_final) || 0))[0];
     const fotoItemMaisCaro = itemMaisCaro && prodMap[itemMaisCaro.produto_codigo]?.imagem_url;
     if (fotoItemMaisCaro) imagemCapa = fotoItemMaisCaro;
+    if (itemMaisCaro) {
+      const pDestaque = prodMap[itemMaisCaro.produto_codigo] || {};
+      modeloDestaque = (pDestaque.modelo || itemMaisCaro.produto_modelo || itemMaisCaro.produto_codigo || '').toUpperCase();
+    }
   }
 
   // 4 — Dados derivados
@@ -72,8 +77,11 @@ async function gerarHTMLProposta(sb, proposta, itens, contatos, versao) {
   const cssUsado = proposta.tipo_produto === 'LASER' ? CSS_PROP_LASER : CSS_PROP;
 
   let corpo;
+  let resumoFooterHTML = '';
   if (proposta.tipo_produto === 'LASER') {
-    corpo = await montarCorpoLaser({ proposta, cf, itens, prodMap, contatos, contPrinc, hoje, tituloCapa, rep });
+    const r = await montarCorpoLaser({ proposta, cf, itens, prodMap, contatos, contPrinc, hoje, tituloCapa, rep, modeloDestaque });
+    corpo = r.html;
+    resumoFooterHTML = pgFooter(r.proximaPagina, proposta, modeloDestaque);
   } else {
     corpo = `
 ${pgObjetivo(cf, rep)}
@@ -94,10 +102,10 @@ ${pgAcordo(cf, proposta.tipo_produto)}`;
 <body>
 <div id="pg-stack">
 ${proposta.tipo_produto === 'LASER'
-  ? pgCapaLaser(proposta, itens, prodMap, contPrinc, hoje)
+  ? pgCapaLaser(proposta, imagemCapa, modeloDestaque, contPrinc, hoje)
   : pgCapa(proposta, cf, imagemCapa, contPrinc, hoje, tituloCapa)}
 ${corpo}
-${pgResumo(proposta, contatos, valorFmt, versao)}
+${pgResumo(proposta, contatos, valorFmt, versao, resumoFooterHTML)}
 </div>
 ${proposta.tipo_produto === 'LASER' ? SCRIPT_SCALE_TO_FIT : ''}
 </body>
@@ -230,6 +238,7 @@ body{font-family:Outfit,sans-serif;background:#f0f4f8;color:#1a202c;font-size:14
 
 const PAGE_W = 900;
 const PAGE_H = Math.round(PAGE_W * (297 / 210)); // proporção A4 ≈ 1273px
+const FOOTER_H = 46; // espaço reservado no fim da página para o rodapé (pgFooter)
 
 const CSS_PROP_LASER = CSS_PROP
   .replace('.pg{background:#fff;max-width:900px;margin:0 auto 28px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08)}',
@@ -302,6 +311,13 @@ const CSS_PROP_LASER = CSS_PROP
    cabeçalho de página (.pg-secao-num), para não parecer uma subseção. */
 .sec-header-inline{font-size:22px;font-weight:700;color:#1d327b;letter-spacing:-.3px;margin-top:32px}
 .sec-divisor-inline{height:1px;background:#d0d8e8;margin:10px 0 24px}
+
+/* Rodapé de página (todas exceto a capa): marca + proposta/modelo + nº */
+.pg-footer{position:absolute;left:48px;right:48px;bottom:26px;display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid #25bbee}
+.pg-footer-brand{font-size:11px;font-weight:600;letter-spacing:.5px;color:#1d327b}
+.pg-footer-brand b{font-weight:700}
+.pg-footer-mid{font-size:10px;font-weight:500;letter-spacing:.5px;color:#718096}
+.pg-footer-num{font-size:12px;font-weight:700;color:#1d327b}
 `;
 
 // ─────────────────────────────────────────────────────────────
@@ -361,14 +377,27 @@ function pgCapa(proposta, cf, imagemCapa, contPrinc, hoje, tituloCapa) {
 </div>`;
 }
 
+// Rodapé de página (LASER, todas as páginas exceto a capa): marca +
+// "proposta nº X | modelo" + número de página sequencial.
+function pgFooter(pageNum, proposta, modeloDestaque) {
+  const meio = [
+    proposta.codigo ? `PROPOSTA TÉCNICO-COMERCIAL Nº ${esc(proposta.codigo)}` : 'PROPOSTA TÉCNICO-COMERCIAL',
+    modeloDestaque ? esc(modeloDestaque) : ''
+  ].filter(Boolean).join(' &nbsp;|&nbsp; ');
+
+  return `<div class="pg-footer">
+    <span class="pg-footer-brand">BOXER <b>SOLDAS</b></span>
+    <span class="pg-footer-mid">${meio}</span>
+    <span class="pg-footer-num">${String(pageNum).padStart(2, '0')}</span>
+  </div>`;
+}
+
 // Capa exclusiva do LASER — isolada de pgCapa (usado por ROBO/MÁQUINAS)
 // para não gerar risco de regressão nesses tipos.
-function pgCapaLaser(proposta, itens, prodMap, contPrinc, hoje) {
-  const itemDestaque = [...itens].sort((a, b) => (parseFloat(b.preco_final) || 0) - (parseFloat(a.preco_final) || 0))[0];
-  const pDestaque = itemDestaque ? (prodMap[itemDestaque.produto_codigo] || {}) : {};
-  const modelo = esc((pDestaque.modelo || itemDestaque?.produto_modelo || itemDestaque?.produto_codigo || '').toUpperCase());
-  const fotoHTML = pDestaque.imagem_url
-    ? `<img src="${esc(pDestaque.imagem_url)}" alt="${modelo}">`
+function pgCapaLaser(proposta, imagemCapa, modeloDestaque, contPrinc, hoje) {
+  const modelo = esc(modeloDestaque || '');
+  const fotoHTML = imagemCapa
+    ? `<img src="${esc(imagemCapa)}" alt="${modelo}">`
     : `<div class="escopo-foto-vazio">Imagem não cadastrada</div>`;
   const acStr = contPrinc.nome ? ` • A/C: ${esc(contPrinc.nome)}` : '';
 
@@ -484,7 +513,7 @@ function equipamentosBodyHTML(itens, secNum) {
     </table>`;
 }
 
-function montarObjetivoEquipamentos(frame, cf, rep, itens) {
+function montarObjetivoEquipamentos(frame, cf, rep, itens, pageNum, proposta, modeloDestaque) {
   const doc = frame.contentDocument;
   const SAFETY = 20;
   const headerHTML = `<div class="pg-secao-num">1. OBJETIVO</div><div class="pg-circle"></div>`;
@@ -493,19 +522,31 @@ function montarObjetivoEquipamentos(frame, cf, rep, itens) {
 
   const headerH = medir(doc, `<div class="pg-header">${headerHTML}</div><div class="pg-linha"></div>`);
   const bodyH   = medir(doc, `<div class="pg-body">${objBody}${eqBody}</div>`);
-  const budget  = PAGE_H - headerH - SAFETY;
+  const budget  = PAGE_H - headerH - SAFETY - FOOTER_H;
 
   if (bodyH <= budget) {
-    return `<div class="pg">
+    const html = `<div class="pg">
   <div class="pg-header">${headerHTML}</div>
   <div class="pg-linha"></div>
   <div class="pg-body">${objBody}${eqBody}</div>
+  ${pgFooter(pageNum, proposta, modeloDestaque)}
 </div>`;
+    return { html, pagesUsed: 1 };
   }
 
   // Não coube tudo numa página só — mantém Equipamentos em página separada
   // (mesmo comportamento de antes) em vez de cortar conteúdo.
-  return `${pgObjetivo(cf, rep)}\n${pgEquipamentos(itens)}`;
+  const pagObjetivo = `<div class="pg">
+  <div class="pg-header">${headerHTML}</div>
+  <div class="pg-linha"></div>
+  <div class="pg-body">${objBody}</div>
+  ${pgFooter(pageNum, proposta, modeloDestaque)}
+</div>`;
+  const pagEquipamentos = `<div class="pg">
+  <div class="pg-body">${eqBody}</div>
+  ${pgFooter(pageNum + 1, proposta, modeloDestaque)}
+</div>`;
+  return { html: `${pagObjetivo}\n${pagEquipamentos}`, pagesUsed: 2 };
 }
 
 function pgEscopo(itens, prodMap) {
@@ -691,10 +732,11 @@ function pgAcordoGenerico(cf, opts = {}) {
       </div>
     </div>
   </div>
+  ${opts.pageFooterHTML || ''}
 </div>`;
 }
 
-function pgResumo(proposta, contatos, valorFmt, versao) {
+function pgResumo(proposta, contatos, valorFmt, versao, pageFooterHTML) {
   const descAtual = `Proposta técnica ${esc(proposta.codigo || '')} V.${versao}`;
 
   const contatosHTML = contatos.map(c => `
@@ -740,6 +782,7 @@ function pgResumo(proposta, contatos, valorFmt, versao) {
       </div>
     </div>
   </div>
+  ${pageFooterHTML || ''}
 </div>`;
 }
 
@@ -750,7 +793,7 @@ function pgResumo(proposta, contatos, valorFmt, versao) {
 // regressão nesses tipos — nada abaixo é usado fora do tipo LASER.
 // ─────────────────────────────────────────────────────────────
 
-async function montarCorpoLaser({ proposta, cf, itens, prodMap, rep }) {
+async function montarCorpoLaser({ proposta, cf, itens, prodMap, rep, modeloDestaque }) {
   const itensComEscopo = itens.filter(i => prodMap[i.produto_codigo]?.descricao_completa);
   const itensComAcessorios = itens.filter(i => (prodMap[i.produto_codigo]?.acessorios_padrao || []).length);
   const itensComEspessura = itens.filter(i => {
@@ -764,32 +807,48 @@ async function montarCorpoLaser({ proposta, cf, itens, prodMap, rep }) {
   const secEspessura  = itensComEspessura.length  ? ++n : null;
   const secAcordo = ++n;
 
+  // Numeração de PÁGINA (distinta da numeração de SEÇÃO acima) — a capa é a
+  // página 1, então o conteúdo do corpo começa sempre na página 2.
+  let pagina = 2;
+
   let objEquipHTML = '', escopoHTML = '', acessoriosHTML = '', espessuraHTML = '';
   const frame = await prepararMedidor();
   try {
-    objEquipHTML = montarObjetivoEquipamentos(frame, cf, rep, itens);
+    const rObjEquip = montarObjetivoEquipamentos(frame, cf, rep, itens, pagina, proposta, modeloDestaque);
+    objEquipHTML = rObjEquip.html; pagina += rObjEquip.pagesUsed;
+
     if (secEscopo) {
       const blocos = montarBlocosEscopo(itensComEscopo, prodMap, secEscopo);
-      escopoHTML = await paginar(frame, blocos, secaoOpts(secEscopo, 'ESCOPO DE FORNECIMENTO'));
+      const r = await paginar(frame, blocos, secaoOpts(secEscopo, 'ESCOPO DE FORNECIMENTO'), pagina, proposta, modeloDestaque);
+      escopoHTML = r.html; pagina += r.pagesUsed;
     }
     if (secAcessorios) {
       const blocos = montarBlocosAcessorios(itensComAcessorios, prodMap);
-      acessoriosHTML = await paginar(frame, blocos, secaoOpts(secAcessorios, 'ACESSÓRIOS PADRÃO'));
+      const r = await paginar(frame, blocos, secaoOpts(secAcessorios, 'ACESSÓRIOS PADRÃO'), pagina, proposta, modeloDestaque);
+      acessoriosHTML = r.html; pagina += r.pagesUsed;
     }
     if (secEspessura) {
       const linhas = montarLinhasEspessura(itensComEspessura, prodMap);
-      espessuraHTML = await paginar(frame, linhas, {
+      const r = await paginar(frame, linhas, {
         ...secaoOpts(secEspessura, 'ESPESSURA DE SOLDA'),
         wrap: rows => `<table class="espessura-table"><thead><tr><th>Modelo</th><th>Aço Carbono</th><th>Aço Inox</th><th>Alumínio</th></tr></thead><tbody>${rows}</tbody></table>`
-      });
+      }, pagina, proposta, modeloDestaque);
+      espessuraHTML = r.html; pagina += r.pagesUsed;
     }
   } finally {
     frame.remove();
   }
 
-  const acordoHTML = pgAcordoGenerico(cf, { secNum: secAcordo, entregaTecnica: true });
+  const acordoHTML = pgAcordoGenerico(cf, {
+    secNum: secAcordo, entregaTecnica: true,
+    pageFooterHTML: pgFooter(pagina, proposta, modeloDestaque)
+  });
+  pagina += 1;
 
-  return `${objEquipHTML}\n${escopoHTML}\n${acessoriosHTML}\n${espessuraHTML}\n${acordoHTML}`;
+  return {
+    html: `${objEquipHTML}\n${escopoHTML}\n${acessoriosHTML}\n${espessuraHTML}\n${acordoHTML}`,
+    proximaPagina: pagina
+  };
 }
 
 function secaoOpts(secNum, titulo) {
@@ -903,7 +962,7 @@ function medir(doc, innerHTML) {
   return root.getBoundingClientRect().height;
 }
 
-async function paginar(frame, blocks, opts) {
+async function paginar(frame, blocks, opts, pageNum, proposta, modeloDestaque) {
   const doc = frame.contentDocument;
   const SAFETY = 20;
 
@@ -915,7 +974,7 @@ async function paginar(frame, blocks, opts) {
   let current = [], used = 0, first = true;
 
   for (let i = 0; i < blocks.length; i++) {
-    const budget = (first ? PAGE_H - headerH : PAGE_H - headerContH) - SAFETY;
+    const budget = (first ? PAGE_H - headerH : PAGE_H - headerContH) - SAFETY - FOOTER_H;
     const h = heights[i];
     if (current.length && used + h > budget) {
       pages.push(current);
@@ -928,12 +987,15 @@ async function paginar(frame, blocks, opts) {
   }
   if (current.length) pages.push(current);
 
-  return pages.map((pageBlocks, idx) => {
+  const html = pages.map((pageBlocks, idx) => {
     const bodyInner = pageBlocks.map(b => b.html).join('');
     const body = opts.wrap ? opts.wrap(bodyInner) : bodyInner;
     const headerHTML = idx === 0
       ? `<div class="pg-header">${opts.headerHTML}</div>`
       : `<div class="pg-header-cont">${opts.headerContHTML}</div>`;
-    return `<div class="pg">${headerHTML}<div class="pg-linha"></div><div class="pg-body">${body}</div></div>`;
+    const footer = pgFooter(pageNum + idx, proposta, modeloDestaque);
+    return `<div class="pg">${headerHTML}<div class="pg-linha"></div><div class="pg-body">${body}</div>${footer}</div>`;
   }).join('\n');
+
+  return { html, pagesUsed: pages.length };
 }
