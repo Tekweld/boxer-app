@@ -105,7 +105,7 @@ ${proposta.tipo_produto === 'LASER'
   ? pgCapaLaser(proposta, imagemCapa, modeloDestaque, contPrinc, hoje)
   : pgCapa(proposta, cf, imagemCapa, contPrinc, hoje, tituloCapa)}
 ${corpo}
-${pgResumo(proposta, contatos, valorFmt, versao, resumoFooterHTML)}
+${pgResumo(proposta, contatos, valorFmt, valorTotal, versao, resumoFooterHTML)}
 </div>
 ${proposta.tipo_produto === 'LASER' ? SCRIPT_SCALE_TO_FIT : ''}
 </body>
@@ -279,6 +279,10 @@ const CSS_PROP_LASER = CSS_PROP
 .escopo-mini{border-radius:0 0 8px 8px}
 .carac-table{border-radius:8px;overflow:hidden}
 
+/* Foto do Escopo de Fornecimento maior, ocupando mais do espaço vertical
+   disponível na coluna (base CSS_PROP limita a 140px para ROBO/MÁQUINAS). */
+.escopo-foto img{max-height:100%;height:100%;width:100%}
+
 /* Capa (Laser) — redesenhada: fundo branco, logo oficial, modelo em
    destaque ao lado da foto, rodapé em cartão. Classes próprias
    (prefixo capa-laser-), não reaproveitam .capa-* do pgCapa legado. */
@@ -295,13 +299,13 @@ const CSS_PROP_LASER = CSS_PROP
 .capa-laser-hero-model-tags{font-size:13.5px;font-weight:600;letter-spacing:1.5px;color:#4a5568;margin-top:14px}
 .capa-laser-hero-photo{flex:1;height:100%;background:#f7f9fc;border:1px solid #d0d8e8;border-radius:16px;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .capa-laser-hero-photo img{max-width:82%;max-height:88%;object-fit:contain}
-.capa-laser-footer-card{position:absolute;left:48px;right:48px;bottom:40px;border:1px solid #d0d8e8;border-top:3px solid #1d327b;border-radius:10px;background:#fff;display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;box-shadow:0 4px 16px rgba(29,50,123,.06)}
-.capa-laser-fc-col{padding:18px 22px;border-right:1px solid #e2e8f0}
+.capa-laser-footer-card{position:absolute;left:48px;right:48px;bottom:40px;border-top:4px solid #25bbee;border-radius:10px;background:#1d327b;display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;box-shadow:0 8px 28px rgba(20,30,80,.28)}
+.capa-laser-fc-col{padding:28px 22px;border-right:1px solid rgba(255,255,255,.16)}
 .capa-laser-fc-col:last-child{border-right:none}
-.capa-laser-fc-label{font-size:10px;font-weight:700;letter-spacing:2px;color:#718096;margin-bottom:6px}
-.capa-laser-fc-value{font-size:14px;font-weight:600;color:#1a202c}
-.capa-laser-fc-value.accent{color:#1d327b}
-.capa-laser-fc-sub{font-size:12px;color:#718096;margin-top:2px}
+.capa-laser-fc-label{font-size:10px;font-weight:700;letter-spacing:2px;color:#9fb3e0;margin-bottom:6px}
+.capa-laser-fc-value{font-size:14px;font-weight:600;color:#fff}
+.capa-laser-fc-value.accent{color:#25bbee}
+.capa-laser-fc-sub{font-size:12px;color:#b7c3e6;margin-top:2px}
 
 /* Cabeçalho de seção embutido no meio de uma página (ex.: "2. EQUIPAMENTOS
    INCLUSOS" logo abaixo de 1. OBJETIVO) — mesmo peso visual de um
@@ -761,7 +765,7 @@ function pgAcordoGenerico(cf, opts = {}) {
 </div>`;
 }
 
-function pgResumo(proposta, contatos, valorFmt, versao, pageFooterHTML) {
+function pgResumo(proposta, contatos, valorFmt, valorTotal, versao, pageFooterHTML) {
   const descAtual = `Proposta técnica ${esc(proposta.codigo || '')} V.${versao}`;
   const isLaser = proposta.tipo_produto === 'LASER';
 
@@ -774,6 +778,18 @@ function pgResumo(proposta, contatos, valorFmt, versao, pageFooterHTML) {
           <td>${esc(proposta.codigo || '')}</td>
           <td>Entrega Técnica</td>
           <td style="text-align:right"><span style="color:#718096;font-weight:600;font-size:13px">A definir</span></td>
+        </tr>` : '';
+
+  // Entrega Técnica ainda não tem cálculo de precificação definido — soma
+  // como R$0 por ora; o total passa a refletir o valor real assim que essa
+  // precificação for implementada.
+  const VALOR_ENTREGA_TECNICA_PLACEHOLDER = 0;
+  const totalFmt = (valorTotal + VALOR_ENTREGA_TECNICA_PLACEHOLDER)
+    .toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const totalRowHTML = isLaser ? `
+        <tr style="border-top:2px solid #1d327b">
+          <td colspan="2" style="text-align:right;font-weight:700;color:#1d327b;padding-right:16px">TOTAL DA PROPOSTA</td>
+          <td style="text-align:right"><span class="res-valor">${esc(totalFmt)}</span></td>
         </tr>` : '';
 
   const contatosHTML = contatos.map(c => `
@@ -801,7 +817,7 @@ function pgResumo(proposta, contatos, valorFmt, versao, pageFooterHTML) {
           <td>${esc(proposta.codigo || '')}</td>
           <td>${descAtual}</td>
           <td style="text-align:right"><span class="res-valor">${esc(valorFmt)}</span></td>
-        </tr>${entregaTecnicaRowHTML}
+        </tr>${entregaTecnicaRowHTML}${totalRowHTML}
         <tr>
           <td colspan="3" class="res-sub">Prazo de pagamento: ${esc(proposta.prazo_pagamento || '')}</td>
         </tr>
