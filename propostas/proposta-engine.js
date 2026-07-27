@@ -296,6 +296,12 @@ const CSS_PROP_LASER = CSS_PROP
 .capa-laser-fc-value{font-size:14px;font-weight:600;color:#1a202c}
 .capa-laser-fc-value.accent{color:#1d327b}
 .capa-laser-fc-sub{font-size:12px;color:#718096;margin-top:2px}
+
+/* Cabeçalho de seção embutido no meio de uma página (ex.: "2. EQUIPAMENTOS
+   INCLUSOS" logo abaixo de 1. OBJETIVO) — mesmo peso visual de um
+   cabeçalho de página (.pg-secao-num), para não parecer uma subseção. */
+.sec-header-inline{font-size:22px;font-weight:700;color:#1d327b;letter-spacing:-.3px;margin-top:32px}
+.sec-divisor-inline{height:1px;background:#d0d8e8;margin:10px 0 24px}
 `;
 
 // ─────────────────────────────────────────────────────────────
@@ -470,7 +476,8 @@ function equipamentosBodyHTML(itens, secNum) {
     <td>${esc(item.produto_modelo || item.produto_codigo || '')}</td>
   </tr>`).join('');
 
-  return `<div class="subsec-bar">${secNum} &nbsp; EQUIPAMENTOS INCLUSOS</div>
+  return `<div class="sec-header-inline">${secNum}. EQUIPAMENTOS INCLUSOS</div>
+    <div class="sec-divisor-inline"></div>
     <table class="eq-table">
       <thead><tr><th style="width:60px">Nº</th><th>DESCRIÇÃO</th></tr></thead>
       <tbody>${linhas}</tbody>
