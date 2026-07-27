@@ -21,7 +21,7 @@ async function gerarHTMLProposta(sb, proposta, itens, contatos, versao) {
   // 2 — Detalhes dos produtos (para Escopo de Fornecimento e seleção de capa)
   const codigos = [...new Set(itens.map(i => i.produto_codigo))];
   const { data: prods } = await sb.from('produtos')
-    .select('codigo, modelo, descricao_completa, caracteristicas, imagem_url, acessorios_padrao, espessura_solda')
+    .select('codigo, modelo, descricao_completa, caracteristicas, imagem_url, acessorios_padrao, espessura_solda, equipamentos_inclusos')
     .in('codigo', codigos);
   const prodMap = Object.fromEntries((prods || []).map(p => [p.codigo, p]));
 
@@ -312,6 +312,11 @@ const CSS_PROP_LASER = CSS_PROP
 .sec-header-inline{font-size:22px;font-weight:700;color:#1d327b;letter-spacing:-.3px;margin-top:32px}
 .sec-divisor-inline{height:1px;background:#d0d8e8;margin:10px 0 24px}
 
+/* Foto pequena por linha em Equipamentos Inclusos */
+.eq-foto{width:40px;height:40px;display:flex;align-items:center;justify-content:center}
+.eq-foto-img{max-width:100%;max-height:100%;object-fit:contain;border-radius:4px}
+.eq-foto-vazio{width:40px;height:40px}
+
 /* Rodapé de página (todas exceto a capa): marca + proposta/modelo + nº */
 .pg-footer{position:absolute;left:48px;right:48px;bottom:26px;display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid #25bbee}
 .pg-footer-brand{font-size:11px;font-weight:600;letter-spacing:.5px;color:#1d327b}
@@ -499,26 +504,49 @@ function objetivoBodyHTML(cf, rep) {
     <div class="diferenciais">${difs}</div>`;
 }
 
-function equipamentosBodyHTML(itens, secNum) {
-  const linhas = itens.map((item, i) => `<tr>
-    <td class="eq-num">${secNum}.${i + 1}</td>
-    <td>${esc(item.produto_modelo || item.produto_codigo || '')}</td>
-  </tr>`).join('');
+function eqLinhaHTML(secNum, i, fotoUrl, desc) {
+  const fotoHTML = fotoUrl
+    ? `<img src="${esc(fotoUrl)}" class="eq-foto-img" alt="">`
+    : `<div class="eq-foto-vazio"></div>`;
+  return `<tr>
+    <td class="eq-num">${secNum}.${i}</td>
+    <td><div class="eq-foto">${fotoHTML}</div></td>
+    <td>${esc(desc)}</td>
+  </tr>`;
+}
+
+function equipamentosBodyHTML(itens, secNum, prodMap) {
+  let i = 0;
+  const linhas = itens.map(item => {
+    const p = prodMap?.[item.produto_codigo] || {};
+    i++;
+    let html = eqLinhaHTML(secNum, i, p.imagem_url, item.produto_modelo || item.produto_codigo || '');
+
+    const extras = Array.isArray(p.equipamentos_inclusos) ? p.equipamentos_inclusos : [];
+    extras.forEach(extra => {
+      i++;
+      const isObj = extra && typeof extra === 'object';
+      const fotoUrl = isObj ? extra.imagem_url : '';
+      const desc = isObj ? (extra.descricao || '') : String(extra || '');
+      html += eqLinhaHTML(secNum, i, fotoUrl, desc);
+    });
+    return html;
+  }).join('');
 
   return `<div class="sec-header-inline">${secNum}. EQUIPAMENTOS INCLUSOS</div>
     <div class="sec-divisor-inline"></div>
     <table class="eq-table">
-      <thead><tr><th style="width:60px">Nº</th><th>DESCRIÇÃO</th></tr></thead>
+      <thead><tr><th style="width:60px">Nº</th><th style="width:60px">FOTO</th><th>DESCRIÇÃO</th></tr></thead>
       <tbody>${linhas}</tbody>
     </table>`;
 }
 
-function montarObjetivoEquipamentos(frame, cf, rep, itens, pageNum, proposta, modeloDestaque) {
+function montarObjetivoEquipamentos(frame, cf, rep, itens, pageNum, proposta, modeloDestaque, prodMap) {
   const doc = frame.contentDocument;
   const SAFETY = 20;
   const headerHTML = `<div class="pg-secao-num">1. OBJETIVO</div><div class="pg-circle"></div>`;
   const objBody = objetivoBodyHTML(cf, rep);
-  const eqBody  = equipamentosBodyHTML(itens, 2);
+  const eqBody  = equipamentosBodyHTML(itens, 2, prodMap);
 
   const headerH = medir(doc, `<div class="pg-header">${headerHTML}</div><div class="pg-linha"></div>`);
   const bodyH   = medir(doc, `<div class="pg-body">${objBody}${eqBody}</div>`);
@@ -814,7 +842,7 @@ async function montarCorpoLaser({ proposta, cf, itens, prodMap, rep, modeloDesta
   let objEquipHTML = '', escopoHTML = '', acessoriosHTML = '', espessuraHTML = '';
   const frame = await prepararMedidor();
   try {
-    const rObjEquip = montarObjetivoEquipamentos(frame, cf, rep, itens, pagina, proposta, modeloDestaque);
+    const rObjEquip = montarObjetivoEquipamentos(frame, cf, rep, itens, pagina, proposta, modeloDestaque, prodMap);
     objEquipHTML = rObjEquip.html; pagina += rObjEquip.pagesUsed;
 
     if (secEscopo) {
