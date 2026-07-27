@@ -263,24 +263,21 @@ const CSS_PROP_LASER = CSS_PROP
 .pg-header-cont{padding:20px 48px 0}
 .pg-secao-num-cont{font-size:14px;font-weight:600;color:#4a5568;letter-spacing:-.2px}
 
-/* Acessórios Padrão */
-.acessorio-card{margin-bottom:18px}
-.acessorio-card-tit{background:#1d327b;color:#fff;font-size:11px;font-weight:700;letter-spacing:.5px;padding:9px 14px}
-.acessorio-lista{border:1px solid #d0d8e8;border-top:none;padding:14px}
-.acessorio-item{display:flex;gap:14px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #edf2f7}
-.acessorio-item:last-child{border-bottom:none}
-.acessorio-foto{width:72px;height:72px;min-width:72px;background:#f7f9fc;border:1px solid #e2e8f0;border-radius:6px;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.acessorio-foto img{max-width:100%;max-height:100%;object-fit:contain}
-.acessorio-foto-vazio{color:#a0aec0;font-size:9px;text-align:center}
-.acessorio-desc-txt{font-size:12.5px;color:#2d3748;line-height:1.5;padding-top:4px}
-
-/* Espessura de solda */
-.espessura-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:8px}
+/* Espessura de solda — agora exibida por item dentro do próprio bloco
+   do Escopo de Fornecimento (3.1, 3.2...), sem coluna de Modelo. */
+.espessura-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:8px;border-radius:8px;overflow:hidden}
 .espessura-table thead tr{background:#1d327b}
 .espessura-table thead th{color:#fff;padding:9px 12px;text-align:center;font-size:10.5px;letter-spacing:.5px}
 .espessura-table tbody tr:nth-child(even){background:#f7f9fc}
 .espessura-table tbody td{padding:8px 12px;border-bottom:1px solid #edf2f7;text-align:center}
-.espessura-table tbody td:first-child{text-align:left;font-weight:600;color:#1a202c}
+
+/* Cantos suavemente arredondados nas barras/tabelas de destaque azul-marinho
+   (somente LASER — sobrepõe as regras equivalentes de CSS_PROP, que
+   permanecem retas para ROBO/MÁQUINAS). */
+.escopo-header{border-radius:8px 8px 0 0}
+.escopo-inner{border-radius:0 0 8px 8px;overflow:hidden}
+.escopo-mini{border-radius:0 0 8px 8px}
+.carac-table{border-radius:8px;overflow:hidden}
 
 /* Capa (Laser) — redesenhada: fundo branco, logo oficial, modelo em
    destaque ao lado da foto, rodapé em cartão. Classes próprias
@@ -766,6 +763,18 @@ function pgAcordoGenerico(cf, opts = {}) {
 
 function pgResumo(proposta, contatos, valorFmt, versao, pageFooterHTML) {
   const descAtual = `Proposta técnica ${esc(proposta.codigo || '')} V.${versao}`;
+  const isLaser = proposta.tipo_produto === 'LASER';
+
+  const logoHTML = isLaser
+    ? `<img style="height:22px;width:auto" src="https://tekweld.github.io/boxer-app/boxer-logo-completo.png" alt="Boxer Soldas">`
+    : `<img style="height:44px" src="https://tekweld.github.io/boxer-app/Estrela-Boxer.svg" alt="Boxer Soldas">`;
+
+  const entregaTecnicaRowHTML = isLaser ? `
+        <tr>
+          <td>${esc(proposta.codigo || '')}</td>
+          <td>Entrega Técnica</td>
+          <td style="text-align:right"><span style="color:#718096;font-weight:600;font-size:13px">A definir</span></td>
+        </tr>` : '';
 
   const contatosHTML = contatos.map(c => `
   <div class="env-col">
@@ -775,7 +784,7 @@ function pgResumo(proposta, contatos, valorFmt, versao, pageFooterHTML) {
 
   return `<div class="pg">
   <div class="res-header">
-    <img style="height:44px" src="https://tekweld.github.io/boxer-app/Estrela-Boxer.svg" alt="Boxer Soldas">
+    ${logoHTML}
     <span style="font-size:11px;color:#718096">www.boxersoldas.com.br</span>
   </div>
   <div class="res-body">
@@ -792,7 +801,7 @@ function pgResumo(proposta, contatos, valorFmt, versao, pageFooterHTML) {
           <td>${esc(proposta.codigo || '')}</td>
           <td>${descAtual}</td>
           <td style="text-align:right"><span class="res-valor">${esc(valorFmt)}</span></td>
-        </tr>
+        </tr>${entregaTecnicaRowHTML}
         <tr>
           <td colspan="3" class="res-sub">Prazo de pagamento: ${esc(proposta.prazo_pagamento || '')}</td>
         </tr>
@@ -823,46 +832,27 @@ function pgResumo(proposta, contatos, valorFmt, versao, pageFooterHTML) {
 
 async function montarCorpoLaser({ proposta, cf, itens, prodMap, rep, modeloDestaque }) {
   const itensComEscopo = itens.filter(i => prodMap[i.produto_codigo]?.descricao_completa);
-  const itensComAcessorios = itens.filter(i => (prodMap[i.produto_codigo]?.acessorios_padrao || []).length);
-  const itensComEspessura = itens.filter(i => {
-    const e = prodMap[i.produto_codigo]?.espessura_solda;
-    return e && (e.aco_carbono || e.aco_inox || e.aluminio);
-  });
 
+  // Seção 3 (Escopo de Fornecimento) sempre existe: reúne os blocos de
+  // máquina (3.1, 3.2...), a Espessura de Solda de cada uma (quando houver)
+  // e sempre termina com o bloco fixo de Entrega Técnica.
   let n = 2; // 1 = Objetivo, 2 = Equipamentos (fixos, sempre presentes)
-  const secEscopo     = itensComEscopo.length     ? ++n : null;
-  const secAcessorios = itensComAcessorios.length ? ++n : null;
-  const secEspessura  = itensComEspessura.length  ? ++n : null;
+  const secEscopo = ++n;
   const secAcordo = ++n;
 
   // Numeração de PÁGINA (distinta da numeração de SEÇÃO acima) — a capa é a
   // página 1, então o conteúdo do corpo começa sempre na página 2.
   let pagina = 2;
 
-  let objEquipHTML = '', escopoHTML = '', acessoriosHTML = '', espessuraHTML = '';
+  let objEquipHTML = '', escopoHTML = '';
   const frame = await prepararMedidor();
   try {
     const rObjEquip = montarObjetivoEquipamentos(frame, cf, rep, itens, pagina, proposta, modeloDestaque, prodMap);
     objEquipHTML = rObjEquip.html; pagina += rObjEquip.pagesUsed;
 
-    if (secEscopo) {
-      const blocos = montarBlocosEscopo(itensComEscopo, prodMap, secEscopo);
-      const r = await paginar(frame, blocos, secaoOpts(secEscopo, 'ESCOPO DE FORNECIMENTO'), pagina, proposta, modeloDestaque);
-      escopoHTML = r.html; pagina += r.pagesUsed;
-    }
-    if (secAcessorios) {
-      const blocos = montarBlocosAcessorios(itensComAcessorios, prodMap);
-      const r = await paginar(frame, blocos, secaoOpts(secAcessorios, 'ACESSÓRIOS PADRÃO'), pagina, proposta, modeloDestaque);
-      acessoriosHTML = r.html; pagina += r.pagesUsed;
-    }
-    if (secEspessura) {
-      const linhas = montarLinhasEspessura(itensComEspessura, prodMap);
-      const r = await paginar(frame, linhas, {
-        ...secaoOpts(secEspessura, 'ESPESSURA DE SOLDA'),
-        wrap: rows => `<table class="espessura-table"><thead><tr><th>Modelo</th><th>Aço Carbono</th><th>Aço Inox</th><th>Alumínio</th></tr></thead><tbody>${rows}</tbody></table>`
-      }, pagina, proposta, modeloDestaque);
-      espessuraHTML = r.html; pagina += r.pagesUsed;
-    }
+    const blocos = montarBlocosEscopo(itensComEscopo, prodMap, secEscopo);
+    const r = await paginar(frame, blocos, secaoOpts(secEscopo, 'ESCOPO DE FORNECIMENTO'), pagina, proposta, modeloDestaque);
+    escopoHTML = r.html; pagina += r.pagesUsed;
   } finally {
     frame.remove();
   }
@@ -874,7 +864,7 @@ async function montarCorpoLaser({ proposta, cf, itens, prodMap, rep, modeloDesta
   pagina += 1;
 
   return {
-    html: `${objEquipHTML}\n${escopoHTML}\n${acessoriosHTML}\n${espessuraHTML}\n${acordoHTML}`,
+    html: `${objEquipHTML}\n${escopoHTML}\n${acordoHTML}`,
     proximaPagina: pagina
   };
 }
@@ -886,8 +876,25 @@ function secaoOpts(secNum, titulo) {
   };
 }
 
+function espessuraMiniHTML(p) {
+  const e = p.espessura_solda || {};
+  if (!e.aco_carbono && !e.aco_inox && !e.aluminio) return '';
+  return `
+      <table class="espessura-table" style="margin-top:12px">
+        <thead><tr><th>Aço Carbono</th><th>Aço Inox</th><th>Alumínio</th></tr></thead>
+        <tbody><tr>
+          <td>${esc(e.aco_carbono || '—')}</td>
+          <td>${esc(e.aco_inox || '—')}</td>
+          <td>${esc(e.aluminio || '—')}</td>
+        </tr></tbody>
+      </table>`;
+}
+
+// Texto de teste — a redação final da Entrega Técnica ainda será definida.
+const ENTREGA_TECNICA_TEXTO_TESTE = 'A entrega técnica do sistema de solda a laser é realizada presencialmente por Técnicos LSO (Laser Safety Officer) certificados da Boxer Soldas, e contempla a instalação completa do equipamento, a calibração inicial dos parâmetros de processo — potência, oscilação, velocidade de avanço e alimentação de arame — conforme a aplicação do cliente, os testes de segurança operacional exigidos pela tecnologia laser, e o treinamento prático da equipe operacional para garantir autonomia e segurança no uso diário do equipamento.';
+
 function montarBlocosEscopo(itensComDetalhe, prodMap, secNum) {
-  return itensComDetalhe.map((item, i) => {
+  const blocosMaquinas = itensComDetalhe.map((item, i) => {
     const p    = prodMap[item.produto_codigo] || {};
     const num  = `${secNum}.${i + 1}`;
     const tit  = esc((p.modelo || item.produto_modelo || item.produto_codigo || '').toUpperCase());
@@ -902,6 +909,7 @@ function montarBlocosEscopo(itensComDetalhe, prodMap, secNum) {
           <td class="carac-valor">${esc(c.valor || c.value || '')}</td>
         </tr>`).join('')}</tbody>
       </table>` : '';
+    const espessuraHTML = espessuraMiniHTML(p);
 
     const fotoEscopo = p.imagem_secundaria_url || p.imagem_url;
     const html = fotoEscopo ? `<div class="escopo-bloco">
@@ -911,6 +919,7 @@ function montarBlocosEscopo(itensComDetalhe, prodMap, secNum) {
     <div class="escopo-right">
       <div class="escopo-desc">${desc}</div>
       ${caracHTML}
+      ${espessuraHTML}
     </div>
   </div>
 </div>` : `<div class="escopo-bloco">
@@ -918,43 +927,25 @@ function montarBlocosEscopo(itensComDetalhe, prodMap, secNum) {
   <div class="escopo-mini">
     <div class="escopo-desc">${desc}</div>
     ${caracHTML}
+    ${espessuraHTML}
   </div>
 </div>`;
 
     return { key: item.produto_codigo, html };
   });
-}
 
-function montarBlocosAcessorios(itensComAcessorios, prodMap) {
-  return itensComAcessorios.map(item => {
-    const p   = prodMap[item.produto_codigo] || {};
-    const tit = esc((p.modelo || item.produto_modelo || item.produto_codigo || '').toUpperCase());
-    const acessorios = Array.isArray(p.acessorios_padrao) ? p.acessorios_padrao : [];
+  const numEntrega = `${secNum}.${itensComDetalhe.length + 1}`;
+  const blocoEntregaTecnica = {
+    key: '__entrega_tecnica__',
+    html: `<div class="escopo-bloco">
+  <div class="escopo-header">${esc(numEntrega)} &nbsp; ENTREGA TÉCNICA</div>
+  <div class="escopo-mini">
+    <div class="escopo-desc">${esc(ENTREGA_TECNICA_TEXTO_TESTE)}</div>
+  </div>
+</div>`
+  };
 
-    const itensHTML = acessorios.map(a => {
-      const foto = a.imagem_url
-        ? `<div class="acessorio-foto"><img src="${esc(a.imagem_url)}" alt=""></div>`
-        : `<div class="acessorio-foto"><span class="acessorio-foto-vazio">Sem foto</span></div>`;
-      return `<div class="acessorio-item">${foto}<div class="acessorio-desc-txt">${esc(a.descricao || '')}</div></div>`;
-    }).join('');
-
-    const html = `<div class="acessorio-card">
-  <div class="acessorio-card-tit">${esc(item.produto_codigo)} &nbsp; ${tit}</div>
-  <div class="acessorio-lista">${itensHTML}</div>
-</div>`;
-
-    return { key: item.produto_codigo, html };
-  });
-}
-
-function montarLinhasEspessura(itensComEspessura, prodMap) {
-  return itensComEspessura.map(item => {
-    const p = prodMap[item.produto_codigo] || {};
-    const e = p.espessura_solda || {};
-    const modelo = esc(p.modelo || item.produto_modelo || item.produto_codigo || '');
-    const html = `<tr><td>${modelo}</td><td>${esc(e.aco_carbono || '—')}</td><td>${esc(e.aco_inox || '—')}</td><td>${esc(e.aluminio || '—')}</td></tr>`;
-    return { key: item.produto_codigo, html };
-  });
+  return [...blocosMaquinas, blocoEntregaTecnica];
 }
 
 // ─── MOTOR DE PAGINAÇÃO (medição real em iframe oculto) ─────────────────────
