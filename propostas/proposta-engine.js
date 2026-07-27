@@ -93,7 +93,9 @@ ${pgAcordo(cf, proposta.tipo_produto)}`;
 </head>
 <body>
 <div id="pg-stack">
-${pgCapa(proposta, cf, imagemCapa, contPrinc, hoje, tituloCapa)}
+${proposta.tipo_produto === 'LASER'
+  ? pgCapaLaser(proposta, itens, prodMap, contPrinc, hoje)
+  : pgCapa(proposta, cf, imagemCapa, contPrinc, hoje, tituloCapa)}
 ${corpo}
 ${pgResumo(proposta, contatos, valorFmt, versao)}
 </div>
@@ -231,15 +233,15 @@ const PAGE_H = Math.round(PAGE_W * (297 / 210)); // proporção A4 ≈ 1273px
 
 const CSS_PROP_LASER = CSS_PROP
   .replace('.pg{background:#fff;max-width:900px;margin:0 auto 28px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08)}',
-            `.pg{background:#fff;width:${PAGE_W}px;height:${PAGE_H}px;margin:0 auto 24px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08)}`)
+            `.pg{background:#fff;width:${PAGE_W}px;height:${PAGE_H}px;margin:0 auto 24px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);position:relative}`)
   .replace('.pg-circle{position:absolute;top:28px;right:48px;width:26px;height:26px;background:#25bbee;border-radius:50%}',
             '.pg-circle{display:none}')
   .replace('.pg-linha{height:3px;background:linear-gradient(90deg,#25bbee 60%,#25bbee22);margin:10px 48px 28px}',
             '.pg-linha{height:1px;background:#d0d8e8;margin:10px 48px 28px}')
   .replace('.capa-linha-azul{height:2px;background:#25bbee;margin:0 44px 0}',
             '.capa-linha-azul{height:2px;background:#1d327b;margin:0 44px 0}')
-  .replace('.dif-dot{width:14px;height:14px;border-radius:50%;background:#25bbee;flex-shrink:0}',
-            '.dif-dot{width:14px;height:14px;border-radius:50%;background:#1d327b;flex-shrink:0}')
+  .replace('.diferenciais{display:grid;grid-template-columns:1fr 1fr;gap:8px}',
+            '.diferenciais{display:grid;grid-template-columns:1fr;gap:8px}')
   .replace('.eq-num{color:#25bbee;font-weight:600;width:52px}',
             '.eq-num{color:#1d327b;font-weight:600;width:52px}')
   .replace('.gar-item{border:2px solid #25bbee;border-radius:8px;padding:14px;text-align:center}',
@@ -270,6 +272,30 @@ const CSS_PROP_LASER = CSS_PROP
 .espessura-table tbody tr:nth-child(even){background:#f7f9fc}
 .espessura-table tbody td{padding:8px 12px;border-bottom:1px solid #edf2f7;text-align:center}
 .espessura-table tbody td:first-child{text-align:left;font-weight:600;color:#1a202c}
+
+/* Capa (Laser) — redesenhada: fundo branco, logo oficial, modelo em
+   destaque ao lado da foto, rodapé em cartão. Classes próprias
+   (prefixo capa-laser-), não reaproveitam .capa-* do pgCapa legado. */
+.capa-laser-top{display:flex;align-items:center;justify-content:space-between;padding:40px 48px 0}
+.capa-laser-logo{height:40px;width:auto;display:block}
+.capa-laser-eyebrow{display:flex;flex-direction:column;align-items:flex-end;text-align:right;padding-top:4px;white-space:nowrap}
+.capa-laser-eyebrow-title{font-size:20.5px;font-weight:700;letter-spacing:.3px;color:#1d327b;text-transform:uppercase}
+.capa-laser-eyebrow-sub{font-size:11px;font-weight:600;letter-spacing:2.5px;color:#25bbee;margin-top:5px}
+.capa-laser-divisor{height:2px;background:#25bbee;margin:34px 48px 0}
+.capa-laser-hero{display:flex;align-items:center;gap:8px;padding:8px 48px 0;height:760px}
+.capa-laser-hero-model{width:280px;flex-shrink:0}
+.capa-laser-hero-model-name{font-size:52px;font-weight:700;color:#1d327b;line-height:1.05;letter-spacing:-1px;word-break:break-word}
+.capa-laser-hero-model-rule{width:56px;height:4px;background:#25bbee;margin-top:20px}
+.capa-laser-hero-model-tags{font-size:13.5px;font-weight:600;letter-spacing:1.5px;color:#4a5568;margin-top:14px}
+.capa-laser-hero-photo{flex:1;height:100%;background:#f7f9fc;border:1px solid #d0d8e8;border-radius:16px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.capa-laser-hero-photo img{max-width:82%;max-height:88%;object-fit:contain}
+.capa-laser-footer-card{position:absolute;left:48px;right:48px;bottom:40px;border:1px solid #d0d8e8;border-top:3px solid #1d327b;border-radius:10px;background:#fff;display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;box-shadow:0 4px 16px rgba(29,50,123,.06)}
+.capa-laser-fc-col{padding:18px 22px;border-right:1px solid #e2e8f0}
+.capa-laser-fc-col:last-child{border-right:none}
+.capa-laser-fc-label{font-size:10px;font-weight:700;letter-spacing:2px;color:#718096;margin-bottom:6px}
+.capa-laser-fc-value{font-size:14px;font-weight:600;color:#1a202c}
+.capa-laser-fc-value.accent{color:#1d327b}
+.capa-laser-fc-sub{font-size:12px;color:#718096;margin-top:2px}
 `;
 
 // ─────────────────────────────────────────────────────────────
@@ -329,6 +355,57 @@ function pgCapa(proposta, cf, imagemCapa, contPrinc, hoje, tituloCapa) {
 </div>`;
 }
 
+// Capa exclusiva do LASER — isolada de pgCapa (usado por ROBO/MÁQUINAS)
+// para não gerar risco de regressão nesses tipos.
+function pgCapaLaser(proposta, itens, prodMap, contPrinc, hoje) {
+  const itemDestaque = [...itens].sort((a, b) => (parseFloat(b.preco_final) || 0) - (parseFloat(a.preco_final) || 0))[0];
+  const pDestaque = itemDestaque ? (prodMap[itemDestaque.produto_codigo] || {}) : {};
+  const modelo = esc((pDestaque.modelo || itemDestaque?.produto_modelo || itemDestaque?.produto_codigo || '').toUpperCase());
+  const fotoHTML = pDestaque.imagem_url
+    ? `<img src="${esc(pDestaque.imagem_url)}" alt="${modelo}">`
+    : `<div class="escopo-foto-vazio">Imagem não cadastrada</div>`;
+  const acStr = contPrinc.nome ? ` • A/C: ${esc(contPrinc.nome)}` : '';
+
+  return `<div class="pg">
+  <div class="capa-laser-top">
+    <img class="capa-laser-logo" src="https://tekweld.github.io/boxer-app/boxer-logo-completo.png" alt="Boxer Soldas">
+    <div class="capa-laser-eyebrow">
+      <div class="capa-laser-eyebrow-title">Proposta Técnica</div>
+      <div class="capa-laser-eyebrow-sub">SISTEMA DE SOLDA A LASER</div>
+    </div>
+  </div>
+  <div class="capa-laser-divisor"></div>
+  <div class="capa-laser-hero">
+    <div class="capa-laser-hero-model">
+      <div class="capa-laser-hero-model-name">${modelo}</div>
+      <div class="capa-laser-hero-model-rule"></div>
+      <div class="capa-laser-hero-model-tags">SOLDA | LIMPEZA | CORTE</div>
+    </div>
+    <div class="capa-laser-hero-photo">${fotoHTML}</div>
+  </div>
+  <div class="capa-laser-footer-card">
+    <div class="capa-laser-fc-col">
+      <div class="capa-laser-fc-label">CLIENTE</div>
+      <div class="capa-laser-fc-value">${esc(proposta.cliente_nome || '')}${acStr}</div>
+      <div class="capa-laser-fc-sub">${esc(proposta.cliente_cidade || '')} – ${esc(proposta.cliente_estado || '')}</div>
+    </div>
+    <div class="capa-laser-fc-col">
+      <div class="capa-laser-fc-label">PROPOSTA</div>
+      <div class="capa-laser-fc-value accent">${esc(proposta.codigo || '')}</div>
+    </div>
+    <div class="capa-laser-fc-col">
+      <div class="capa-laser-fc-label">EMISSÃO</div>
+      <div class="capa-laser-fc-value">${hoje}</div>
+    </div>
+    <div class="capa-laser-fc-col">
+      <div class="capa-laser-fc-label">REPRESENTANTE</div>
+      <div class="capa-laser-fc-value">${esc(proposta.vendedor_nome || '')}</div>
+      <div class="capa-laser-fc-sub">Boxer Soldas</div>
+    </div>
+  </div>
+</div>`;
+}
+
 function pgObjetivo(cf, rep) {
   const difs = (cf.diferenciais || []).map(d =>
     `<div class="dif-item"><div class="dif-dot"></div><span>${esc(d)}</span></div>`
@@ -367,6 +444,61 @@ function pgEquipamentos(itens) {
     </table>
   </div>
 </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────
+// LASER: junta 1. OBJETIVO + 2. EQUIPAMENTOS numa página só quando
+// cabe (aproveita o espaço em branco que sobra sob os diferenciais).
+// Mede o conteúdo combinado contra a altura da página; se não couber,
+// cai de volta para as duas páginas separadas (pgObjetivo/pgEquipamentos),
+// sem cortar conteúdo silenciosamente.
+// ─────────────────────────────────────────────────────────────
+
+function objetivoBodyHTML(cf, rep) {
+  const difs = (cf.diferenciais || []).map(d =>
+    `<div class="dif-item"><div class="dif-dot"></div><span>${esc(d)}</span></div>`
+  ).join('');
+
+  return `<div class="content-box">${esc(rep(cf.objetivo_paragrafo || ''))}</div>
+    <div class="subsec-bar">1.1 &nbsp; DIFERENCIAIS BOXER SOLDAS</div>
+    <div class="diferenciais">${difs}</div>`;
+}
+
+function equipamentosBodyHTML(itens, secNum) {
+  const linhas = itens.map((item, i) => `<tr>
+    <td class="eq-num">${secNum}.${i + 1}</td>
+    <td>${esc(item.produto_modelo || item.produto_codigo || '')}</td>
+  </tr>`).join('');
+
+  return `<div class="subsec-bar">${secNum} &nbsp; EQUIPAMENTOS INCLUSOS</div>
+    <table class="eq-table">
+      <thead><tr><th style="width:60px">Nº</th><th>DESCRIÇÃO</th></tr></thead>
+      <tbody>${linhas}</tbody>
+    </table>`;
+}
+
+function montarObjetivoEquipamentos(frame, cf, rep, itens) {
+  const doc = frame.contentDocument;
+  const SAFETY = 20;
+  const headerHTML = `<div class="pg-secao-num">1. OBJETIVO</div><div class="pg-circle"></div>`;
+  const objBody = objetivoBodyHTML(cf, rep);
+  const eqBody  = equipamentosBodyHTML(itens, 2);
+
+  const headerH = medir(doc, `<div class="pg-header">${headerHTML}</div><div class="pg-linha"></div>`);
+  const bodyH   = medir(doc, `<div class="pg-body">${objBody}${eqBody}</div>`);
+  const budget  = PAGE_H - headerH - SAFETY;
+
+  if (bodyH <= budget) {
+    return `<div class="pg">
+  <div class="pg-header">${headerHTML}</div>
+  <div class="pg-linha"></div>
+  <div class="pg-body">${objBody}${eqBody}</div>
+</div>`;
+  }
+
+  // Não coube tudo numa página só — mantém Equipamentos em página separada
+  // (mesmo comportamento de antes) em vez de cortar conteúdo.
+  return `${pgObjetivo(cf, rep)}\n${pgEquipamentos(itens)}`;
 }
 
 function pgEscopo(itens, prodMap) {
@@ -625,12 +757,10 @@ async function montarCorpoLaser({ proposta, cf, itens, prodMap, rep }) {
   const secEspessura  = itensComEspessura.length  ? ++n : null;
   const secAcordo = ++n;
 
-  const objetivoHTML     = pgObjetivo(cf, rep);
-  const equipamentosHTML = pgEquipamentos(itens);
-
-  let escopoHTML = '', acessoriosHTML = '', espessuraHTML = '';
+  let objEquipHTML = '', escopoHTML = '', acessoriosHTML = '', espessuraHTML = '';
   const frame = await prepararMedidor();
   try {
+    objEquipHTML = montarObjetivoEquipamentos(frame, cf, rep, itens);
     if (secEscopo) {
       const blocos = montarBlocosEscopo(itensComEscopo, prodMap, secEscopo);
       escopoHTML = await paginar(frame, blocos, secaoOpts(secEscopo, 'ESCOPO DE FORNECIMENTO'));
@@ -652,7 +782,7 @@ async function montarCorpoLaser({ proposta, cf, itens, prodMap, rep }) {
 
   const acordoHTML = pgAcordoGenerico(cf, { secNum: secAcordo, entregaTecnica: true });
 
-  return `${objetivoHTML}\n${equipamentosHTML}\n${escopoHTML}\n${acessoriosHTML}\n${espessuraHTML}\n${acordoHTML}`;
+  return `${objEquipHTML}\n${escopoHTML}\n${acessoriosHTML}\n${espessuraHTML}\n${acordoHTML}`;
 }
 
 function secaoOpts(secNum, titulo) {
