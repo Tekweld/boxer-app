@@ -97,12 +97,13 @@ ${pgAcordo(cf, proposta.tipo_produto)}`;
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(tituloCapa)} — ${esc(proposta.codigo || '')}</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>${cssUsado}</style>
 </head>
 <body>
 <div id="pg-stack">
 ${proposta.tipo_produto === 'LASER'
-  ? pgCapaLaser(proposta, imagemCapa, modeloDestaque, contPrinc, hoje)
+  ? pgCapaLaser(proposta, hoje)
   : pgCapa(proposta, cf, imagemCapa, contPrinc, hoje, tituloCapa)}
 ${corpo}
 ${pgResumo(proposta, contatos, valorFmt, valorTotal, versao, resumoFooterHTML)}
@@ -283,29 +284,29 @@ const CSS_PROP_LASER = CSS_PROP
    disponível na coluna (base CSS_PROP limita a 140px para ROBO/MÁQUINAS). */
 .escopo-foto img{max-height:100%;height:100%;width:100%}
 
-/* Capa (Laser) — redesenhada: fundo branco, logo oficial, modelo em
-   destaque ao lado da foto, rodapé em cartão. Classes próprias
-   (prefixo capa-laser-), não reaproveitam .capa-* do pgCapa legado. */
-.capa-laser-top{display:flex;align-items:center;justify-content:space-between;padding:40px 48px 0}
-.capa-laser-logo{height:40px;width:auto;display:block}
-.capa-laser-eyebrow{display:flex;flex-direction:column;align-items:flex-end;text-align:right;padding-top:4px;white-space:nowrap}
-.capa-laser-eyebrow-title{font-size:20.5px;font-weight:700;letter-spacing:.3px;color:#1d327b;text-transform:uppercase}
-.capa-laser-eyebrow-sub{font-size:11px;font-weight:600;letter-spacing:2.5px;color:#25bbee;margin-top:5px}
-.capa-laser-divisor{height:2px;background:#25bbee;margin:34px 48px 0}
-.capa-laser-hero{display:flex;align-items:center;gap:8px;padding:8px 48px 0;height:760px}
-.capa-laser-hero-model{width:280px;flex-shrink:0}
-.capa-laser-hero-model-name{font-size:52px;font-weight:700;color:#1d327b;line-height:1.05;letter-spacing:-1px;word-break:break-word}
-.capa-laser-hero-model-rule{width:56px;height:4px;background:#25bbee;margin-top:20px}
-.capa-laser-hero-model-tags{font-size:13.5px;font-weight:600;letter-spacing:1.5px;color:#4a5568;margin-top:14px}
-.capa-laser-hero-photo{flex:1;height:100%;background:#f7f9fc;border:1px solid #d0d8e8;border-radius:16px;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.capa-laser-hero-photo img{max-width:82%;max-height:88%;object-fit:contain}
-.capa-laser-footer-card{position:absolute;left:48px;right:48px;bottom:40px;border-top:4px solid #25bbee;border-radius:10px;background:#1d327b;display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;box-shadow:0 8px 28px rgba(20,30,80,.28)}
-.capa-laser-fc-col{padding:28px 22px;border-right:1px solid rgba(255,255,255,.16)}
-.capa-laser-fc-col:last-child{border-right:none}
-.capa-laser-fc-label{font-size:10px;font-weight:700;letter-spacing:2px;color:#9fb3e0;margin-bottom:6px}
-.capa-laser-fc-value{font-size:14px;font-weight:600;color:#fff}
-.capa-laser-fc-value.accent{color:#25bbee}
-.capa-laser-fc-sub{font-size:12px;color:#b7c3e6;margin-top:2px}
+/* Capa (Laser) — modelo BMAX genérico (mesma capa para todas as
+   propostas LASER), a partir do design entregue por Bruno via Claude
+   Design (arquivo "Capa BMAX A4 - standalone.html"). Medidas escaladas
+   do A4 de referência (210mm ≈ 794px @ 96dpi) para o canvas de 900px
+   usado nas páginas do LASER (fator ≈ 1.1335). Fonte própria (Poppins,
+   carregada só para esta capa) — classes com prefixo capa-bmax-, não
+   reaproveitam .capa-* do pgCapa legado nem .capa-laser-* anteriores. */
+.capa-bmax-pg{font-family:'Poppins',sans-serif;background:#00083B}
+.capa-bmax-blob1{position:absolute;top:0;left:0;width:589px;height:589px;background:radial-gradient(circle at 30% 30%, rgba(79,200,245,.16), transparent 65%);pointer-events:none}
+.capa-bmax-blob2{position:absolute;bottom:-181px;right:-136px;width:725px;height:725px;background:radial-gradient(circle, rgba(79,200,245,.14), transparent 60%);pointer-events:none}
+.capa-bmax-logo{position:absolute;top:54px;left:54px;height:36px;width:auto;display:block}
+.capa-bmax-eyebrow{position:absolute;top:54px;right:54px;text-align:right}
+.capa-bmax-eyebrow div{font-size:16px;font-weight:800;letter-spacing:1.1px;color:#fff}
+.capa-bmax-bmax-logo{position:absolute;top:150px;left:54px;height:25px;width:auto;display:block}
+.capa-bmax-h1{position:absolute;top:195px;left:54px;right:54px;margin:0;font-size:36px;line-height:1.2;font-weight:800;color:#fff;text-wrap:pretty}
+.capa-bmax-h1 span{color:#4FC8F5}
+.capa-bmax-p{position:absolute;top:365px;left:54px;right:54px;margin:0;font-size:16px;line-height:1.6;font-weight:400;color:rgba(255,255,255,.72)}
+.capa-bmax-hero{position:absolute;top:453px;left:50%;transform:translateX(-50%);width:453px;height:auto;object-fit:contain;filter:drop-shadow(0 23px 45px rgba(0,0,0,.45))}
+.capa-bmax-footer{position:absolute;bottom:0;left:0;width:100%;padding:27px 54px 36px;box-sizing:border-box;background:rgba(255,255,255,.04);border-top:1px solid rgba(255,255,255,.14);display:grid;grid-template-columns:1fr 1fr;row-gap:20px;column-gap:27px}
+.capa-bmax-fc-label{font-size:11px;font-weight:700;letter-spacing:1.4px;color:#4FC8F5}
+.capa-bmax-fc-value{font-size:16px;font-weight:600;color:#fff;margin-top:5px}
+.capa-bmax-fc-full{grid-column:1 / -1}
+.capa-bmax-fc-site{grid-column:1 / -1;text-align:right;font-size:12px;font-weight:500;color:rgba(255,255,255,.55)}
 
 /* Cabeçalho de seção embutido no meio de uma página (ex.: "2. EQUIPAMENTOS
    INCLUSOS" logo abaixo de 1. OBJETIVO) — mesmo peso visual de um
@@ -399,50 +400,51 @@ function pgFooter(pageNum, proposta, modeloDestaque) {
 }
 
 // Capa exclusiva do LASER — isolada de pgCapa (usado por ROBO/MÁQUINAS)
-// para não gerar risco de regressão nesses tipos.
-function pgCapaLaser(proposta, imagemCapa, modeloDestaque, contPrinc, hoje) {
-  const modelo = esc(modeloDestaque || '');
-  const fotoHTML = imagemCapa
-    ? `<img src="${esc(imagemCapa)}" alt="${modelo}">`
-    : `<div class="escopo-foto-vazio">Imagem não cadastrada</div>`;
-  const acStr = contPrinc.nome ? ` • A/C: ${esc(contPrinc.nome)}` : '';
+// para não gerar risco de regressão nesses tipos. Capa genérica BMAX:
+// mesma imagem/composição em todas as propostas LASER (não há mais foto
+// nem nome de modelo por máquina — ver comentário da CSS acima).
+function pgCapaLaser(proposta, hoje) {
+  return `<div class="pg capa-bmax-pg">
+  <div class="capa-bmax-blob1"></div>
+  <div class="capa-bmax-blob2"></div>
 
-  return `<div class="pg">
-  <div class="capa-laser-top">
-    <img class="capa-laser-logo" src="https://tekweld.github.io/boxer-app/boxer-logo-completo.png" alt="Boxer Soldas">
-    <div class="capa-laser-eyebrow">
-      <div class="capa-laser-eyebrow-title">Proposta Técnica</div>
-      <div class="capa-laser-eyebrow-sub">SISTEMA DE SOLDA A LASER</div>
-    </div>
+  <img class="capa-bmax-logo" src="https://tekweld.github.io/boxer-app/boxer-logo-branco.png" alt="Boxer Soldas">
+
+  <div class="capa-bmax-eyebrow">
+    <div>PROPOSTA COMERCIAL</div>
+    <div>TÉCNICA</div>
   </div>
-  <div class="capa-laser-divisor"></div>
-  <div class="capa-laser-hero">
-    <div class="capa-laser-hero-model">
-      <div class="capa-laser-hero-model-name">${modelo}</div>
-      <div class="capa-laser-hero-model-rule"></div>
-      <div class="capa-laser-hero-model-tags">SOLDA | LIMPEZA | CORTE</div>
+
+  <img class="capa-bmax-bmax-logo" src="https://tekweld.github.io/boxer-app/bmax-logo.png" alt="BMAX">
+
+  <h1 class="capa-bmax-h1">Mais do que <span>vender máquinas</span>, entregamos uma <span>solução completa</span> para sua indústria</h1>
+
+  <p class="capa-bmax-p">O BMAX é o pacote de pré e pós-venda que acompanha todos os equipamentos industriais da Boxer, sem custo adicional.</p>
+
+  <img class="capa-bmax-hero" src="https://tekweld.github.io/boxer-app/equipamentos-boxer.png" alt="Equipamentos Boxer">
+
+  <div class="capa-bmax-footer">
+    <div>
+      <div class="capa-bmax-fc-label">CLIENTE</div>
+      <div class="capa-bmax-fc-value">${esc(proposta.cliente_nome || '')}</div>
     </div>
-    <div class="capa-laser-hero-photo">${fotoHTML}</div>
-  </div>
-  <div class="capa-laser-footer-card">
-    <div class="capa-laser-fc-col">
-      <div class="capa-laser-fc-label">CLIENTE</div>
-      <div class="capa-laser-fc-value">${esc(proposta.cliente_nome || '')}${acStr}</div>
-      <div class="capa-laser-fc-sub">${esc(proposta.cliente_cidade || '')} – ${esc(proposta.cliente_estado || '')}</div>
+    <div>
+      <div class="capa-bmax-fc-label">PROPOSTA Nº</div>
+      <div class="capa-bmax-fc-value">${esc(proposta.codigo || '')}</div>
     </div>
-    <div class="capa-laser-fc-col">
-      <div class="capa-laser-fc-label">PROPOSTA</div>
-      <div class="capa-laser-fc-value accent">${esc(proposta.codigo || '')}</div>
+    <div>
+      <div class="capa-bmax-fc-label">DATA</div>
+      <div class="capa-bmax-fc-value">${hoje}</div>
     </div>
-    <div class="capa-laser-fc-col">
-      <div class="capa-laser-fc-label">EMISSÃO</div>
-      <div class="capa-laser-fc-value">${hoje}</div>
+    <div>
+      <div class="capa-bmax-fc-label">VALIDADE</div>
+      <div class="capa-bmax-fc-value">30 dias</div>
     </div>
-    <div class="capa-laser-fc-col">
-      <div class="capa-laser-fc-label">REPRESENTANTE</div>
-      <div class="capa-laser-fc-value">${esc(proposta.vendedor_nome || '')}</div>
-      <div class="capa-laser-fc-sub">Boxer Soldas</div>
+    <div class="capa-bmax-fc-full">
+      <div class="capa-bmax-fc-label">CONSULTOR RESPONSÁVEL</div>
+      <div class="capa-bmax-fc-value">${esc(proposta.vendedor_nome || '')}</div>
     </div>
+    <div class="capa-bmax-fc-site">boxersoldas.com.br</div>
   </div>
 </div>`;
 }
@@ -974,6 +976,7 @@ function criarMeasureFrame() {
   doc.open();
   doc.write(`<!DOCTYPE html><html><head>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>${CSS_PROP_LASER}</style></head>
 <body><div id="measure-root" style="width:${PAGE_W}px"></div></body></html>`);
   doc.close();
