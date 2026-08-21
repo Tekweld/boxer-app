@@ -93,6 +93,7 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 const params = new URLSearchParams(window.location.search);
 const TID = parseInt(params.get('t')) || 1;
 const IS_AUTO = TID === 2;
+const IS_TEST = TID === 3;
 
 const SZ = {Pequenas:'PEQ',Médias:'MED',Grandes:'GRD','Maquinário':'MAQ'};
 const SZC = {Pequenas:'sz-peq',Médias:'sz-med',Grandes:'sz-grd','Maquinário':'sz-maq'};
@@ -255,11 +256,15 @@ function render() {
                         : `<td class="ac"></td>`;
                     r += `<tr${jaSel?' class="row-sel"':''}>${celSel}<td class="td-code">${p.codigo}</td><td class="td-name">${p.modelo}</td><td class="ac"><span class="size-badge ${SZC[p.porte]||'sz-grd'}">${SZ[p.porte]||p.porte}</span></td><td class="td-price-base">${fmt(tb)}</td>${pc}<td class="td-pct">${ic}%</td><td class="td-pct">${p.ipi}%</td><td class="td-ncm">${p.ncm}</td></tr>`;
                 } else {
-                    r += `<tr><td class="td-code">${p.codigo}</td><td class="td-name">${p.modelo}</td><td class="ac"><span class="size-badge ${SZC[p.porte]||'sz-grd'}">${SZ[p.porte]||p.porte}</span></td><td class="td-price-base">${fmt(tb)}</td>${pc}<td class="td-pct">${ic}%</td><td class="td-pct">${p.ipi}%</td><td class="td-ncm">${p.ncm}</td></tr>`;
+                    const celQtd = IS_TEST ? `<td class="ac"><input type="number" class="qtd-input" min="0" placeholder="0" data-codigo="${p.codigo}" style="width:56px;text-align:center"></td>` : '';
+                    const celExtra = IS_TEST ? `<td class="ac disponivel-cell" data-codigo="${p.codigo}"></td><td class="ac previsao-cell" data-codigo="${p.codigo}"></td>` : '';
+                    r += `<tr>${celQtd}<td class="td-code">${p.codigo}</td><td class="td-name">${p.modelo}</td><td class="ac"><span class="size-badge ${SZC[p.porte]||'sz-grd'}">${SZ[p.porte]||p.porte}</span></td><td class="td-price-base">${fmt(tb)}</td>${pc}<td class="td-pct">${ic}%</td><td class="td-pct">${p.ipi}%</td><td class="td-ncm">${p.ncm}</td>${celExtra}</tr>`;
                 }
             });
             const propHeader = IS_AUTO ? '<th class="ac" style="width:110px">Proposta</th>' : '';
-            d.innerHTML += `<div class="tbl-wrap"><table><thead><tr>${propHeader}<th class="al">Código</th><th class="al">Descrição</th><th class="ac">Porte</th><th class="ar">Tabela</th><th class="ar">c/ Desconto</th><th class="ar">ICMS</th><th class="ar">IPI</th><th class="al">NCM</th></tr></thead><tbody>${r}</tbody></table></div>`;
+            const qtdHeader = IS_TEST ? '<th class="ac" style="width:70px">QTD</th>' : '';
+            const extraHeader = IS_TEST ? '<th class="ac" style="width:90px">Disponível?</th><th class="ac" style="width:100px">Previsão</th>' : '';
+            d.innerHTML += `<div class="tbl-wrap"><table><thead><tr>${propHeader}${qtdHeader}<th class="al">Código</th><th class="al">Descrição</th><th class="ac">Porte</th><th class="ar">Tabela</th><th class="ar">c/ Desconto</th><th class="ar">ICMS</th><th class="ar">IPI</th><th class="al">NCM</th>${extraHeader}</tr></thead><tbody>${r}</tbody></table></div>`;
             a.appendChild(d);
         });
     }
