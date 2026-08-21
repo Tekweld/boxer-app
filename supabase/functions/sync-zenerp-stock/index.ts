@@ -38,19 +38,15 @@ Deno.serve(async (_req) => {
 
     const rows = await zenRes.json();
 
-    // Um produto pode aparecer mais de uma vez quando tem embalagens
-    // alternativas (ex: "7005012" e "7005012/20"). Preferimos a linha cuja
-    // productPacking_code é igual ao product_code (a embalagem base);
-    // caso não exista, ficamos com a primeira que aparecer.
+    // Cada embalagem (productPacking_code) é um item vendável próprio no
+    // nosso catálogo - ex: "7005012" e "7005012/20" são dois códigos
+    // distintos em produtos.codigo, então o saldo é indexado por
+    // productPacking_code, não por product_code.
     const byCodigo = new Map();
     for (const r of rows) {
-      const codigo = r.product_code;
+      const codigo = r.productPacking_code;
       if (!codigo) continue;
-      const existing = byCodigo.get(codigo);
-      const isBase = r.productPacking_code === codigo;
-      if (!existing || (isBase && existing.productPacking_code !== codigo)) {
-        byCodigo.set(codigo, r);
-      }
+      byCodigo.set(codigo, r);
     }
 
     const agora = new Date().toISOString();
