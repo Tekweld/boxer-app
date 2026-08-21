@@ -98,7 +98,7 @@ const IS_TEST = TID === 3;
 const SZ = {Pequenas:'PEQ',Médias:'MED',Grandes:'GRD','Maquinário':'MAQ'};
 const SZC = {Pequenas:'sz-peq',Médias:'sz-med',Grandes:'sz-grd','Maquinário':'sz-maq'};
 
-let P=[], ST=[], M={}, CM={}, SEG=[], CLS=[], CATS=[], GRUPOS=[], catGroupById={}, catGroupByName={};
+let P=[], ST=[], M={}, CM={}, SEG=[], CLS=[], CATS=[], GRUPOS=[], catGroupById={}, catGroupByName={}, ESTOQUE={};
 let cState='SP', cSeg='', cCls=0, cCat='TODAS', cCatGrupo='', cSearch='';
 const ORDEM_GRUPO = {'Robô':0,'Laser':1,'Máquinas':2,'Outros':3};
 
@@ -114,14 +114,17 @@ async function sbFetch(path) {
 }
 
 async function load() {
-    const [tabelaRes, estadosRes, multsRes, prodsRes, catsRes, comsRes] = await Promise.all([
+    const [tabelaRes, estadosRes, multsRes, prodsRes, catsRes, comsRes, estoqueRes] = await Promise.all([
         sbFetch('/tabelas?id=eq.'+TID+'&select=*'),
         sbFetch('/estados?select=uf,mult_4_icms,mult_total&order=uf'),
         sbFetch('/multiplicadores?tabela_id=eq.'+TID+'&select=segmento,classe,porte,categoria_grupo,valor'),
         sbFetch('/produtos?tabela_id=eq.'+TID+'&ativo=eq.true&pv_sp=gt.0&select=codigo,modelo,pv_sp,porte,icms,ipi,ncm,categoria_id&order=pv_sp'),
         sbFetch('/categorias?tabela_id=eq.'+TID+'&select=id,nome,ordem,categoria_grupo&order=ordem'),
-        sbFetch('/comissoes?tabela_id=eq.'+TID+'&select=segmento,classe,categoria_grupo,rep_pct,revenda_pct,vendedor_tecnico_pct')
+        sbFetch('/comissoes?tabela_id=eq.'+TID+'&select=segmento,classe,categoria_grupo,rep_pct,revenda_pct,vendedor_tecnico_pct'),
+        IS_TEST ? sbFetch('/estoque_zenerp?select=codigo,quantity_balance') : Promise.resolve([])
     ]);
+
+    estoqueRes.forEach(e => { ESTOQUE[e.codigo] = parseFloat(e.quantity_balance); });
 
     const tabela = tabelaRes[0];
     ST = estadosRes;
@@ -327,6 +330,25 @@ function gerarProposta() {
         politica: { uf: cState, segmento: cSeg, classe: cCls, categoria_grupo: cCatGrupo || null }
     }));
     window.location.href = '/propostas/login.html';
+}
+
+function avaliarDisponibilidade(qtdInput) {
+    const codigo = qtdInput.dataset.codigo;
+    const row = qtdInput.closest('tr');
+    const cel = row.querySelector('.disponivel-cell');
+    if (!cel) return;
+    const qtd = parseFloat(qtdInput.value);
+    if (!qtd || qtd <= 0) { cel.innerHTML = ''; return; }
+    const saldo = ESTOQUE[codigo];
+    if (saldo === undefined) { cel.innerHTML = '<span style="color:#a0aec0;font-size:12px">?</span>'; return; }
+    const disponivel = saldo >= qtd;
+    cel.innerHTML = `<span title="Saldo: ${saldo}" style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${disponivel?'#38a169':'#e53e3e'}"></span>`;
+}
+
+if (IS_TEST) {
+    document.getElementById('tableArea').addEventListener('input', e => {
+        if (e.target.classList.contains('qtd-input')) avaliarDisponibilidade(e.target);
+    });
 }
 
 document.addEventListener('DOMContentLoaded', load);

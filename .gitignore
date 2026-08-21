@@ -1,0 +1,3 @@
+.supabase-migrations/
+supabase/.temp/
+graphify-out/
