@@ -116,7 +116,7 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 <div class="panel-content" id="tab-produtos">
 <div class="panel-header"><div><div class="panel-title">Cadastro de Produtos</div><div class="panel-sub" id="prodSub"></div></div>
 <div style="display:flex;gap:8px;align-items:center">
-<select id="prodTabela" class="select-sm" onchange="loadProdutos()"><option value="1">Revendas</option><option value="2">BMAX</option></select>
+<select id="prodTabela" class="select-sm" onchange="loadProdutos()"><option value="1">Revendas</option><option value="2">BMAX</option><option value="3">Revendas Teste</option></select>
 <select id="prodCatFilter" class="select-sm" onchange="filterProdutos()"><option value="TODAS">Todas as categorias</option></select>
 <input type="text" id="prodSearch" placeholder="Buscar..." style="width:200px;padding:6px 10px;font-size:12px" oninput="filterProdutos()">
 <button class="btn btn-warn btn-sm admin-only hidden" onclick="openReajusteModal()">% Reajuste em Massa</button>
@@ -132,14 +132,14 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 
 <div class="panel-content hidden" id="tab-multiplicadores">
 <div class="panel-header"><div><div class="panel-title">Multiplicadores Comerciais</div></div>
-<select id="multTabela" class="select-sm" onchange="loadMult()"><option value="1">Revendas</option><option value="2">BMAX</option></select></div>
+<select id="multTabela" class="select-sm" onchange="loadMult()"><option value="1">Revendas</option><option value="2">BMAX</option><option value="3">Revendas Teste</option></select></div>
 <div id="multGrid"><div class="loading">Carregando...</div></div>
 </div>
 
 <div class="panel-content hidden" id="tab-comissoes">
 <div class="panel-header"><div><div class="panel-title">Comissões</div></div>
 <div style="display:flex;gap:8px">
-<select id="comTabela" class="select-sm" onchange="loadComissoes()"><option value="1">Revendas</option><option value="2">BMAX</option></select>
+<select id="comTabela" class="select-sm" onchange="loadComissoes()"><option value="1">Revendas</option><option value="2">BMAX</option><option value="3">Revendas Teste</option></select>
 <select id="comSegFilter" class="select-sm" onchange="renderComissoes()"><option value="TODOS">Todos os segmentos</option></select>
 <span id="comCatFilterWrap" style="display:none"><select id="comCatFilter" class="select-sm" onchange="renderComissoes()"><option value="TODOS">Todas as categorias</option></select></span>
 </div></div>
