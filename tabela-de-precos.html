@@ -113,6 +113,26 @@ async function sbFetch(path) {
     return r.json();
 }
 
+// A API do Supabase limita cada resposta a 1000 linhas por padrão - para
+// tabelas maiores (ex: estoque_zenerp, com milhares de produtos) é preciso
+// buscar em várias páginas até esgotar os registros.
+async function sbFetchAll(path) {
+    const PAGE = 1000;
+    let offset = 0, all = [], pagina;
+    do {
+        const r = await fetch(SUPABASE_URL+'/rest/v1'+path, {
+            headers: {
+                'apikey': SUPABASE_ANON, 'Authorization': 'Bearer '+SUPABASE_ANON,
+                'Range': offset+'-'+(offset+PAGE-1)
+            }
+        });
+        pagina = await r.json();
+        all = all.concat(pagina);
+        offset += PAGE;
+    } while (pagina.length === PAGE);
+    return all;
+}
+
 async function load() {
     const [tabelaRes, estadosRes, multsRes, prodsRes, catsRes, comsRes, estoqueRes] = await Promise.all([
         sbFetch('/tabelas?id=eq.'+TID+'&select=*'),
@@ -121,7 +141,7 @@ async function load() {
         sbFetch('/produtos?tabela_id=eq.'+TID+'&ativo=eq.true&pv_sp=gt.0&select=codigo,modelo,pv_sp,porte,icms,ipi,ncm,categoria_id&order=pv_sp'),
         sbFetch('/categorias?tabela_id=eq.'+TID+'&select=id,nome,ordem,categoria_grupo&order=ordem'),
         sbFetch('/comissoes?tabela_id=eq.'+TID+'&select=segmento,classe,categoria_grupo,rep_pct,revenda_pct,vendedor_tecnico_pct'),
-        IS_TEST ? sbFetch('/estoque_zenerp?select=codigo,quantity_balance') : Promise.resolve([])
+        IS_TEST ? sbFetchAll('/estoque_zenerp?select=codigo,quantity_balance') : Promise.resolve([])
     ]);
 
     estoqueRes.forEach(e => { ESTOQUE[e.codigo] = parseFloat(e.quantity_balance); });
