@@ -363,7 +363,7 @@ async function loadProdutos(){
     try {
         const tid = document.getElementById('prodTabela').value;
         const [prods, cats] = await Promise.all([
-            sb('/produtos?tabela_id=eq.'+tid+'&ativo=eq.true&pv_sp=gt.0&select=*,categorias(nome)&order=modelo'),
+            sb('/produtos?tabela_id=eq.'+tid+'&ativo=eq.true&select=*,categorias(nome)&order=modelo'),
             sb('/categorias?tabela_id=eq.'+tid+'&select=id,nome&order=ordem')
         ]);
         allProd = prods.map(p => ({...p, cat: p.categorias?.nome || 'SEM CATEGORIA'}));
@@ -384,7 +384,7 @@ function filterProdutos(){
 function renderProd(ps){
     const sm={Pequenas:'sz-peq',Médias:'sz-med',Grandes:'sz-grd','Maquinário':'sz-maq'},sl={Pequenas:'PEQ',Médias:'MED',Grandes:'GRD','Maquinário':'MAQ'};
     let h='<table><thead><tr><th>Código</th><th>Modelo</th><th>Categoria</th><th class="text-right">PV SP</th><th class="text-center">Porte</th><th class="text-right">ICMS</th><th class="text-right">IPI</th><th>NCM</th><th class="text-center">Ações</th></tr></thead><tbody>';
-    ps.forEach(p=>{h+=`<tr><td style="font-family:monospace;font-size:12px">${p.codigo}</td><td>${p.modelo}</td><td style="color:#718096;font-size:12px">${p.cat}</td><td class="text-right" style="font-weight:600">R$ ${parseFloat(p.pv_sp).toFixed(2)}</td><td class="text-center"><span class="size-badge ${sm[p.porte]||''}">${sl[p.porte]||p.porte}</span></td><td class="text-right">${p.icms}%</td><td class="text-right">${p.ipi}%</td><td style="color:#a0aec0;font-size:11px">${p.ncm}</td><td class="text-center" style="white-space:nowrap"><button class="btn btn-outline btn-sm" onclick="openProdModal(${p.id})">Editar</button>${IS_ADMIN?` <button class="btn btn-danger btn-sm" onclick="delProd(${p.id},'${p.modelo.replace(/'/g,"\\'")}')">Excluir</button>`:''}</td></tr>`;});
+    ps.forEach(p=>{const semPreco=!p.pv_sp||parseFloat(p.pv_sp)<=0;h+=`<tr${semPreco?' style="background:#fffbeb"':''}><td style="font-family:monospace;font-size:12px">${p.codigo}</td><td>${p.modelo}</td><td style="color:#718096;font-size:12px">${p.cat}</td><td class="text-right" style="font-weight:600${semPreco?';color:#b45309':''}">${semPreco?'⚠️ SEM PREÇO':'R$ '+parseFloat(p.pv_sp).toFixed(2)}</td><td class="text-center"><span class="size-badge ${sm[p.porte]||''}">${sl[p.porte]||p.porte}</span></td><td class="text-right">${p.icms}%</td><td class="text-right">${p.ipi}%</td><td style="color:#a0aec0;font-size:11px">${p.ncm}</td><td class="text-center" style="white-space:nowrap"><button class="btn btn-outline btn-sm" onclick="openProdModal(${p.id})">Editar</button>${IS_ADMIN?` <button class="btn btn-danger btn-sm" onclick="delProd(${p.id},'${p.modelo.replace(/'/g,"\\'")}')">Excluir</button>`:''}</td></tr>`;});
     h+='</tbody></table>';
     document.getElementById('prodTableWrap').innerHTML=h;
 }
@@ -415,7 +415,7 @@ function pvSpEhDerivado(){
 function atualizarBloqueioPvSp(){
     const derivado=pvSpEhDerivado();
     const input=document.getElementById('f_pv');
-    const trava=!IS_ADMIN||derivado;
+    const trava=derivado;
     input.disabled=trava;
     input.style.background=trava?'#f1f5f9':'';
     document.getElementById('f_pv_label').innerHTML='PV SP '+(trava?'🔒':'');
@@ -424,7 +424,7 @@ function atualizarBloqueioPvSp(){
 async function saveProd(id){
     const tid=document.getElementById('prodTabela').value;
     const body={tabela_id:parseInt(tid),codigo:document.getElementById('f_cod').value,modelo:document.getElementById('f_mod').value,porte:document.getElementById('f_po').value,icms:parseFloat(document.getElementById('f_ic').value),ipi:parseFloat(document.getElementById('f_ip').value),ncm:document.getElementById('f_nc').value,categoria_id:parseInt(document.getElementById('f_cat').value)};
-    if(IS_ADMIN && !pvSpEhDerivado()) body.pv_sp=parseFloat(document.getElementById('f_pv').value);
+    if(!pvSpEhDerivado()) body.pv_sp=parseFloat(document.getElementById('f_pv').value);
     try{
         if(id){await sb('/produtos?id=eq.'+id,'PATCH',body);}
         else{await sb('/produtos','POST',body);}
