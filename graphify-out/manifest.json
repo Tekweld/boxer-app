@@ -1,0 +1,107 @@
+{
+  "propostas/proposta-engine.js": {
+    "mtime": 1785272239.383034,
+    "ast_hash": "6a6badccd8c5b141bac1c4bcd1f2ea8f",
+    "semantic_hash": "6a6badccd8c5b141bac1c4bcd1f2ea8f"
+  },
+  "README.md": {
+    "mtime": 1783440661.5939562,
+    "ast_hash": "d8a34a4c637b27eb9ce876afa5ba42be",
+    "semantic_hash": "d8a34a4c637b27eb9ce876afa5ba42be"
+  },
+  "admin_supabase.html": {
+    "mtime": 1788193947.322966,
+    "ast_hash": "163ee5d7e626ad43a3978a6cdadd6b64",
+    "semantic_hash": "163ee5d7e626ad43a3978a6cdadd6b64"
+  },
+  "index.html": {
+    "mtime": 1783440130.190782,
+    "ast_hash": "8c6fd124a703a49412e79bd073c6b280",
+    "semantic_hash": "8c6fd124a703a49412e79bd073c6b280"
+  },
+  "marketing.html": {
+    "mtime": 1787313811.036147,
+    "ast_hash": "75232b052ff920d8b605ff60f4d2c152",
+    "semantic_hash": "75232b052ff920d8b605ff60f4d2c152"
+  },
+  "propostas/gerenciar.html": {
+    "mtime": 1784658355.5211413,
+    "ast_hash": "7c34435b5e679154eff3eb600a1fd12a",
+    "semantic_hash": "7c34435b5e679154eff3eb600a1fd12a"
+  },
+  "propostas/index.html": {
+    "mtime": 1783440130.190782,
+    "ast_hash": "4a473a5f139adaa14a48f4ccb616221b",
+    "semantic_hash": "4a473a5f139adaa14a48f4ccb616221b"
+  },
+  "propostas/login.html": {
+    "mtime": 1783440130.191785,
+    "ast_hash": "a6948114b3cf72599da5324293e42809",
+    "semantic_hash": "a6948114b3cf72599da5324293e42809"
+  },
+  "propostas/novo.html": {
+    "mtime": 1784658337.2984655,
+    "ast_hash": "bc46fd49af33399d5b4d15335b897191",
+    "semantic_hash": "bc46fd49af33399d5b4d15335b897191"
+  },
+  "propostas/ver.html": {
+    "mtime": 1783440130.1929052,
+    "ast_hash": "6840de64920b4fbea751ea754cfd47c1",
+    "semantic_hash": "6840de64920b4fbea751ea754cfd47c1"
+  },
+  "skills/sistemas-tekweld-stack/SKILL.md": {
+    "mtime": 1783440130.1929052,
+    "ast_hash": "e52de73a55eb699e8c647d54cf8cf728",
+    "semantic_hash": "e52de73a55eb699e8c647d54cf8cf728"
+  },
+  "tabela-de-precos.html": {
+    "mtime": 1787316780.9200273,
+    "ast_hash": "db79800a4374c3ce24daac76085b91da",
+    "semantic_hash": "db79800a4374c3ce24daac76085b91da"
+  },
+  "tabela-precos/tabela-admin.html": {
+    "mtime": 1783440130.1939714,
+    "ast_hash": "84f446db60da70b9f14f42e615b8c86d",
+    "semantic_hash": "84f446db60da70b9f14f42e615b8c86d"
+  },
+  "tabela-precos/tabela-automacao.html": {
+    "mtime": 1783440130.1939714,
+    "ast_hash": "d702b4ada24fd8506ccc2de39d070f36",
+    "semantic_hash": "d702b4ada24fd8506ccc2de39d070f36"
+  },
+  "tabela-precos/tabela-principal.html": {
+    "mtime": 1783440130.1948173,
+    "ast_hash": "115329baef08a72acf76ac106729e46f",
+    "semantic_hash": "115329baef08a72acf76ac106729e46f"
+  },
+  "Estrela-Boxer.svg": {
+    "mtime": 1783440130.189176,
+    "ast_hash": "c255c71bbc7b8ad330ec3466fd8d8ca3",
+    "semantic_hash": "c255c71bbc7b8ad330ec3466fd8d8ca3"
+  },
+  "bmax-logo.png": {
+    "mtime": 1783440130.1896813,
+    "ast_hash": "c9df191f6576a97091449b019f11c468",
+    "semantic_hash": "c9df191f6576a97091449b019f11c468"
+  },
+  "boxer-logo-branco.png": {
+    "mtime": 1785272247.0653956,
+    "ast_hash": "9e236fa0c18967ebd77236159c278276",
+    "semantic_hash": "9e236fa0c18967ebd77236159c278276"
+  },
+  "boxer-logo-completo.png": {
+    "mtime": 1785144287.7699015,
+    "ast_hash": "7bfcdfb9302b17a805cc969e3fdc63e7",
+    "semantic_hash": "7bfcdfb9302b17a805cc969e3fdc63e7"
+  },
+  "equipamentos-boxer.png": {
+    "mtime": 1785272247.084503,
+    "ast_hash": "57cb60621059d63d4c3af6d8102979c5",
+    "semantic_hash": "57cb60621059d63d4c3af6d8102979c5"
+  },
+  "supabase/functions/sync-zenerp-stock/index.ts": {
+    "mtime": 1787317115.8618505,
+    "ast_hash": "29940f91cee923f076c318345c1fc934",
+    "semantic_hash": "29940f91cee923f076c318345c1fc934"
+  }
+}
