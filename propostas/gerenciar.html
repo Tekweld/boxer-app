@@ -277,6 +277,7 @@ function renderSidebar() {
     <div class="info-row"><strong>Cidade</strong>${esc(proposta.cliente_cidade||'–')} / ${esc(proposta.cliente_estado||'–')}</div>
     <div class="info-row"><strong>Tipo</strong>${esc(proposta.tipo_produto)}</div>
     <div class="info-row"><strong>Pagamento</strong>${esc(proposta.prazo_pagamento||'–')}</div>
+    ${proposta.observacoes ? `<div class="info-row"><strong>Obs.</strong>${esc(proposta.observacoes)}</div>` : ''}
     <div class="info-row"><strong>Status</strong><span class="badge ${proposta.status}">${statusLabel}</span></div>
     <div class="info-row"><strong>Criada em</strong>${formatarData(proposta.criado_em)}</div>
   `;
@@ -431,9 +432,9 @@ function renderItensEditList() {
       <div class="ie-info">
         <div class="ie-cod">${esc(it.produto_codigo)} · ${esc(it.produto_categoria||'')}</div>
         <div class="ie-mod">${esc(it.produto_modelo)}</div>
-        <div class="ie-preco">R$ ${formatarValor(it.preco_final)} / un.</div>
       </div>
-      <input type="number" min="1" value="${it.quantidade}" onchange="itensEdit[${i}].quantidade=parseInt(this.value)||1">
+      <label style="font-size:10px;color:#718096;text-align:center">Qtd<br><input type="number" min="1" value="${it.quantidade}" onchange="itensEdit[${i}].quantidade=parseInt(this.value)||1"></label>
+      <label style="font-size:10px;color:#718096;text-align:center">R$ unit.<br><input type="number" min="0" step="0.01" style="width:90px" value="${it.preco_final}" onchange="itensEdit[${i}].preco_final=parseFloat(this.value)||0"></label>
       <button type="button" class="btn btn-outline btn-sm" onclick="itensEdit.splice(${i},1);renderItensEditList()">✕</button>
     </div>
   `).join('');
@@ -581,6 +582,7 @@ function abrirEditarDados() {
 </div>
 <div class="form-row"><label>Tipo de Produto</label><select id="d_tipo">${Object.entries(TIPOS_PRODUTO).map(([k,v])=>`<option value="${k}" ${k===proposta.tipo_produto?'selected':''}>${v}</option>`).join('')}</select></div>
 <div class="form-row"><label>Prazo de Pagamento</label><textarea id="d_prazo" rows="5">${esc(proposta.prazo_pagamento||'')}</textarea></div>
+<div class="form-row"><label>Observações (aparece na proposta)</label><textarea id="d_obs" rows="4" placeholder="Qualquer orientação adicional combinada com o cliente...">${esc(proposta.observacoes||'')}</textarea></div>
 <div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="salvarDados()">Salvar</button></div>`);
 }
 async function salvarDados() {
@@ -589,7 +591,8 @@ async function salvarDados() {
     cliente_cidade: document.getElementById('d_cidade').value.trim(),
     cliente_estado: document.getElementById('d_estado').value.trim().toUpperCase(),
     tipo_produto: document.getElementById('d_tipo').value,
-    prazo_pagamento: document.getElementById('d_prazo').value.trim()
+    prazo_pagamento: document.getElementById('d_prazo').value.trim(),
+    observacoes: document.getElementById('d_obs').value.trim() || null
   };
   if (!body.cliente_nome) { toast('Informe o nome do cliente.', 'erro'); return; }
 

@@ -425,12 +425,16 @@ async function saveProd(id){
     const tid=document.getElementById('prodTabela').value;
     const body={tabela_id:parseInt(tid),codigo:document.getElementById('f_cod').value,modelo:document.getElementById('f_mod').value,porte:document.getElementById('f_po').value,icms:parseFloat(document.getElementById('f_ic').value),ipi:parseFloat(document.getElementById('f_ip').value),ncm:document.getElementById('f_nc').value,categoria_id:parseInt(document.getElementById('f_cat').value)};
     if(!pvSpEhDerivado()) body.pv_sp=parseFloat(document.getElementById('f_pv').value);
+    if(!body.codigo.trim()||!body.modelo.trim()){toast('Preencha código e modelo.','error');return;}
+    if(isNaN(body.icms)||body.icms<0){toast('ICMS inválido — informe um valor maior ou igual a zero.','error');return;}
+    if(isNaN(body.ipi)||body.ipi<0){toast('IPI inválido — informe um valor maior ou igual a zero.','error');return;}
+    if(body.pv_sp!==undefined&&(isNaN(body.pv_sp)||body.pv_sp<0)){toast('PV SP inválido — informe um valor maior ou igual a zero.','error');return;}
     try{
         if(id){await sb('/produtos?id=eq.'+id,'PATCH',body);}
         else{await sb('/produtos','POST',body);}
         await sb('/log_alteracoes','POST',{usuario_id:SESSION.user.id,usuario_email:SESSION.user.email,tabela_ref:'produtos',registro_id:id,campo:id?'update':'create',valor_novo:body.modelo});
         await sb('/tabelas?id=eq.'+tid,'PATCH',{atualizado_em:new Date().toISOString()});
-        toast(id?'Produto updated':'Produto criado');closeModal();loadProdutos();
+        toast(id?'Produto atualizado':'Produto criado');closeModal();loadProdutos();
     }catch(e){toast('Erro ao salvar: '+e.message,'error');}
 }
 async function delProd(id,n){
@@ -529,13 +533,21 @@ async function openEstModal(id){
     openModal(`<h3>Editar: ${e.uf}</h3>
 <div class="form-row"><label>Mult 4% ICMS</label><input id="e_m4" type="number" step="0.001" value="${e.mult_4_icms}"><p style="font-size:11px;color:#718096;margin-top:4px">0.925 para todos exceto SP = 1.0</p></div>
 <div class="form-row"><label>Mult Total %</label><input id="e_mt" type="number" step="0.0001" value="${e.mult_total}"><p style="font-size:11px;color:#718096;margin-top:4px">Ex: SP = 1.5%</p></div>
-<div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveEst(${id})">Salvar</button></div>`);
+<div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveEst(${id},'${e.uf}',${e.mult_4_icms},${e.mult_total})">Salvar</button></div>`);
 }
-async function saveEst(id){
+async function saveEst(id,uf,antigoM4,antigoMt){
+    const novoM4=parseFloat(document.getElementById('e_m4').value);
+    const novoMt=parseFloat(document.getElementById('e_mt').value);
+    if(isNaN(novoM4)||novoM4<=0){toast('Mult 4% ICMS inválido — informe um valor maior que zero.','error');return;}
+    if(isNaN(novoMt)||novoMt<0||novoMt>=100){toast('Mult Total % inválido — precisa ser entre 0 e 100 (é usado como 1-valor/100 na fórmula de preço; 100 ou mais quebra o cálculo pra todo mundo).','error');return;}
     try{
-        await sb('/estados?id=eq.'+id,'PATCH',{mult_4_icms:parseFloat(document.getElementById('e_m4').value),mult_total:parseFloat(document.getElementById('e_mt').value)});
+        await sb('/estados?id=eq.'+id,'PATCH',{mult_4_icms:novoM4,mult_total:novoMt});
+        const logs=[];
+        if(novoM4!==antigoM4)logs.push({usuario_id:SESSION.user.id,usuario_email:SESSION.user.email,tabela_ref:'estados',registro_id:id,campo:'mult_4_icms ('+uf+')',valor_anterior:String(antigoM4),valor_novo:String(novoM4)});
+        if(novoMt!==antigoMt)logs.push({usuario_id:SESSION.user.id,usuario_email:SESSION.user.email,tabela_ref:'estados',registro_id:id,campo:'mult_total ('+uf+')',valor_anterior:String(antigoMt),valor_novo:String(novoMt)});
+        if(logs.length)await sb('/log_alteracoes','POST',logs);
         await sb('/tabelas?id=in.(1,2)','PATCH',{atualizado_em:new Date().toISOString()});
-        toast('Estado updated');closeModal();loadEstados();
+        toast('Estado atualizado');closeModal();loadEstados();
     }catch(e){toast('Erro: '+e.message,'error');}
 }
 
@@ -557,13 +569,16 @@ async function loadMult(){
 function editMult(id,v,seg,cls,dim){
     openModal(`<h3>Editar Multiplicador</h3><p style="color:#718096;font-size:13px;margin-bottom:16px">${seg} · Classe ${cls} · ${dim}</p>
 <div class="form-row"><label>Valor</label><input id="m_v" type="number" step="0.0001" value="${v}"></div>
-<div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveMult(${id})">Salvar</button></div>`);
+<div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveMult(${id},'${seg}',${cls},'${dim}',${v})">Salvar</button></div>`);
 }
-async function saveMult(id){
+async function saveMult(id,seg,cls,dim,antigo){
+    const novo=parseFloat(document.getElementById('m_v').value);
+    if(isNaN(novo)||novo<0){toast('Valor inválido — informe um número maior ou igual a zero.','error');return;}
     try{
-        await sb('/multiplicadores?id=eq.'+id,'PATCH',{valor:parseFloat(document.getElementById('m_v').value)});
+        await sb('/multiplicadores?id=eq.'+id,'PATCH',{valor:novo});
+        if(novo!==antigo)await sb('/log_alteracoes','POST',{usuario_id:SESSION.user.id,usuario_email:SESSION.user.email,tabela_ref:'multiplicadores',registro_id:id,campo:seg+' · Classe '+cls+' · '+dim,valor_anterior:String(antigo),valor_novo:String(novo)});
         await sb('/tabelas?id=in.(1,2)','PATCH',{atualizado_em:new Date().toISOString()});
-        toast('Multiplicador updated');closeModal();loadMult();
+        toast('Multiplicador atualizado');closeModal();loadMult();
     }catch(e){toast('Erro: '+e.message,'error');}
 }
 
@@ -608,14 +623,25 @@ function editComissao(id,rep,revenda,vendedorTecnico,seg,cls,categoria){
 <div class="form-row"><label>Representante %</label><input id="c_rep" type="number" step="0.01" value="${rep}"></div>
 <div class="form-row"><label>Revenda % (deixe em branco se não houver)</label><input id="c_rev" type="number" step="0.01" value="${revenda===null?'':revenda}"></div>
 <div class="form-row"><label>Vendedor Técnico % (deixe em branco se não houver)</label><input id="c_vt" type="number" step="0.01" value="${vendedorTecnico===null?'':vendedorTecnico}"></div>
-<div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveComissao(${id})">Salvar</button></div>`);
+<div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveComissao(${id},'${subtitle}',${rep},${revenda===null?'null':revenda},${vendedorTecnico===null?'null':vendedorTecnico})">Salvar</button></div>`);
 }
-async function saveComissao(id){
+async function saveComissao(id,subtitle,antigoRep,antigoRevenda,antigoVt){
+    const revStr=document.getElementById('c_rev').value.trim();
+    const vtStr=document.getElementById('c_vt').value.trim();
+    const novoRep=parseFloat(document.getElementById('c_rep').value);
+    const novoRevenda=revStr===''?null:parseFloat(revStr);
+    const novoVt=vtStr===''?null:parseFloat(vtStr);
+    if(isNaN(novoRep)||novoRep<0){toast('Representante % inválido — informe um valor maior ou igual a zero.','error');return;}
+    if(novoRevenda!==null&&(isNaN(novoRevenda)||novoRevenda<0)){toast('Revenda % inválido — informe um valor maior ou igual a zero, ou deixe em branco.','error');return;}
+    if(novoVt!==null&&(isNaN(novoVt)||novoVt<0)){toast('Vendedor Técnico % inválido — informe um valor maior ou igual a zero, ou deixe em branco.','error');return;}
     try{
-        const revStr=document.getElementById('c_rev').value.trim();
-        const vtStr=document.getElementById('c_vt').value.trim();
-        await sb('/comissoes?id=eq.'+id,'PATCH',{rep_pct:parseFloat(document.getElementById('c_rep').value),revenda_pct:revStr===''?null:parseFloat(revStr),vendedor_tecnico_pct:vtStr===''?null:parseFloat(vtStr)});
-        toast('Comissão updated');closeModal();await fetchCom();renderComissoes();
+        await sb('/comissoes?id=eq.'+id,'PATCH',{rep_pct:novoRep,revenda_pct:novoRevenda,vendedor_tecnico_pct:novoVt});
+        const logs=[];
+        if(novoRep!==antigoRep)logs.push({usuario_id:SESSION.user.id,usuario_email:SESSION.user.email,tabela_ref:'comissoes',registro_id:id,campo:'rep_pct ('+subtitle+')',valor_anterior:String(antigoRep),valor_novo:String(novoRep)});
+        if(novoRevenda!==antigoRevenda)logs.push({usuario_id:SESSION.user.id,usuario_email:SESSION.user.email,tabela_ref:'comissoes',registro_id:id,campo:'revenda_pct ('+subtitle+')',valor_anterior:String(antigoRevenda),valor_novo:String(novoRevenda)});
+        if(novoVt!==antigoVt)logs.push({usuario_id:SESSION.user.id,usuario_email:SESSION.user.email,tabela_ref:'comissoes',registro_id:id,campo:'vendedor_tecnico_pct ('+subtitle+')',valor_anterior:String(antigoVt),valor_novo:String(novoVt)});
+        if(logs.length)await sb('/log_alteracoes','POST',logs);
+        toast('Comissão atualizada');closeModal();await fetchCom();renderComissoes();
     }catch(e){toast('Erro: '+e.message,'error');}
 }
 

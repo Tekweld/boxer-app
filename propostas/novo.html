@@ -223,12 +223,18 @@ async function init() {
     lista.appendChild(li);
   });
 
-  // Preencher UFs
+  // Preencher UFs — pré-seleciona a UF já usada pra calcular o preço na
+  // tabela (draft.politica.uf), já que normalmente é a mesma do cliente;
+  // continua editável caso o pedido seja pra entrega em outro estado.
   const sel = document.getElementById('clienteEstado');
   UFS.forEach(uf => {
     const o = document.createElement('option');
     o.value = uf; o.textContent = uf; sel.appendChild(o);
   });
+  if (UFS.includes(draft.politica.uf)) {
+    sel.value = draft.politica.uf;
+    carregarCidades();
+  }
 }
 
 function fmt(v) {

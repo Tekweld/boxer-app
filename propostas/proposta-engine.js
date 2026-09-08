@@ -822,7 +822,10 @@ function pgResumo(proposta, contatos, valorFmt, valorTotal, versao, pageFooterHT
         </tr>${entregaTecnicaRowHTML}${totalRowHTML}
         <tr>
           <td colspan="3" class="res-sub">Prazo de pagamento: ${esc(proposta.prazo_pagamento || '')}</td>
-        </tr>
+        </tr>${proposta.observacoes ? `
+        <tr>
+          <td colspan="3" class="res-sub">Observações: ${esc(proposta.observacoes)}</td>
+        </tr>` : ''}
         <tr>
           <td colspan="3" style="text-align:center;font-size:12px;font-weight:600;color:#1d327b;padding:10px 16px">${esc(proposta.cliente_nome || '')}</td>
         </tr>
