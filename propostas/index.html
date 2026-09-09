@@ -137,42 +137,56 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 let todasPropostas = [];
 let totaisPorProposta = {};
 
+// Timeout evita a tela travar em "Carregando propostas..." pra sempre se o
+// Supabase estiver fora do ar/instável.
+function comTimeout(promise, ms=15000) {
+  const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms));
+  return Promise.race([promise, timeout]);
+}
+
 async function init() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) { window.location.href = 'login.html'; return; }
 
   const user = session.user;
 
-  // Nome do vendedor
-  const { data: perfil } = await sb.schema('comercial').from('vendedor_perfis')
-    .select('nome_completo').eq('user_id', user.id).maybeSingle();
-  document.getElementById('headerUser').textContent =
-    (perfil?.nome_completo || user.email) + ' · ' + new Date().toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long'});
+  try {
+    // Nome do vendedor
+    const { data: perfil } = await comTimeout(sb.schema('comercial').from('vendedor_perfis')
+      .select('nome_completo').eq('user_id', user.id).maybeSingle());
+    document.getElementById('headerUser').textContent =
+      (perfil?.nome_completo || user.email) + ' · ' + new Date().toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long'});
 
-  // Buscar propostas
-  const { data: propostas } = await sb.schema('comercial').from('propostas')
-    .select('id, codigo, cliente_nome, cliente_cidade, cliente_estado, tipo_produto, status, criado_em, link_token')
-    .eq('vendedor_id', user.id)
-    .eq('ativo', true)
-    .order('criado_em', { ascending: false });
+    // Buscar propostas
+    const { data: propostas } = await comTimeout(sb.schema('comercial').from('propostas')
+      .select('id, codigo, cliente_nome, cliente_cidade, cliente_estado, tipo_produto, status, criado_em, link_token')
+      .eq('vendedor_id', user.id)
+      .eq('ativo', true)
+      .order('criado_em', { ascending: false }));
 
-  todasPropostas = propostas || [];
+    todasPropostas = propostas || [];
 
-  if (todasPropostas.length > 0) {
-    // Buscar totais dos itens
-    const ids = todasPropostas.map(p => p.id);
-    const { data: itens } = await sb.schema('comercial').from('proposta_itens')
-      .select('proposta_id, preco_final, quantidade')
-      .in('proposta_id', ids);
+    if (todasPropostas.length > 0) {
+      // Buscar totais dos itens
+      const ids = todasPropostas.map(p => p.id);
+      const { data: itens } = await comTimeout(sb.schema('comercial').from('proposta_itens')
+        .select('proposta_id, preco_final, quantidade')
+        .in('proposta_id', ids));
 
-    (itens || []).forEach(item => {
-      totaisPorProposta[item.proposta_id] =
-        (totaisPorProposta[item.proposta_id] || 0) + item.preco_final * item.quantidade;
-    });
+      (itens || []).forEach(item => {
+        totaisPorProposta[item.proposta_id] =
+          (totaisPorProposta[item.proposta_id] || 0) + item.preco_final * item.quantidade;
+      });
+    }
+
+    atualizarKPIs();
+    renderLista(todasPropostas);
+  } catch (e) {
+    document.getElementById('headerUser').textContent = user.email;
+    document.getElementById('lista').innerHTML =
+      '<div class="empty"><h3>Não foi possível carregar suas propostas</h3><p>Instabilidade temporária no servidor.</p>'
+      + '<button class="btn-empty" onclick="location.reload()">Tentar novamente</button></div>';
   }
-
-  atualizarKPIs();
-  renderLista(todasPropostas);
 }
 
 function atualizarKPIs() {

@@ -188,7 +188,20 @@ async function sb(path, method='GET', body=null, token=null, _retry=true) {
     };
     const opts = {method, headers: hdrs};
     if (body) opts.body = JSON.stringify(body);
-    const r = await fetch(SB_URL+'/rest/v1'+path, opts);
+    // Timeout evita ficar pendurado indefinidamente se o Supabase estiver fora
+    // do ar/instável — sem isso, um painel trava em "Carregando..." pra sempre
+    // sem nunca cair no catch de quem chamou.
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 15000);
+    let r;
+    try {
+        r = await fetch(SB_URL+'/rest/v1'+path, Object.assign({signal: ctrl.signal}, opts));
+    } catch (e) {
+        if (e.name === 'AbortError') throw new Error('Tempo esgotado consultando o servidor. Tente novamente.');
+        throw e;
+    } finally {
+        clearTimeout(timer);
+    }
     if (!r.ok) {
         const e = await r.text();
         if (_retry && !token && /JWT expired|PGRST303/.test(e) && await refreshSession()) {
@@ -522,11 +535,15 @@ async function applyReajuste(){
 
 // ESTADOS
 async function loadEstados(){
-    const d=await sb('/estados?select=id,uf,mult_4_icms,mult_total&order=uf');
-    let h='<table><thead><tr><th>UF</th><th class="text-right">Mult 4% ICMS</th><th class="text-right">Mult Total %</th>';
-    if(IS_ADMIN)h+='<th class="text-center">Ação</th>';h+='</tr></thead><tbody>';
-    d.forEach(e=>{h+=`<tr><td style="font-weight:600">${e.uf}</td><td class="text-right">${parseFloat(e.mult_4_icms).toFixed(3)}</td><td class="text-right">${parseFloat(e.mult_total).toFixed(4)}%</td>`;if(IS_ADMIN)h+=`<td class="text-center"><button class="btn btn-outline btn-sm" onclick="openEstModal(${e.id})">Editar</button></td>`;h+='</tr>';});
-    h+='</tbody></table>';document.getElementById('estadosTable').innerHTML=h;
+    try{
+        const d=await sb('/estados?select=id,uf,mult_4_icms,mult_total&order=uf');
+        let h='<table><thead><tr><th>UF</th><th class="text-right">Mult 4% ICMS</th><th class="text-right">Mult Total %</th>';
+        if(IS_ADMIN)h+='<th class="text-center">Ação</th>';h+='</tr></thead><tbody>';
+        d.forEach(e=>{h+=`<tr><td style="font-weight:600">${e.uf}</td><td class="text-right">${parseFloat(e.mult_4_icms).toFixed(3)}</td><td class="text-right">${parseFloat(e.mult_total).toFixed(4)}%</td>`;if(IS_ADMIN)h+=`<td class="text-center"><button class="btn btn-outline btn-sm" onclick="openEstModal(${e.id})">Editar</button></td>`;h+='</tr>';});
+        h+='</tbody></table>';document.getElementById('estadosTable').innerHTML=h;
+    }catch(e){
+        document.getElementById('estadosTable').innerHTML=`<div style="text-align:center;padding:20px;color:#dc2626">Erro ao carregar estados: ${e.message} <button class="btn btn-outline btn-sm" onclick="loadEstados()">Tentar novamente</button></div>`;
+    }
 }
 async function openEstModal(id){
     const r=await sb('/estados?id=eq.'+id+'&select=*');const e=r[0];
@@ -553,18 +570,22 @@ async function saveEst(id,uf,antigoM4,antigoMt){
 
 // MULTIPLICADORES
 async function loadMult(){
-    const tid=document.getElementById('multTabela').value;
-    const isBmax=tid==='2';
-    const filtro=isBmax?'&categoria_grupo=not.is.null':'';
-    const d=await sb('/multiplicadores?tabela_id=eq.'+tid+filtro+'&select=*&order=segmento,classe');
-    const dimOf=m=>isBmax?m.categoria_grupo:m.porte;
-    const ORDEM_GRUPO={'Robô':0,'Laser':1,'Máquinas':2,'Outros':3};
-    const dims=[...new Set(d.map(dimOf))].sort((a,b)=>isBmax?(ORDEM_GRUPO[a]??9)-(ORDEM_GRUPO[b]??9):0),segs=[...new Set(d.map(m=>m.segmento))],cls=[...new Set(d.map(m=>m.classe))].sort(),lk={};
-    d.forEach(m=>{lk[m.segmento+'-'+m.classe+'-'+dimOf(m)]=m;});
-    let h='<table><thead><tr><th>Segmento</th><th class="text-center">Classe</th>';dims.forEach(p=>{h+=`<th class="text-center">${p}</th>`;});h+='</tr></thead><tbody>';
-    segs.forEach(seg=>{cls.forEach(c=>{h+=`<tr><td style="font-weight:500">${seg}</td><td class="text-center">${c}</td>`;dims.forEach(dim=>{const m=lk[seg+'-'+c+'-'+dim];if(m){const v=parseFloat(m.valor);const cl=v<1?'mult-discount':v>1?'mult-markup':'mult-neutral';const ck=IS_ADMIN?`onclick="editMult(${m.id},${v},'${seg}',${c},'${dim}')" style="cursor:pointer"`:'';h+=`<td class="text-center"><span class="mult-cell ${cl}" ${ck}>${v.toFixed(4)}</span></td>`;}else{h+=`<td class="text-center"><span class="mult-cell mult-na">N/D</span></td>`;}});h+='</tr>';});});
-    h+='</tbody></table><p style="font-size:12px;color:#718096;margin-top:12px">Verde=desconto · Vermelho=acréscimo'+(IS_ADMIN?' · Clique para editar':'')+'</p>';
-    document.getElementById('multGrid').innerHTML=h;
+    try{
+        const tid=document.getElementById('multTabela').value;
+        const isBmax=tid==='2';
+        const filtro=isBmax?'&categoria_grupo=not.is.null':'';
+        const d=await sb('/multiplicadores?tabela_id=eq.'+tid+filtro+'&select=*&order=segmento,classe');
+        const dimOf=m=>isBmax?m.categoria_grupo:m.porte;
+        const ORDEM_GRUPO={'Robô':0,'Laser':1,'Máquinas':2,'Outros':3};
+        const dims=[...new Set(d.map(dimOf))].sort((a,b)=>isBmax?(ORDEM_GRUPO[a]??9)-(ORDEM_GRUPO[b]??9):0),segs=[...new Set(d.map(m=>m.segmento))],cls=[...new Set(d.map(m=>m.classe))].sort(),lk={};
+        d.forEach(m=>{lk[m.segmento+'-'+m.classe+'-'+dimOf(m)]=m;});
+        let h='<table><thead><tr><th>Segmento</th><th class="text-center">Classe</th>';dims.forEach(p=>{h+=`<th class="text-center">${p}</th>`;});h+='</tr></thead><tbody>';
+        segs.forEach(seg=>{cls.forEach(c=>{h+=`<tr><td style="font-weight:500">${seg}</td><td class="text-center">${c}</td>`;dims.forEach(dim=>{const m=lk[seg+'-'+c+'-'+dim];if(m){const v=parseFloat(m.valor);const cl=v<1?'mult-discount':v>1?'mult-markup':'mult-neutral';const ck=IS_ADMIN?`onclick="editMult(${m.id},${v},'${seg}',${c},'${dim}')" style="cursor:pointer"`:'';h+=`<td class="text-center"><span class="mult-cell ${cl}" ${ck}>${v.toFixed(4)}</span></td>`;}else{h+=`<td class="text-center"><span class="mult-cell mult-na">N/D</span></td>`;}});h+='</tr>';});});
+        h+='</tbody></table><p style="font-size:12px;color:#718096;margin-top:12px">Verde=desconto · Vermelho=acréscimo'+(IS_ADMIN?' · Clique para editar':'')+'</p>';
+        document.getElementById('multGrid').innerHTML=h;
+    }catch(e){
+        document.getElementById('multGrid').innerHTML=`<div style="text-align:center;padding:20px;color:#dc2626">Erro ao carregar multiplicadores: ${e.message} <button class="btn btn-outline btn-sm" onclick="loadMult()">Tentar novamente</button></div>`;
+    }
 }
 function editMult(id,v,seg,cls,dim){
     openModal(`<h3>Editar Multiplicador</h3><p style="color:#718096;font-size:13px;margin-bottom:16px">${seg} · Classe ${cls} · ${dim}</p>
@@ -591,17 +612,21 @@ async function fetchCom(){
     allCom=await sb('/comissoes?tabela_id=eq.'+tid+filtro+'&select=*&order=segmento,classe');
 }
 async function loadComissoes(){
-    await fetchCom();
-    const isBmax=document.getElementById('comTabela').value==='2';
-    const segs=[...new Set(allCom.map(c=>c.segmento))];
-    document.getElementById('comSegFilter').innerHTML='<option value="TODOS">Todos os segmentos</option>'+segs.map(s=>`<option value="${s}">${s}</option>`).join('');
-    const catWrap=document.getElementById('comCatFilterWrap');
-    if(isBmax){
-        catWrap.style.display='';
-        const cats=[...new Set(allCom.map(c=>c.categoria_grupo))];
-        document.getElementById('comCatFilter').innerHTML='<option value="TODOS">Todas as categorias</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join('');
-    } else { catWrap.style.display='none'; }
-    renderComissoes();
+    try{
+        await fetchCom();
+        const isBmax=document.getElementById('comTabela').value==='2';
+        const segs=[...new Set(allCom.map(c=>c.segmento))];
+        document.getElementById('comSegFilter').innerHTML='<option value="TODOS">Todos os segmentos</option>'+segs.map(s=>`<option value="${s}">${s}</option>`).join('');
+        const catWrap=document.getElementById('comCatFilterWrap');
+        if(isBmax){
+            catWrap.style.display='';
+            const cats=[...new Set(allCom.map(c=>c.categoria_grupo))];
+            document.getElementById('comCatFilter').innerHTML='<option value="TODOS">Todas as categorias</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+        } else { catWrap.style.display='none'; }
+        renderComissoes();
+    }catch(e){
+        document.getElementById('comGrid').innerHTML=`<div style="text-align:center;padding:20px;color:#dc2626">Erro ao carregar comissões: ${e.message} <button class="btn btn-outline btn-sm" onclick="loadComissoes()">Tentar novamente</button></div>`;
+    }
 }
 function renderComissoes(){
     const isBmax=document.getElementById('comTabela').value==='2';
@@ -648,12 +673,16 @@ async function saveComissao(id,subtitle,antigoRep,antigoRevenda,antigoVt){
 // USUÁRIOS
 async function loadUsuarios(){
     if(!IS_ADMIN)return;
-    const d=await sb('/perfis?select=id,nome,permissao');
-    let h='';
-    d.forEach(u=>{const ini=u.nome?u.nome.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase():'?';const bg=u.permissao==='admin'?'#fee2e2':u.permissao==='marketing'?'#f3e8ff':'#dbeafe';const tc=u.permissao==='admin'?'#991b1b':u.permissao==='marketing'?'#7c3aed':'#1d4ed8';
-    h+=`<div class="user-card"><div class="user-avatar" style="background:${bg};color:${tc}">${ini}</div><div style="flex:1"><p style="font-weight:500;font-size:14px;margin:0">${u.nome||'Sem nome'}</p></div><span class="perm-tag perm-${u.permissao}">${u.permissao.toUpperCase()}</span><button class="btn btn-outline btn-sm" onclick="openUserModal('${u.id}')">Editar</button>${u.id!==SESSION.user.id?`<button class="btn btn-danger btn-sm" onclick="delUser('${u.id}','${(u.nome||'').replace(/'/g,"\\'")}')">Excluir</button>`:''}</div>`;
-    });
-    document.getElementById('usersList').innerHTML=h||'<p style="color:#718096;font-size:13px">Nenhum usuário</p>';
+    try{
+        const d=await sb('/perfis?select=id,nome,permissao');
+        let h='';
+        d.forEach(u=>{const ini=u.nome?u.nome.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase():'?';const bg=u.permissao==='admin'?'#fee2e2':u.permissao==='marketing'?'#f3e8ff':'#dbeafe';const tc=u.permissao==='admin'?'#991b1b':u.permissao==='marketing'?'#7c3aed':'#1d4ed8';
+        h+=`<div class="user-card"><div class="user-avatar" style="background:${bg};color:${tc}">${ini}</div><div style="flex:1"><p style="font-weight:500;font-size:14px;margin:0">${u.nome||'Sem nome'}</p></div><span class="perm-tag perm-${u.permissao}">${u.permissao.toUpperCase()}</span><button class="btn btn-outline btn-sm" onclick="openUserModal('${u.id}')">Editar</button>${u.id!==SESSION.user.id?`<button class="btn btn-danger btn-sm" onclick="delUser('${u.id}','${(u.nome||'').replace(/'/g,"\\'")}')">Excluir</button>`:''}</div>`;
+        });
+        document.getElementById('usersList').innerHTML=h||'<p style="color:#718096;font-size:13px">Nenhum usuário</p>';
+    }catch(e){
+        document.getElementById('usersList').innerHTML=`<div style="text-align:center;padding:20px;color:#dc2626">Erro ao carregar usuários: ${e.message} <button class="btn btn-outline btn-sm" onclick="loadUsuarios()">Tentar novamente</button></div>`;
+    }
 }
 async function openUserModal(id=null){
     let u={nome:'',permissao:'editor'};

@@ -187,8 +187,9 @@ iframe#previewFrame{flex:1;border:none;background:#e8eaf0}
   </div>
 </div>
 <div class="erro-central" id="erroCentral" style="display:none">
-  <h2>Proposta não encontrada</h2>
-  <p>Verifique o link ou volte para a lista de propostas.</p>
+  <h2 id="erroCentralTitulo">Proposta não encontrada</h2>
+  <p id="erroCentralMsg">Verifique o link ou volte para a lista de propostas.</p>
+  <button id="erroCentralBtn" onclick="location.reload()" style="display:none;margin-top:12px;background:#1d327b;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-family:Outfit;font-size:14px;font-weight:600;cursor:pointer">Tentar novamente</button>
 </div>
 
 <!-- Overlay -->
@@ -228,35 +229,47 @@ async function init() {
   vendedorId = session.user.id;
 
   mostrarOverlay('Carregando proposta...');
-  await carregarTudo();
+  try {
+    await carregarTudo();
+  } catch (e) {
+    mostrarErroCentral('Não foi possível carregar agora', 'Instabilidade temporária no servidor. Tente novamente em alguns instantes.', true);
+    return;
+  }
   esconderOverlay();
+}
+
+// Timeout evita a tela travar em "Carregando proposta..." pra sempre se o
+// Supabase estiver fora do ar/instável.
+function comTimeout(promise, ms=15000) {
+  const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms));
+  return Promise.race([promise, timeout]);
 }
 
 async function carregarTudo() {
   // Proposta
-  const { data: p, error } = await sb.schema('comercial').from('propostas')
+  const { data: p, error } = await comTimeout(sb.schema('comercial').from('propostas')
     .select('*')
     .eq('id', propostaId)
-    .single();
+    .single());
 
   if (error || !p) { mostrarErroCentral(); return; }
   proposta = p;
 
   // Itens
-  const { data: it } = await sb.schema('comercial').from('proposta_itens')
-    .select('*').eq('proposta_id', propostaId).order('criado_em');
+  const { data: it } = await comTimeout(sb.schema('comercial').from('proposta_itens')
+    .select('*').eq('proposta_id', propostaId).order('criado_em'));
   itens = it || [];
 
   // Contatos
-  const { data: ct } = await sb.schema('comercial').from('proposta_contatos')
-    .select('*').eq('proposta_id', propostaId).order('criado_em');
+  const { data: ct } = await comTimeout(sb.schema('comercial').from('proposta_contatos')
+    .select('*').eq('proposta_id', propostaId).order('criado_em'));
   contatos = ct || [];
 
   // Versões
-  const { data: vs } = await sb.schema('comercial').from('proposta_versoes')
+  const { data: vs } = await comTimeout(sb.schema('comercial').from('proposta_versoes')
     .select('id, versao, tipo_alteracao, descricao, html_snapshot, criado_em')
     .eq('proposta_id', propostaId)
-    .order('versao', { ascending: false });
+    .order('versao', { ascending: false }));
   versoes = vs || [];
 
   renderSidebar();
@@ -657,10 +670,13 @@ function esconderOverlay() {
   document.getElementById('overlay').classList.remove('visible');
 }
 
-function mostrarErroCentral() {
+function mostrarErroCentral(titulo, msg, comBotao) {
   document.querySelector('.layout').style.display = 'none';
   document.getElementById('erroCentral').style.display = 'flex';
-  document.getElementById('headerSub').textContent = 'Proposta não encontrada';
+  document.getElementById('erroCentralTitulo').textContent = titulo || 'Proposta não encontrada';
+  document.getElementById('erroCentralMsg').textContent = msg || 'Verifique o link ou volte para a lista de propostas.';
+  document.getElementById('erroCentralBtn').style.display = comBotao ? 'inline-block' : 'none';
+  document.getElementById('headerSub').textContent = titulo || 'Proposta não encontrada';
   esconderOverlay();
 }
 

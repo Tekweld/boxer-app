@@ -66,6 +66,13 @@ iframe#frame{flex:1;border:none;width:100%;background:#e8eaf0}
   <p>Esta proposta ainda está sendo finalizada pelo vendedor.<br>Tente novamente em alguns instantes.</p>
 </div>
 
+<div class="estado" id="estadoIndisponivel" style="display:none">
+  <img src="https://tekweld.github.io/boxer-app/Estrela-Boxer.svg">
+  <h2>Não foi possível carregar agora</h2>
+  <p>Instabilidade temporária no servidor. Tente novamente em alguns instantes.</p>
+  <button onclick="location.reload()" style="margin-top:8px;background:#1d327b;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-family:Outfit;font-size:14px;font-weight:600;cursor:pointer">Tentar novamente</button>
+</div>
+
 <script>
 const SUPABASE_URL  = 'https://bmepxcnrsofofoswubuu.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtZXB4Y25yc29mb2Zvc3d1YnV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MTczNzMsImV4cCI6MjA5NTI5MzM3M30.S55ouFczRYlUYNFf5PotYKXBPT5idypTSmbzR-x2Pk0';
@@ -75,12 +82,24 @@ async function init() {
   const token = new URLSearchParams(location.search).get('token');
   if (!token) { mostrar('estadoErro'); return; }
 
-  const { data, error } = await sb.schema('comercial').rpc('buscar_proposta_publica', { p_token: token });
-
-  if (error || !data || data.length === 0) {
-    mostrar('estadoErro');
+  let data, error;
+  try {
+    // Timeout evita a tela travar em "Carregando proposta..." pra sempre se o
+    // Supabase estiver fora do ar/instável — o cliente vendo uma tela sem
+    // resposta nenhuma é exatamente o tipo de coisa que esse sistema existe
+    // pra evitar (ver objetivo do sistema de propostas).
+    const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 15000));
+    ({ data, error } = await Promise.race([
+      sb.schema('comercial').rpc('buscar_proposta_publica', { p_token: token }),
+      timeout
+    ]));
+  } catch (e) {
+    mostrar('estadoIndisponivel');
     return;
   }
+
+  if (error) { mostrar('estadoIndisponivel'); return; }
+  if (!data || data.length === 0) { mostrar('estadoErro'); return; }
 
   const row = data[0];
 
