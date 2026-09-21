@@ -30,6 +30,10 @@ input:focus{border-color:#25bbee;box-shadow:0 0 0 3px rgba(37,187,238,.1)}
 .back-link{text-align:center;margin-top:20px;font-size:13px;color:#718096}
 .back-link a{color:#1d327b;text-decoration:none;font-weight:500}
 .back-link a:hover{text-decoration:underline}
+.forgot-link{text-align:right;margin-top:-12px;margin-bottom:20px}
+.forgot-link a{font-size:12px;color:#718096;text-decoration:none;cursor:pointer}
+.forgot-link a:hover{color:#1d327b;text-decoration:underline}
+.msg-ok{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;font-size:13px;color:#15803d;margin-top:16px;display:none}
 </style>
 </head>
 <body>
@@ -59,9 +63,11 @@ input:focus{border-color:#25bbee;box-shadow:0 0 0 3px rgba(37,187,238,.1)}
 
     <label for="senha">Senha</label>
     <input type="password" id="senha" placeholder="••••••••" autocomplete="current-password">
+    <div class="forgot-link"><a onclick="esqueciSenha()">Esqueci minha senha</a></div>
 
     <button class="btn-login" id="btnLogin" onclick="fazerLogin()">Entrar</button>
     <div class="msg-erro" id="msgErro"></div>
+    <div class="msg-ok" id="msgOk"></div>
 
     <div class="back-link">
       <a href="https://app.boxersoldas.com.br/tabela-de-precos.html?t=2">← Voltar para a tabela de preços</a>
@@ -135,9 +141,36 @@ async function fazerLogin() {
 }
 
 function mostrarErro(msg) {
+  document.getElementById('msgOk').style.display = 'none';
   const el = document.getElementById('msgErro');
   el.textContent = msg;
   el.style.display = 'block';
+}
+
+function mostrarOk(msg) {
+  document.getElementById('msgErro').style.display = 'none';
+  const el = document.getElementById('msgOk');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+async function esqueciSenha() {
+  const email = document.getElementById('email').value.trim();
+  if (!email) {
+    mostrarErro('Digite seu e-mail no campo acima e clique em "Esqueci minha senha" de novo.');
+    return;
+  }
+
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: 'https://app.boxersoldas.com.br/propostas/redefinir-senha.html'
+  });
+
+  if (error) {
+    mostrarErro('Não foi possível enviar o e-mail de recuperação. Tente novamente.');
+    return;
+  }
+
+  mostrarOk('Se esse e-mail estiver cadastrado, enviamos um link para redefinir a senha. Confira sua caixa de entrada.');
 }
 
 init();
