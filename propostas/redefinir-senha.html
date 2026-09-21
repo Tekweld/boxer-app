@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Redefinir senha — Propostas Boxer</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Outfit,sans-serif;background:#f0f4f8;color:#1a202c;min-height:100vh;display:flex;flex-direction:column}
+.header{background:linear-gradient(135deg,#1d327b,#162666);border-bottom:3px solid #25bbee;padding:18px 24px}
+.header-inner{max-width:480px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.header h1{font-size:20px;font-weight:700;color:#fff}
+.header p{font-size:12px;color:#93b4d4;margin-top:2px}
+.main{flex:1;display:flex;align-items:center;justify-content:center;padding:32px 16px}
+.card{background:#fff;border:1px solid #d0d8e8;border-radius:12px;padding:32px;width:100%;max-width:420px;box-shadow:0 4px 24px rgba(29,50,123,.08)}
+.card-title{font-size:18px;font-weight:700;color:#1d327b;margin-bottom:4px}
+.card-sub{font-size:13px;color:#718096;margin-bottom:28px}
+.aviso-box{background:#f0f4f8;border:1px solid #d0d8e8;border-radius:8px;padding:12px 16px;margin-bottom:24px}
+.aviso-box p{font-size:12px;color:#4a5568}
+label{display:block;font-size:12px;font-weight:500;color:#4a5568;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+input{width:100%;padding:10px 14px;border:1px solid #c3cfe2;border-radius:8px;font-family:Outfit;font-size:14px;color:#1a202c;outline:none;margin-bottom:20px;transition:border-color .15s}
+input:focus{border-color:#25bbee;box-shadow:0 0 0 3px rgba(37,187,238,.1)}
+.btn-login{width:100%;padding:12px;background:#1d327b;color:#fff;border:none;border-radius:8px;font-family:Outfit;font-size:15px;font-weight:600;cursor:pointer;transition:background .15s}
+.btn-login:hover{background:#162666}
+.btn-login:disabled{background:#a0aec0;cursor:not-allowed}
+.msg-erro{background:#fff5f5;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;font-size:13px;color:#c53030;margin-top:16px;display:none}
+.msg-ok{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;font-size:13px;color:#15803d;margin-top:16px;display:none}
+.back-link{text-align:center;margin-top:20px;font-size:13px;color:#718096}
+.back-link a{color:#1d327b;text-decoration:none;font-weight:500}
+.back-link a:hover{text-decoration:underline}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <img src="https://tekweld.github.io/boxer-app/Estrela-Boxer.svg" width="36" height="36">
+    <div>
+      <h1>Propostas Boxer</h1>
+      <p>Área exclusiva para vendedores</p>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="card">
+
+    <div id="formWrap">
+      <div class="card-title">Definir nova senha</div>
+      <div class="card-sub">Escolha uma nova senha para sua conta</div>
+
+      <div class="aviso-box">
+        <p>Esta senha é a mesma usada em outros sistemas Boxer (ex: Hub). Ao redefinir aqui, ela muda em todos eles.</p>
+      </div>
+
+      <label for="novaSenha">Nova senha</label>
+      <input type="password" id="novaSenha" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+
+      <label for="confirmaSenha">Confirmar nova senha</label>
+      <input type="password" id="confirmaSenha" placeholder="Repita a senha" autocomplete="new-password">
+
+      <button class="btn-login" id="btnSalvar" onclick="salvarNovaSenha()">Salvar nova senha</button>
+      <div class="msg-erro" id="msgErro"></div>
+      <div class="msg-ok" id="msgOk"></div>
+    </div>
+
+    <div id="linkInvalido" class="hidden">
+      <div class="card-title">Link inválido ou expirado</div>
+      <div class="card-sub">Este link de redefinição já foi usado ou não é mais válido.</div>
+      <div class="back-link"><a href="login.html">← Voltar para o login e solicitar um novo link</a></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL  = 'https://bmepxcnrsofofoswubuu.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtZXB4Y25yc29mb2Zvc3d1YnV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MTczNzMsImV4cCI6MjA5NTI5MzM3M30.S55ouFczRYlUYNFf5PotYKXBPT5idypTSmbzR-x2Pk0';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+let sessaoRecuperacaoOk = false;
+
+sb.auth.onAuthStateChange((event, session) => {
+  if (event === 'PASSWORD_RECOVERY') {
+    sessaoRecuperacaoOk = true;
+  }
+});
+
+async function init() {
+  // Supabase-js já processa o token de recuperação da URL ao carregar a página.
+  // Dá uma folga pro evento PASSWORD_RECOVERY disparar antes de checar a sessão.
+  await new Promise(r => setTimeout(r, 400));
+
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    mostrarLinkInvalido();
+  }
+
+  document.getElementById('confirmaSenha').addEventListener('keydown', e => {
+    if (e.key === 'Enter') salvarNovaSenha();
+  });
+}
+
+function mostrarLinkInvalido() {
+  document.getElementById('formWrap').classList.add('hidden');
+  document.getElementById('linkInvalido').classList.remove('hidden');
+}
+
+async function salvarNovaSenha() {
+  const senha = document.getElementById('novaSenha').value;
+  const confirma = document.getElementById('confirmaSenha').value;
+  const btn = document.getElementById('btnSalvar');
+  const erro = document.getElementById('msgErro');
+
+  erro.style.display = 'none';
+
+  if (senha.length < 6) {
+    mostrarErro('A senha precisa ter no mínimo 6 caracteres.');
+    return;
+  }
+  if (senha !== confirma) {
+    mostrarErro('As senhas não coincidem.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+
+  const { error } = await sb.auth.updateUser({ password: senha });
+
+  if (error) {
+    btn.disabled = false;
+    btn.textContent = 'Salvar nova senha';
+    mostrarErro('Não foi possível salvar a nova senha. Solicite um novo link e tente de novo.');
+    return;
+  }
+
+  mostrarOk('Senha alterada com sucesso! Redirecionando para o login...');
+  await sb.auth.signOut();
+  setTimeout(() => { window.location.href = 'login.html'; }, 1800);
+}
+
+function mostrarErro(msg) {
+  document.getElementById('msgOk').style.display = 'none';
+  const el = document.getElementById('msgErro');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function mostrarOk(msg) {
+  document.getElementById('msgErro').style.display = 'none';
+  document.getElementById('btnSalvar').classList.add('hidden');
+  const el = document.getElementById('msgOk');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+init();
+</script>
+</body>
+</html>
