@@ -22,6 +22,7 @@ async function gerarHTMLProposta(sb, proposta, itens, contatos, versao) {
   const codigos = [...new Set(itens.map(i => i.produto_codigo))];
   const { data: prods } = await sb.from('produtos')
     .select('codigo, modelo, descricao_completa, caracteristicas, imagem_url, imagem_secundaria_url, acessorios_padrao, espessura_solda, equipamentos_inclusos')
+    .eq('tabela_id', 2).eq('status', 'ativo')
     .in('codigo', codigos);
   const prodMap = Object.fromEntries((prods || []).map(p => [p.codigo, p]));
 
