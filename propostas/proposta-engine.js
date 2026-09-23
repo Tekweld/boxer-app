@@ -53,10 +53,14 @@ async function gerarHTMLProposta(sb, proposta, itens, contatos, versao) {
       }
     }
   } else {
-    // Demais tipos (Laser, Máquinas...): capa usa a foto do item de maior valor selecionado.
+    // Laser: capa usa a foto do item de maior valor selecionado. Máquinas usa
+    // sempre a capa genérica de cf.imagem_capa (mesma imagem do fallback do
+    // Robô) — decisão do André em 2026-09-23: a foto do produto isolada
+    // ficava com aparência ruim de capa. Vale até termos capas dedicadas
+    // por segmento de produto (pendência registrada).
     const itemMaisCaro = [...itens].sort((a, b) => (parseFloat(b.preco_final) || 0) - (parseFloat(a.preco_final) || 0))[0];
     const fotoItemMaisCaro = itemMaisCaro && prodMap[itemMaisCaro.produto_codigo]?.imagem_url;
-    if (fotoItemMaisCaro) imagemCapa = fotoItemMaisCaro;
+    if (fotoItemMaisCaro && proposta.tipo_produto !== 'MAQUINAS') imagemCapa = fotoItemMaisCaro;
     if (itemMaisCaro) {
       const pDestaque = prodMap[itemMaisCaro.produto_codigo] || {};
       modeloDestaque = (pDestaque.modelo || itemMaisCaro.produto_modelo || itemMaisCaro.produto_codigo || '').toUpperCase();
