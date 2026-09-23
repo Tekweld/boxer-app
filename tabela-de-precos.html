@@ -307,7 +307,7 @@ function render() {
                 const ic = cState==='SP' ? p.icms : 4;
                 const jaSel = selecionados.has(p.codigo);
                 if (IS_AUTO) {
-                    const podeSelecionar = p.catGroup === 'Laser';
+                    const podeSelecionar = ['Laser', 'Robô', 'Máquinas'].includes(p.catGroup);
                     const celSel = podeSelecionar
                         ? `<td class="ac"><button class="btn-sel${jaSel?' selecionado':''}" data-sel="${p.codigo}" data-modelo="${p.modelo.replace(/"/g,'&quot;')}" data-cat="${p.cat}" data-pvsp="${p.pv_sp}" data-final="${(tb*(scm||1)).toFixed(2)}" data-mult="${scm||''}" data-porte="${p.porte}" onclick="toggleSel(this)">${jaSel?'✓ Selecionado':'+ Selecionar'}</button></td>`
                         : `<td class="ac"></td>`;
