@@ -354,6 +354,11 @@ async function doDefinirNovaSenha() {
         document.getElementById('recoveryPage').classList.add('hidden');
         await resolverPerfilEEntrar(u.email, u.id);
         toast('Senha atualizada com sucesso!');
+        fetch('https://hub.boxersoldas.com.br/api/email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tipo: 'senha_alterada', dados: { email: u.email, sistema: 'Admin Tabela de Preços', hora: new Date().toLocaleString('pt-BR') } })
+        }).catch(() => {});
     } catch(e) {
         errEl.textContent = 'Erro de conexão: ' + e.message;
         errEl.classList.remove('hidden');
