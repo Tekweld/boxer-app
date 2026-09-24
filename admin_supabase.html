@@ -121,6 +121,7 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 <select id="prodCatFilter" class="select-sm" onchange="filterProdutos()"><option value="TODAS">Todas as categorias</option></select>
 <input type="text" id="prodSearch" placeholder="Buscar..." style="width:200px;padding:6px 10px;font-size:12px" oninput="filterProdutos()">
 <button class="btn btn-warn btn-sm admin-only hidden" onclick="openReajusteModal()">% Reajuste em Massa</button>
+<button class="btn btn-outline btn-sm" id="btnSyncPdm" onclick="syncPdmTabelaPrecos()">🔄 Sincronizar PDM</button>
 <button class="btn btn-primary btn-sm" id="btnNovoProd" onclick="openProdModal()">+ Novo</button>
 </div></div>
 <div style="overflow:auto;max-height:600px" id="prodTableWrap"><div class="loading">Carregando...</div></div>
@@ -390,6 +391,25 @@ async function loadProdutos(){
         document.getElementById('prodTableWrap').innerHTML = `<div style="text-align:center;padding:20px;color:#dc2626">Erro ao carregar produtos: ${e.message}</div>`;
     }
 }
+async function syncPdmTabelaPrecos(){
+    const btn=document.getElementById('btnSyncPdm');
+    const txtOrig=btn.textContent;
+    btn.disabled=true;btn.textContent='Sincronizando...';
+    try{
+        const r=await fetch('https://hub.boxersoldas.com.br/api/sync-pdm-tabela-precos',{
+            method:'POST',
+            headers:{'Authorization':'Bearer '+SESSION.access_token}
+        });
+        const d=await r.json();
+        if(!r.ok||!d.ok) throw new Error(d.error||'Falha na sincronização');
+        toast(`PDM sincronizado: ${d.produtos_atualizados} produto(s) atualizado(s), ${d.produtos_sem_mudanca} sem mudança, ${d.produtos_sem_pdm.length} sem PDM.`);
+        loadProdutos();
+    }catch(e){
+        toast('Erro ao sincronizar PDM: '+e.message,'error');
+    }finally{
+        btn.disabled=false;btn.textContent=txtOrig;
+    }
+}
 function filterProdutos(){
     const q=document.getElementById('prodSearch').value.toLowerCase();
     const cat=document.getElementById('prodCatFilter').value;
@@ -400,6 +420,7 @@ function filterProdutos(){
 function renderProd(ps){
     const sm={Pequenas:'sz-peq',Médias:'sz-med',Grandes:'sz-grd','Maquinário':'sz-maq'},sl={Pequenas:'PEQ',Médias:'MED',Grandes:'GRD','Maquinário':'MAQ'};
     const statusBadge={fora_de_linha:'<span class="size-badge" style="background:#fef9c3;color:#854d0e">FORA DE LINHA</span>',excluido:'<span class="size-badge" style="background:#fee2e2;color:#991b1b">EXCLUÍDO</span>'};
+    const seteDiasMs=7*24*60*60*1000;
     let h='<table><thead><tr><th>Código</th><th>Modelo</th><th>Categoria</th><th class="text-right">PV SP</th><th class="text-center">Porte</th><th class="text-right">ICMS</th><th class="text-right">IPI</th><th>NCM</th><th class="text-center">Ações</th></tr></thead><tbody>';
     ps.forEach(p=>{
         const semPreco=!p.pv_sp||parseFloat(p.pv_sp)<=0;
@@ -412,7 +433,9 @@ function renderProd(ps){
             acoes+=` <button class="btn btn-outline btn-sm" onclick="reativarProd(${p.id},'${nomeEsc}')">Reativar</button>`;
             if(IS_ADMIN && p.status!=='excluido') acoes+=` <button class="btn btn-danger btn-sm" onclick="delProd(${p.id},'${nomeEsc}')">Excluir</button>`;
         }
-        h+=`<tr${semPreco?' style="background:#fffbeb"':''}><td style="font-family:monospace;font-size:12px">${p.codigo}</td><td>${p.modelo} ${statusBadge[p.status]||''}</td><td style="color:#718096;font-size:12px">${p.cat}</td><td class="text-right" style="font-weight:600${semPreco?';color:#b45309':''}">${semPreco?'⚠️ SEM PREÇO':'R$ '+parseFloat(p.pv_sp).toFixed(2)}</td><td class="text-center"><span class="size-badge ${sm[p.porte]||''}">${sl[p.porte]||p.porte}</span></td><td class="text-right">${p.icms}%</td><td class="text-right">${p.ipi}%</td><td style="color:#a0aec0;font-size:11px">${p.ncm}</td><td class="text-center" style="white-space:nowrap">${acoes}</td></tr>`;
+        const recente=p.atualizado_em && (Date.now()-new Date(p.atualizado_em).getTime())<seteDiasMs;
+        const novaTag=recente?' <span class="size-badge" style="background:#dcfce7;color:#166534" title="Atualizado em '+new Date(p.atualizado_em).toLocaleDateString('pt-BR')+'">🆕 ATUALIZADO</span>':'';
+        h+=`<tr${semPreco?' style="background:#fffbeb"':''}><td style="font-family:monospace;font-size:12px">${p.codigo}</td><td>${p.modelo} ${statusBadge[p.status]||''}${novaTag}</td><td style="color:#718096;font-size:12px">${p.cat}</td><td class="text-right" style="font-weight:600${semPreco?';color:#b45309':''}">${semPreco?'⚠️ SEM PREÇO':'R$ '+parseFloat(p.pv_sp).toFixed(2)}</td><td class="text-center"><span class="size-badge ${sm[p.porte]||''}">${sl[p.porte]||p.porte}</span></td><td class="text-right">${p.icms}%</td><td class="text-right">${p.ipi}%</td><td style="color:#a0aec0;font-size:11px">${p.ncm}</td><td class="text-center" style="white-space:nowrap">${acoes}</td></tr>`;
     });
     h+='</tbody></table>';
     document.getElementById('prodTableWrap').innerHTML=h;
