@@ -396,7 +396,7 @@ async function syncPdmTabelaPrecos(){
     const txtOrig=btn.textContent;
     btn.disabled=true;btn.textContent='Sincronizando...';
     try{
-        const r=await fetch('https://hub.boxersoldas.com.br/api/sync-pdm-tabela-precos',{
+        const r=await fetch('https://hub.boxersoldas.com.br/api/sync-pdm?target=produtos',{
             method:'POST',
             headers:{'Authorization':'Bearer '+SESSION.access_token}
         });
