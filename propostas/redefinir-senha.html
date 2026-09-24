@@ -82,6 +82,22 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 let sessaoRecuperacaoOk = false;
+let EMAIL_USUARIO = null;
+
+// Fire-and-forget: nunca deve travar o fluxo de redefinicao de senha se o
+// email de aviso falhar (endpoint no Hub, mesmo usado pra notificacoes do
+// Hub — ver api/email.js).
+function notificarSenhaAlterada(){
+  if (!EMAIL_USUARIO) return;
+  fetch('https://hub.boxersoldas.com.br/api/email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      tipo: 'senha_alterada',
+      dados: { email: EMAIL_USUARIO, sistema: 'Propostas', hora: new Date().toLocaleString('pt-BR') }
+    })
+  }).catch(() => {});
+}
 
 sb.auth.onAuthStateChange((event, session) => {
   if (event === 'PASSWORD_RECOVERY') {
@@ -97,6 +113,8 @@ async function init() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) {
     mostrarLinkInvalido();
+  } else {
+    EMAIL_USUARIO = session.user.email;
   }
 
   document.getElementById('confirmaSenha').addEventListener('keydown', e => {
@@ -139,6 +157,7 @@ async function salvarNovaSenha() {
   }
 
   mostrarOk('Senha alterada com sucesso! Redirecionando para o login...');
+  notificarSenhaAlterada();
   await sb.auth.signOut();
   setTimeout(() => { window.location.href = 'login.html'; }, 1800);
 }
