@@ -111,6 +111,7 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 <div class="tab admin-only hidden" onclick="showTab('multiplicadores',this)">Multiplicadores</div>
 <div class="tab admin-only hidden" onclick="showTab('comissoes',this)">Comissões</div>
 <div class="tab admin-only hidden" onclick="showTab('usuarios',this)">Usuários</div>
+<div class="tab admin-only hidden" onclick="showTab('uso',this)">Uso da Tabela</div>
 </div>
 <div class="panel">
 <div class="panel-content" id="tab-produtos">
@@ -152,6 +153,17 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 <div class="panel-header"><div><div class="panel-title">Gestão de Usuários</div><div class="panel-sub">Apenas admin</div></div>
 <button class="btn btn-primary btn-sm" onclick="openUserModal()">+ Novo usuário</button></div>
 <div id="usersList"><div class="loading">Carregando...</div></div>
+</div>
+
+<div class="panel-content hidden" id="tab-uso">
+<div class="panel-header"><div><div class="panel-title">Uso da Tabela de Preços</div><div class="panel-sub" id="usoSub">Quem acessa, o que consulta e quais propostas gera na tela com login</div></div>
+<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+<select id="usoPeriodo" class="select-sm" onchange="loadUsoTabela()"><option value="1">Últimas 24h</option><option value="7" selected>Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option></select>
+<select id="usoUsuario" class="select-sm" onchange="renderUso()"><option value="">Todos os usuários</option></select>
+<select id="usoEvento" class="select-sm" onchange="renderUso()"><option value="">Todos os eventos</option><option value="login">Login</option><option value="acesso">Acesso</option><option value="acesso_negado">Acesso negado</option><option value="consulta">Consulta (filtros)</option><option value="consulta_disponibilidade">Consulta de estoque</option><option value="selecionar_item">Selecionou item</option><option value="gerar_proposta">Gerou proposta</option><option value="logout">Logout</option></select>
+<button class="btn btn-outline btn-sm" onclick="loadUsoTabela()">Atualizar</button>
+</div></div>
+<div id="usoWrap"><div class="loading">Carregando...</div></div>
 </div>
 </div>
 </div>
@@ -376,6 +388,7 @@ function showTab(n,el){
     if(n==='multiplicadores')loadMult();
     if(n==='comissoes')loadComissoes();
     if(n==='usuarios')loadUsuarios();
+    if(n==='uso')loadUsoTabela();
 }
 
 // PRODUTOS
@@ -604,6 +617,56 @@ async function applyReajuste(){
         await sb('/log_alteracoes','POST',{usuario_id:SESSION.user.id,usuario_email:SESSION.user.email,tabela_ref:'reajuste_massa',campo:'percentual',valor_novo:pct+'% ('+updated+' produtos, categorias: '+catNames+')'});
         toast(updated+' produtos reajustados em '+pct+'%');closeModal();loadProdutos();
     }catch(e){toast('Erro: '+e.message,'error');}
+}
+
+
+// USO DA TABELA (log da tela de teste com login)
+const USO_EVENTOS={login:'Login',acesso:'Acesso',acesso_negado:'Acesso negado',logout:'Logout',consulta:'Consulta (filtros)',consulta_disponibilidade:'Consulta de estoque',selecionar_item:'Selecionou item',desselecionar_item:'Removeu item',gerar_proposta:'Gerou proposta'};
+let USO_ROWS=[];
+function escUso(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function descUso(ev,d){
+    if(!d)return '';
+    if(ev==='consulta'){const p=[];if(d.grupo)p.push(d.grupo);if(d.categoria&&d.categoria!=='TODAS')p.push(d.categoria);if(d.segmento)p.push(d.segmento);if(d.classe)p.push('Classe '+d.classe);if(d.uf)p.push(d.uf);if(d.busca)p.push('busca: "'+d.busca+'"');return p.join(' · ');}
+    if(ev==='consulta_disponibilidade'){const r={ok:'disponível',prev:'previsão '+(d.previsao?String(d.previsao).slice(0,10):''),sem_prev:'sem previsão',sem_info:'sem info',prev_indisponivel:'previsão indisponível'}[d.resultado]||'';return d.codigo+' × '+d.qtd+(r?' → '+r:'');}
+    if(ev==='selecionar_item'||ev==='desselecionar_item')return (d.codigo||'')+(d.modelo?' · '+d.modelo:'');
+    if(ev==='gerar_proposta')return (d.itens||[]).length+' item(ns): '+(d.itens||[]).join(', ');
+    if(ev==='login'||ev==='acesso')return d.origem?(d.origem+(d.role?' / '+d.role:'')):'';
+    return '';
+}
+async function loadUsoTabela(){
+    const wrap=document.getElementById('usoWrap');
+    try{
+        const dias=parseInt(document.getElementById('usoPeriodo').value,10)||7;
+        const desde=new Date(Date.now()-dias*86400000).toISOString();
+        const rows=await sb('/tabela_acessos_log?select=id,email,evento,detalhe,criado_em&criado_em=gte.'+encodeURIComponent(desde)+'&order=criado_em.desc&limit=1000');
+        USO_ROWS=rows;
+        const usuarios=[...new Set(rows.map(r=>r.email))].sort();
+        const sel=document.getElementById('usoUsuario');const atual=sel.value;
+        sel.innerHTML='<option value="">Todos os usuários</option>'+usuarios.map(u=>`<option value="${escUso(u)}">${escUso(u)}</option>`).join('');
+        sel.value=usuarios.includes(atual)?atual:'';
+        document.getElementById('usoSub').textContent='Últimos '+dias+' dia(s)'+(rows.length>=1000?' · mostrando os 1000 mais recentes':'');
+        renderUso();
+    }catch(e){
+        wrap.innerHTML=`<div style="text-align:center;padding:20px;color:#dc2626">Erro ao carregar o log: ${escUso(e.message)} <button class="btn btn-outline btn-sm" onclick="loadUsoTabela()">Tentar novamente</button></div>`;
+    }
+}
+function renderUso(){
+    const u=document.getElementById('usoUsuario').value,ev=document.getElementById('usoEvento').value;
+    const rows=USO_ROWS.filter(r=>(!u||r.email===u)&&(!ev||r.evento===ev));
+    const cnt=e=>rows.filter(r=>r.evento===e).length;
+    const sessoes=cnt('login')+cnt('acesso');
+    const kpi=(n,l)=>`<div style="flex:1;min-width:130px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px"><div style="font-size:22px;font-weight:700;color:#1d327b">${n}</div><div style="font-size:11px;color:#718096;text-transform:uppercase;letter-spacing:.5px">${l}</div></div>`;
+    let h='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">'
+        +kpi(new Set(rows.map(r=>r.email)).size,'Usuários')+kpi(sessoes,'Acessos')+kpi(cnt('consulta')+cnt('consulta_disponibilidade'),'Consultas')+kpi(cnt('gerar_proposta'),'Propostas geradas')+kpi(cnt('acesso_negado'),'Acessos negados')+'</div>';
+    const por={};rows.forEach(r=>{const p=por[r.email]=por[r.email]||{n:0,acessos:0,consultas:0,props:0,ultimo:r.criado_em};p.n++;if(r.evento==='login'||r.evento==='acesso')p.acessos++;if(r.evento==='consulta'||r.evento==='consulta_disponibilidade')p.consultas++;if(r.evento==='gerar_proposta')p.props++;if(r.criado_em>p.ultimo)p.ultimo=r.criado_em;});
+    h+='<div style="font-weight:600;color:#1d327b;margin:4px 0 6px">Por usuário</div><table><thead><tr><th>Usuário</th><th class="text-right">Acessos</th><th class="text-right">Consultas</th><th class="text-right">Propostas</th><th>Último uso</th></tr></thead><tbody>';
+    Object.entries(por).sort((a,b)=>b[1].ultimo.localeCompare(a[1].ultimo)).forEach(([e,p])=>{h+=`<tr><td>${escUso(e)}</td><td class="text-right">${p.acessos}</td><td class="text-right">${p.consultas}</td><td class="text-right">${p.props}</td><td>${new Date(p.ultimo).toLocaleString('pt-BR')}</td></tr>`;});
+    if(!Object.keys(por).length)h+='<tr><td colspan="5" style="text-align:center;color:#a0aec0;padding:16px">Nenhum uso registrado neste período</td></tr>';
+    h+='</tbody></table><div style="font-weight:600;color:#1d327b;margin:18px 0 6px">Eventos recentes</div><div style="max-height:460px;overflow:auto"><table><thead><tr><th>Quando</th><th>Usuário</th><th>Evento</th><th>Detalhe</th></tr></thead><tbody>';
+    rows.slice(0,300).forEach(r=>{h+=`<tr><td style="white-space:nowrap">${new Date(r.criado_em).toLocaleString('pt-BR')}</td><td>${escUso(r.email)}</td><td>${escUso(USO_EVENTOS[r.evento]||r.evento)}</td><td style="font-size:12px;color:#4a5568">${escUso(descUso(r.evento,r.detalhe))}</td></tr>`;});
+    if(!rows.length)h+='<tr><td colspan="4" style="text-align:center;color:#a0aec0;padding:16px">Nada para mostrar</td></tr>';
+    h+='</tbody></table></div>'+(rows.length>300?'<p style="font-size:11px;color:#718096;margin-top:6px">Mostrando os 300 mais recentes de '+rows.length+'.</p>':'');
+    document.getElementById('usoWrap').innerHTML=h;
 }
 
 // ESTADOS
