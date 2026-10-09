@@ -276,6 +276,7 @@ function agendarLogFiltro() {
     clearTimeout(_filtroTimer);
     _filtroTimer = setTimeout(() => {
         const d = { uf: cState, segmento: cSeg, classe: cCls, grupo: cCatGrupo, categoria: cCat, busca: (cSearch || '').trim() };
+        if (!d.grupo && !d.busca) return;
         const s = JSON.stringify(d);
         if (s === _filtroUltimo) return;
         _filtroUltimo = s;
