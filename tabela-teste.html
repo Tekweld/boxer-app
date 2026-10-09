@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tabela de Preços Boxer - TESTE</title>
+<meta name="robots" content="noindex,nofollow">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f4f8;color:#1a202c}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:#e2e8f0}::-webkit-scrollbar-thumb{background:#25bbee;border-radius:3px}
+.header{background:linear-gradient(135deg,#1d327b 0%,#162666 100%);border-bottom:3px solid #25bbee;padding:18px 24px}
+.header-inner{max-width:1400px;margin:0 auto}.logo-row{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.logo-row h1{font-family:Outfit;font-size:22px;font-weight:700;color:#fff;letter-spacing:-.5px}
+.logo-row p{font-family:Outfit;font-size:12px;color:#93b4d4;margin-top:2px}
+.nav-btn{position:absolute;right:24px;top:18px;padding:10px 20px;border-radius:8px;border:2px solid #25bbee;background:rgba(37,187,238,.1);color:#fff;font-family:Outfit;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.nav-btn:hover{background:#25bbee;color:#fff}
+.filters-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.filter-label{font-family:Outfit;font-size:11px;color:#93b4d4;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px}
+.state-select{width:80px;height:30px;padding:0 4px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:#fff;font-size:13px;font-family:Outfit}
+.state-select option{color:#1a202c;background:#fff}
+.btn-group{display:flex;gap:4px}
+.fb{padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:#c8ddf0;cursor:pointer;font-size:13px;transition:all .2s;font-family:Outfit;white-space:nowrap}
+.fb:hover{border-color:#25bbee;color:#fff}.fb.on{background:#25bbee;border-color:#25bbee;color:#fff;box-shadow:0 2px 8px rgba(29,50,123,.25)}
+.fb-classe{min-width:40px;text-align:center}
+.comissao-box{display:none;padding:8px 16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;margin-left:auto}
+.comissao-text{font-family:Outfit;font-size:14px;color:#fff;font-weight:500}
+.comissao-text span{color:#25bbee;font-weight:600}
+.content{max-width:1400px;margin:0 auto;padding:16px 24px;padding-bottom:90px}
+.search-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.search-input{flex:1 1 280px;padding:9px 14px;border-radius:8px;border:1px solid #c3cfe2;background:#fff;color:#1a202c;font-size:14px;outline:none;font-family:Outfit}
+.cat-select{padding:9px 14px;border-radius:8px;border:1px solid #c3cfe2;background:#fff;color:#1a202c;font-size:13px;min-width:220px;font-family:Outfit}
+.cat-header{padding:8px 16px;border-radius:8px;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+.cat-header span:first-child{font-family:Outfit;font-weight:600;font-size:14px;color:#fff}
+.cat-badge{font-family:Outfit;font-size:12px;color:rgba(255,255,255,.7);background:rgba(255,255,255,.15);padding:2px 8px;border-radius:10px}
+.cat-group{margin-bottom:16px}.tbl-wrap{overflow:auto;border-radius:8px;border:1px solid #d0d8e8}
+table{width:100%;border-collapse:collapse;font-size:13px}thead tr{background:#1d327b}
+th{padding:8px 12px;color:#fff;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+.al{text-align:left}.ar{text-align:right}.ac{text-align:center}
+tbody tr{border-bottom:1px solid #e2e8f0;transition:background .15s}tbody tr:nth-child(odd){background:#fff}tbody tr:nth-child(even){background:#eef2fa}tbody tr:hover{background:#dbeafe !important}
+td{padding:7px 12px}.td-code{color:#4a5568;font-variant-numeric:tabular-nums;font-size:12px}.td-name{color:#1a202c;max-width:340px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.td-price-base{text-align:right;color:#718096;font-variant-numeric:tabular-nums;font-size:12px}.td-price-final{text-align:right;color:#1d327b;font-weight:700;font-variant-numeric:tabular-nums}
+.td-pct{text-align:right;color:#718096;font-size:12px}.td-ncm{color:#a0aec0;font-size:11px}
+.size-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:6px;display:inline-block}
+.sz-peq{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}.sz-med{background:#fef9c3;color:#854d0e;border:1px solid #fde68a}.sz-grd{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}.sz-maq{background:#ede9fe;color:#5b21b6;border:1px solid #c4b5fd}
+.footer{margin-top:24px;padding:16px;background:#fff;border-radius:10px;border:1px solid #d0d8e8}.footer p{font-family:Outfit;font-size:12px;color:#718096}.footer strong{color:#1d327b}
+.empty{text-align:center;padding:60px;color:#718096;font-family:Outfit}.loading{text-align:center;padding:80px;color:#718096;font-family:Outfit;font-size:16px}
+.error-box{text-align:center;padding:60px;font-family:Outfit}
+.error-box p{color:#991b1b;font-size:15px;margin-bottom:16px}
+.error-box button{background:#1d327b;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-family:Outfit;font-size:14px;font-weight:600;cursor:pointer}
+.error-box button:hover{background:#162666}
+/* === FASE 2: Seleção de itens para proposta === */
+.btn-sel{background:transparent;border:1px solid #d0d8e8;border-radius:6px;padding:4px 10px;cursor:pointer;font-family:Outfit;font-size:12px;color:#718096;transition:all .15s;white-space:nowrap}
+.btn-sel:hover{border-color:#1d327b;color:#1d327b}
+.btn-sel.selecionado{background:#1d327b;border-color:#1d327b;color:#fff}
+tbody tr.row-sel{background:#e8f0fe !important}
+#barProposta{position:fixed;bottom:0;left:0;right:0;background:linear-gradient(135deg,#1d327b,#162666);border-top:3px solid #25bbee;padding:14px 24px;display:none;align-items:center;justify-content:space-between;z-index:1000;box-shadow:0 -4px 20px rgba(29,50,123,.3)}
+#barProposta.visible{display:flex}
+#barContador{font-family:Outfit;font-size:14px;color:#fff}
+#barContador strong{color:#25bbee;font-size:18px;font-weight:700;margin-right:4px}
+#btnGerar{background:#25bbee;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-family:Outfit;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
+#btnGerar:hover{background:#1ea8d8}
+#btnLimpar{background:transparent;color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:10px 16px;font-family:Outfit;font-size:13px;cursor:pointer;margin-right:12px}
+#btnLimpar:hover{color:#fff;border-color:rgba(255,255,255,.5)}
+/* === TESTE: login, banner, estoque e previsão === */
+body.locked .header,body.locked .content,body.locked #barProposta,body.locked #testBanner{display:none}
+#testBanner{background:#fef3c7;border-bottom:1px solid #fde68a;color:#92400e;font-family:Outfit;font-size:12px;padding:6px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+#testBanner strong{letter-spacing:.5px}
+#testBanner .sp{flex:1}
+#testBanner a{color:#92400e;text-decoration:underline;cursor:pointer}
+#loginOverlay{position:fixed;inset:0;background:#f0f4f8;display:none;align-items:center;justify-content:center;z-index:3000;padding:16px}
+#loginOverlay.show{display:flex}
+.login-card{background:#fff;border-radius:12px;padding:36px;width:100%;max-width:400px;box-shadow:0 4px 24px rgba(0,0,0,.08);border:1px solid #e2e8f0;font-family:Outfit}
+.login-card h1{font-size:20px;color:#1d327b;font-weight:700;text-align:center;margin:12px 0 4px}
+.login-card p.sub{font-size:13px;color:#718096;text-align:center;margin-bottom:22px}
+.login-card .field{margin-bottom:14px}
+.login-card .field label{display:block;font-size:12px;font-weight:500;color:#4a5568;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.login-card .field input{width:100%;padding:10px 14px;border:1px solid #c3cfe2;border-radius:8px;font-size:14px;font-family:Outfit;outline:none}
+.login-card .field input:focus{border-color:#25bbee}
+.login-card .btn-login{width:100%;padding:12px;background:#1d327b;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:Outfit}
+.login-card .btn-login:hover{background:#162666}
+.login-card .btn-login:disabled{opacity:.6;cursor:default}
+.login-card .err-msg{background:#fee2e2;color:#991b1b;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;border:1px solid #fecaca;display:none}
+.login-card .err-msg.show{display:block}
+.login-card .links{text-align:center;margin-top:14px;font-size:12px}
+.login-card .links a{color:#1d327b;cursor:pointer;text-decoration:underline}
+.est{display:inline-block;min-width:30px;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}
+.est.pos{background:#dcfce7;color:#166534}
+.est.zero{background:#e2e8f0;color:#4a5568}
+.est.none{color:#a0aec0;font-weight:400}
+.disp{font-family:Outfit;font-size:12px;font-weight:600;white-space:nowrap}
+.disp.ok{color:#166534}
+.disp.prev{color:#92400e}
+.disp.no{color:#b91c1c}
+.disp.muted{color:#a0aec0;font-weight:400}
+</style>
+</head>
+<body class="locked">
+<div id="testBanner">
+  <strong>VERSÃO DE TESTE</strong>
+  <span>Estoque e previsão de chegada · uso registrado</span>
+  <span class="sp"></span>
+  <span id="userInfo"></span>
+  <a onclick="doLogout()">Sair</a>
+</div>
+
+<div id="loginOverlay">
+  <div class="login-card">
+    <div style="text-align:center"><img src="Estrela-Boxer.svg" width="40" height="40" alt=""></div>
+    <h1>Tabela de Preços Boxer</h1>
+    <p class="sub" id="loginSub">Acesso restrito à equipe Boxer · versão de teste</p>
+    <div id="loginErr" class="err-msg"></div>
+    <div id="loginForm">
+      <div class="field"><label for="loginEmail">Email</label><input id="loginEmail" type="email" autocomplete="username" placeholder="seu@boxersoldas.com.br"></div>
+      <div class="field"><label for="loginPass">Senha</label><input id="loginPass" type="password" autocomplete="current-password" placeholder="••••••••"></div>
+      <button class="btn-login" id="btnLogin" onclick="doLogin()">Entrar</button>
+      <div class="links"><a href="/propostas/login.html">Esqueci minha senha</a></div>
+    </div>
+    <div id="deniedBox" style="display:none">
+      <button class="btn-login" onclick="doLogout()">Sair</button>
+    </div>
+  </div>
+</div>
+
+<div class="header" style="position:relative;"><div class="header-inner">
+<a id="navBtn" href="#" class="nav-btn"></a>
+<div class="logo-row">
+<img src="Estrela-Boxer.svg" width="40" height="40" style="display:block">
+<div><h1 id="pageTitle">Tabela de Preços Boxer</h1><p id="pageSubtitle">Carregando...</p></div></div>
+<div class="filters-row">
+<div><label class="filter-label">Estado</label><select id="selState" class="state-select"></select></div>
+<div><label class="filter-label" id="segLabel">Segmento</label><div id="segBtns" class="btn-group"></div></div>
+<div id="catGrupoWrap" style="display:none"><label class="filter-label">Categoria</label><div id="catGrupoBtns" class="btn-group"></div></div>
+<div><label class="filter-label">Classe</label><div id="clsBtns" class="btn-group"></div></div>
+<div class="comissao-box" id="comissaoBox"><label class="filter-label">Comissionamento</label><div class="comissao-text" id="comissaoText"></div></div>
+</div></div></div>
+<div class="content">
+<div class="search-row"><input id="searchInput" class="search-input" placeholder="Buscar por nome ou código..."/><select id="selCat" class="cat-select"></select></div>
+<div id="tableArea"><div class="loading">Carregando tabela de preços...</div></div>
+<div class="footer"><p>Configuração: <strong id="footState"></strong> · <strong id="footSeg"></strong> · Classe <strong id="footCls"></strong></p></div>
+</div>
+
+<div id="barProposta">
+  <span id="barContador"></span>
+  <div>
+    <button id="btnLimpar" onclick="limparSelecao()">Limpar seleção</button>
+    <button id="btnGerar" onclick="gerarProposta()">Gerar Proposta →</button>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://bmepxcnrsofofoswubuu.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtZXB4Y25yc29mb2Zvc3d1YnV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MTczNzMsImV4cCI6MjA5NTI5MzM3M30.S55ouFczRYlUYNFf5PotYKXBPT5idypTSmbzR-x2Pk0';
+
+const params = new URLSearchParams(window.location.search);
+const TID = 2; // tela de teste: só a tabela BMAX
+const IS_AUTO = TID === 2;
+const IS_TEST = TID === 3;
+
+const SZ = {Pequenas:'PEQ',Médias:'MED',Grandes:'GRD','Maquinário':'MAQ'};
+const SZC = {Pequenas:'sz-peq',Médias:'sz-med',Grandes:'sz-grd','Maquinário':'sz-maq'};
+
+let P=[], ST=[], M={}, CM={}, SEG=[], CLS=[], CATS=[], GRUPOS=[], catGroupById={}, catGroupByName={}, ESTOQUE={};
+let cState='SP', cSeg='', cCls=0, cCat='TODAS', cCatGrupo='', cSearch='';
+const ORDEM_GRUPO = {'Robô':0,'Laser':1,'Máquinas':2,'Outros':3};
+
+const selecionados = new Map();
+
+// === TESTE: login, log de uso, estoque (Hub/ZEN) e previsão de chegada (FUP via Hub) ===
+const HUB_API = 'https://hub.boxersoldas.com.br';
+const sbc = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+let USER = null, TOKEN = null, DADOS_CARREGADOS = false;
+let QTD = {}, PREV = {}, PREV_OK = false, PREV_ATUALIZADO = null;
+
+function $(id){ return document.getElementById(id); }
+
+function showLogin(msg) {
+    DADOS_CARREGADOS = false;
+    document.body.classList.add('locked');
+    $('loginOverlay').classList.add('show');
+    $('loginForm').style.display = '';
+    $('deniedBox').style.display = 'none';
+    $('loginSub').textContent = 'Acesso restrito à equipe Boxer · versão de teste';
+    const e = $('loginErr');
+    if (msg) { e.textContent = msg; e.classList.add('show'); } else e.classList.remove('show');
+}
+
+function showDenied() {
+    document.body.classList.add('locked');
+    $('loginOverlay').classList.add('show');
+    $('loginForm').style.display = 'none';
+    $('deniedBox').style.display = '';
+    $('loginSub').textContent = '';
+    const e = $('loginErr');
+    e.textContent = 'Seu usuário não tem acesso à tabela de preços. Fale com o administrador.';
+    e.classList.add('show');
+}
+
+async function doLogin() {
+    const email = $('loginEmail').value.trim();
+    const pass = $('loginPass').value;
+    const err = $('loginErr');
+    if (!email || !pass) { err.textContent = 'Preencha email e senha'; err.classList.add('show'); return; }
+    err.classList.remove('show');
+    const btn = $('btnLogin');
+    btn.disabled = true; btn.textContent = 'Entrando...';
+    try {
+        const { data, error } = await sbc.auth.signInWithPassword({ email, password: pass });
+        if (error || !data.session) { showLogin('Email ou senha incorretos'); return; }
+        await onSession(data.session, true);
+    } catch (e) {
+        showLogin('Erro de conexão. Tente novamente.');
+    } finally {
+        btn.disabled = false; btn.textContent = 'Entrar';
+    }
+}
+
+async function doLogout() {
+    logUso('logout');
+    await new Promise(r => setTimeout(r, 150));
+    USER = null; TOKEN = null; QTD = {};
+    await sbc.auth.signOut();
+    location.reload();
+}
+
+async function onSession(session, novoLogin) {
+    USER = session.user; TOKEN = session.access_token;
+    let acesso = null;
+    try {
+        const { data, error } = await sbc.rpc('tabela_acesso');
+        if (error) throw error;
+        acesso = data;
+    } catch (e) {
+        console.error('Falha ao checar acesso', e);
+        showLogin('Não foi possível validar seu acesso. Tente novamente.');
+        return;
+    }
+    if (!acesso || !acesso.permitido) {
+        logUso('acesso_negado');
+        showDenied();
+        return;
+    }
+    $('loginOverlay').classList.remove('show');
+    document.body.classList.remove('locked');
+    $('userInfo').textContent = (acesso.nome || USER.email) + ' · ' + USER.email;
+    logUso(novoLogin ? 'login' : 'acesso', { origem: acesso.origem, role: acesso.role });
+    if (!DADOS_CARREGADOS) { DADOS_CARREGADOS = true; await load(); }
+}
+
+async function initAuth() {
+    sbc.auth.onAuthStateChange((ev, s) => {
+        if (s) TOKEN = s.access_token;
+        if (ev === 'SIGNED_OUT' && DADOS_CARREGADOS) location.reload();
+    });
+    const { data: { session } } = await sbc.auth.getSession();
+    if (session) await onSession(session, false); else showLogin();
+}
+
+// --- log de uso (fire-and-forget; nunca trava a tela) ---
+function logUso(evento, detalhe) {
+    if (!USER || !TOKEN) return;
+    try {
+        fetch(SUPABASE_URL + '/rest/v1/tabela_acessos_log', {
+            method: 'POST',
+            keepalive: true,
+            headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + TOKEN, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+            body: JSON.stringify({ user_id: USER.id, email: USER.email, evento, detalhe: detalhe || null })
+        }).catch(() => {});
+    } catch (e) { /* log não pode quebrar a tela */ }
+}
+
+let _filtroTimer = null, _filtroUltimo = '';
+function agendarLogFiltro() {
+    if (!DADOS_CARREGADOS) return;
+    clearTimeout(_filtroTimer);
+    _filtroTimer = setTimeout(() => {
+        const d = { uf: cState, segmento: cSeg, classe: cCls, grupo: cCatGrupo, categoria: cCat, busca: (cSearch || '').trim() };
+        const s = JSON.stringify(d);
+        if (s === _filtroUltimo) return;
+        _filtroUltimo = s;
+        logUso('consulta', d);
+    }, 2000);
+}
+
+// --- estoque: RPC que lê o estoque do Hub (regra do sync-estoque) ---
+async function carregarEstoque() {
+    try {
+        const { data, error } = await sbc.rpc('tabela_estoque_bmax');
+        if (error) throw error;
+        (data || []).forEach(r => { ESTOQUE[r.codigo] = { q: r.estoque === null ? null : Number(r.estoque), origem: r.origem }; });
+    } catch (e) {
+        console.error('Falha ao carregar estoque', e);
+    }
+}
+
+// --- previsão de chegada: FUP via Hub (função da Vercel, só equipe interna) ---
+async function carregarPrevisao() {
+    try {
+        const r = await fetch(HUB_API + '/api/disponibilidade?target=tabela', { headers: { 'Authorization': 'Bearer ' + TOKEN } });
+        if (!r.ok) throw new Error('Hub respondeu ' + r.status);
+        const j = await r.json();
+        PREV = j.porCodigo || {};
+        PREV_ATUALIZADO = j.lastUpdate || null;
+        PREV_OK = true;
+    } catch (e) {
+        console.error('Falha ao carregar previsão', e);
+        PREV_OK = false;
+    }
+    atualizarTodasDisponibilidades();
+}
+
+// Mesma regra do Hub (hub.js): anda pelas remessas por data prevista, desconta a fila de reservas
+// e devolve a data em que o déficit passa a estar coberto.
+function calcularDisponibilidadePrevista(records, deficit) {
+    if (!Array.isArray(records) || !records.length || !(deficit > 0)) return null;
+    const toDate = v => { const d = v ? new Date(v) : null; return d && !isNaN(d) ? d : null; };
+    const ordenados = [...records].sort((a, b) => {
+        const da = toDate(a.prevRep), db = toDate(b.prevRep);
+        if (!da && !db) return 0;
+        if (!da) return 1;
+        if (!db) return -1;
+        return da - db;
+    });
+    let reservasRestantes = Number(ordenados[0].reservas) || 0;
+    let acumulado = 0;
+    for (const rec of ordenados) {
+        const qty = Number(rec.qtd) || 0;
+        if (reservasRestantes > 0) {
+            if (qty <= reservasRestantes) { reservasRestantes -= qty; continue; }
+            acumulado += (qty - reservasRestantes);
+            reservasRestantes = 0;
+        } else {
+            acumulado += qty;
+        }
+        if (acumulado >= deficit) return rec.prevRep || null;
+    }
+    return null;
+}
+
+function fmtData(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso));
+    if (m) return m[3] + '/' + m[2] + '/' + m[1];
+    const d = new Date(iso);
+    return isNaN(d) ? String(iso) : d.toLocaleDateString('pt-BR');
+}
+
+function badgeEstoque(e) {
+    if (!e || e.q === null || e.q === undefined) return '<span class="est none" title="Sem informação de estoque no ZEN">—</span>';
+    return '<span class="est ' + (e.q > 0 ? 'pos' : 'zero') + '">' + e.q + '</span>';
+}
+
+function dispCalc(codigo, qtd) {
+    if (!qtd || qtd <= 0) return null;
+    const e = ESTOQUE[codigo];
+    if (!e || e.q === null || e.q === undefined) return { tipo: 'sem_info' };
+    if (e.q >= qtd) return { tipo: 'ok' };
+    const deficit = qtd - e.q;
+    if (!PREV_OK) return { tipo: 'prev_indisponivel', deficit, estoque: e.q };
+    const iso = calcularDisponibilidadePrevista(PREV[String(codigo).trim().toUpperCase()], deficit);
+    return iso ? { tipo: 'prev', iso, deficit, estoque: e.q } : { tipo: 'sem_prev', deficit, estoque: e.q };
+}
+
+function dispHtml(codigo) {
+    const r = dispCalc(codigo, QTD[codigo]);
+    if (!r) return '';
+    if (r.tipo === 'ok') return '<span class="disp ok">✓ Disponível</span>';
+    if (r.tipo === 'sem_info') return '<span class="disp muted">Sem info de estoque</span>';
+    const falta = 'Faltam ' + r.deficit + ' un. (estoque: ' + r.estoque + ')';
+    if (r.tipo === 'prev') return '<span class="disp prev" title="' + falta + '">Previsão: ' + fmtData(r.iso) + '</span>';
+    if (r.tipo === 'prev_indisponivel') return '<span class="disp muted" title="' + falta + '">Previsão indisponível</span>';
+    return '<span class="disp no" title="' + falta + '">Sem previsão</span>';
+}
+
+function atualizarTodasDisponibilidades() {
+    document.querySelectorAll('.disp-cell').forEach(c => { c.innerHTML = dispHtml(c.dataset.codigo); });
+}
+
+const _qtdTimers = {};
+function aoDigitarQtd(input) {
+    const codigo = input.dataset.codigo;
+    const v = parseInt(input.value, 10);
+    QTD[codigo] = v > 0 ? v : 0;
+    const cel = input.closest('tr').querySelector('.disp-cell');
+    if (cel) cel.innerHTML = dispHtml(codigo);
+    clearTimeout(_qtdTimers[codigo]);
+    if (QTD[codigo] > 0) {
+        _qtdTimers[codigo] = setTimeout(() => {
+            const r = dispCalc(codigo, QTD[codigo]);
+            logUso('consulta_disponibilidade', { codigo, qtd: QTD[codigo], resultado: r ? r.tipo : null, previsao: r && r.iso ? r.iso : null });
+        }, 1500);
+    }
+}
+
+
+function fmt(v){return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
+
+const SB_TIMEOUT_MS = 15000;
+
+// Sem timeout, uma falha do Supabase (fora do ar, rede lenta) deixa o fetch
+// pendurado indefinidamente e a tela trava em "Carregando..." pra sempre,
+// sem erro nenhum pro usuário ver. Com AbortController, no máximo SB_TIMEOUT_MS
+// depois a gente desiste e cai no catch de load(), que mostra erro + botão de
+// tentar de novo.
+async function sbFetchRaw(path, extraHeaders) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), SB_TIMEOUT_MS);
+    try {
+        const r = await fetch(SUPABASE_URL+'/rest/v1'+path, {
+            headers: Object.assign({'apikey': SUPABASE_ANON, 'Authorization': 'Bearer '+(typeof TOKEN!=='undefined' && TOKEN ? TOKEN : SUPABASE_ANON)}, extraHeaders||{}),
+            signal: ctrl.signal
+        });
+        if (!r.ok) throw new Error('Supabase respondeu '+r.status+' em '+path);
+        return r;
+    } catch (e) {
+        if (e.name === 'AbortError') throw new Error('Tempo esgotado consultando '+path);
+        throw e;
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+async function sbFetch(path) {
+    const r = await sbFetchRaw(path);
+    return r.json();
+}
+
+// A API do Supabase limita cada resposta a 1000 linhas por padrão - para
+// tabelas maiores (ex: estoque_zenerp, com milhares de produtos) é preciso
+// buscar em várias páginas até esgotar os registros.
+async function sbFetchAll(path) {
+    const PAGE = 1000;
+    let offset = 0, all = [], pagina;
+    do {
+        const r = await sbFetchRaw(path, {'Range': offset+'-'+(offset+PAGE-1)});
+        pagina = await r.json();
+        all = all.concat(pagina);
+        offset += PAGE;
+    } while (pagina.length === PAGE);
+    return all;
+}
+
+async function load() {
+    try {
+        await carregarDados();
+    } catch (e) {
+        console.error('Falha ao carregar tabela de preços:', e);
+        document.getElementById('pageSubtitle').textContent = 'Erro ao carregar';
+        document.getElementById('tableArea').innerHTML =
+            '<div class="error-box"><p>Não foi possível carregar a tabela de preços. Pode ser instabilidade temporária no servidor.</p>'
+            + '<button onclick="location.reload()">Tentar novamente</button></div>';
+    }
+}
+
+async function carregarDados() {
+    const [tabelaRes, estadosRes, multsRes, prodsRes, catsRes, comsRes, estoqueRes] = await Promise.all([
+        sbFetch('/tabelas?id=eq.'+TID+'&select=*'),
+        sbFetch('/estados?select=uf,mult_4_icms,mult_total&order=uf'),
+        sbFetch('/multiplicadores?tabela_id=eq.'+TID+'&select=segmento,classe,porte,categoria_grupo,valor'),
+        sbFetch('/produtos?tabela_id=eq.'+TID+'&ativo=eq.true&pv_sp=gt.0&select=codigo,modelo,pv_sp,porte,icms,ipi,ncm,categoria_id&order=pv_sp'),
+        sbFetch('/categorias?tabela_id=eq.'+TID+'&select=id,nome,ordem,categoria_grupo&order=ordem'),
+        sbFetch('/comissoes?tabela_id=eq.'+TID+'&select=segmento,classe,categoria_grupo,rep_pct,revenda_pct,vendedor_tecnico_pct'),
+        IS_TEST ? sbFetchAll('/estoque_zenerp?select=codigo,quantity_balance') : Promise.resolve([])
+    ]);
+
+    estoqueRes.forEach(e => { ESTOQUE[e.codigo] = parseFloat(e.quantity_balance); });
+
+    const tabela = tabelaRes[0];
+    ST = estadosRes;
+    SEG = tabela.segmentos;
+    CLS = tabela.classes;
+
+    multsRes.forEach(m => { const dim = m.categoria_grupo || m.porte; M[m.segmento+m.classe+dim] = parseFloat(m.valor); });
+    comsRes.forEach(c => { CM[c.segmento+'-'+c.classe+'-'+c.categoria_grupo] = c; });
+
+    const catMap = {};
+    catsRes.forEach(c => { catMap[c.id] = c.nome; catGroupById[c.id] = c.categoria_grupo; catGroupByName[c.nome] = c.categoria_grupo; });
+    CATS = catsRes.map(c => c.nome);
+    GRUPOS = [...new Set(catsRes.map(c => c.categoria_grupo).filter(Boolean))].sort((a,b) => (ORDEM_GRUPO[a]??9)-(ORDEM_GRUPO[b]??9));
+
+    P = prodsRes.map(p => ({...p, cat: catMap[p.categoria_id] || 'SEM CATEGORIA', catGroup: catGroupById[p.categoria_id] || null}));
+
+    if (IS_AUTO) { cSeg=''; cCls=0; cCatGrupo=''; }
+    else { cSeg = SEG[0]; cCls = CLS[CLS.length-1]; }
+
+    const atualizado = new Date(tabela.atualizado_em).toLocaleDateString('pt-BR');
+    document.getElementById('pageSubtitle').textContent = `Atualizado em ${atualizado} · ${P.length} produtos`;
+
+    if (IS_AUTO) {
+        document.getElementById('pageTitle').innerHTML = 'Tabela de Preços Boxer <img src="bmax-logo.png" alt="BMax" style="height:26px;vertical-align:middle;margin-left:8px">';
+        document.querySelector('.header').style.borderBottomColor = '#e30613';
+        document.getElementById('navBtn').href = 'tabela-de-precos.html?t=1';
+        document.getElementById('navBtn').innerHTML = '&#10132; Tabela Revendas';
+        document.title = 'Tabela de Preços Boxer - Automação';
+        document.getElementById('segLabel').textContent = 'Origem do lead';
+        document.getElementById('catGrupoWrap').style.display = '';
+    } else {
+        document.getElementById('navBtn').href = 'tabela-de-precos.html?t=2';
+        document.getElementById('navBtn').innerHTML = '<img src="bmax-logo.png" height="32" style="display:block">';
+    }
+
+    await carregarEstoque();
+    buildFilters();
+    render();
+    carregarPrevisao();
+}
+
+function buildFilters() {
+    const sel = document.getElementById('selState');
+    ST.forEach(s => { const o = document.createElement('option'); o.value=s.uf; o.textContent=s.uf; sel.appendChild(o); });
+    sel.value = cState;
+    sel.addEventListener('change', () => { cState=sel.value; render(); });
+
+    const sd = document.getElementById('segBtns');
+    SEG.forEach(s => { const b=document.createElement('button'); b.className='fb'+(s===cSeg?' on':''); b.textContent=s; b.addEventListener('click',()=>{cSeg=s;updBtns();render();}); sd.appendChild(b); });
+
+    const cd = document.getElementById('clsBtns');
+    CLS.forEach(c => { const b=document.createElement('button'); b.className='fb fb-classe'+(c===cCls?' on':''); b.textContent=c; b.addEventListener('click',()=>{cCls=c;updBtns();render();}); cd.appendChild(b); });
+
+    const gd = document.getElementById('catGrupoBtns');
+    GRUPOS.forEach(g => { const b=document.createElement('button'); b.className='fb'+(g===cCatGrupo?' on':''); b.textContent=g; b.addEventListener('click',()=>{cCatGrupo=g;refreshCatSelect();updBtns();render();}); gd.appendChild(b); });
+
+    document.getElementById('searchInput').addEventListener('input', e => { cSearch=e.target.value; render(); });
+    refreshCatSelect();
+}
+
+function refreshCatSelect() {
+    const cs = document.getElementById('selCat');
+    cs.innerHTML = '';
+    if (IS_AUTO && !cCatGrupo) { cs.disabled = true; cCat = 'TODAS'; return; }
+    cs.disabled = false;
+    const opts = IS_AUTO ? CATS.filter(c => catGroupByName[c] === cCatGrupo) : CATS;
+    const oA = document.createElement('option'); oA.value='TODAS'; oA.textContent = IS_AUTO ? `Todas de ${cCatGrupo} (${opts.length})` : `Todas as categorias (${P.length})`; cs.appendChild(oA);
+    opts.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; cs.appendChild(o); });
+    cCat = 'TODAS';
+    cs.onchange = () => { cCat=cs.value; render(); };
+}
+
+function updBtns() {
+    document.querySelectorAll('#segBtns .fb').forEach(b => b.className='fb'+(b.textContent===cSeg?' on':''));
+    document.querySelectorAll('#clsBtns .fb').forEach(b => b.className='fb fb-classe'+(parseInt(b.textContent)===cCls?' on':''));
+    document.querySelectorAll('#catGrupoBtns .fb').forEach(b => b.className='fb'+(b.textContent===cCatGrupo?' on':''));
+}
+
+function updateComissao() {
+    const box = document.getElementById('comissaoBox');
+    if (!IS_AUTO || !cCatGrupo) { box.style.display='none'; return; }
+    const c = CM[cSeg+'-'+cCls+'-'+cCatGrupo];
+    if (c) {
+        let text = `Representante = <span>${parseFloat(c.rep_pct)}%</span>`;
+        if (c.revenda_pct !== null) text += ` · Revenda = <span>${parseFloat(c.revenda_pct)}%</span>`;
+        if (c.vendedor_tecnico_pct !== null) text += ` · Vendedor Técnico = <span>${parseFloat(c.vendedor_tecnico_pct)}%</span>`;
+        box.style.display = 'block';
+        document.getElementById('comissaoText').innerHTML = text;
+    } else { box.style.display='none'; }
+}
+
+function render() {
+    agendarLogFiltro();
+    const st = ST.find(s => s.uf===cState);
+    const a = document.getElementById('tableArea');
+
+    if (IS_AUTO && (!cSeg || !cCls || !cCatGrupo)) {
+        a.innerHTML = '<div class="empty"><p style="font-size:18px">Selecione Origem do lead, Categoria e Classe para ver os preços</p></div>';
+        document.getElementById('footState').textContent = cState;
+        document.getElementById('footSeg').textContent = cSeg || '—';
+        document.getElementById('footCls').textContent = cCls || '—';
+        updateComissao();
+        return;
+    }
+
+    let items = P;
+    if (IS_AUTO) items = items.filter(p => p.catGroup === cCatGrupo);
+    if (cCat !== 'TODAS') items = items.filter(p => p.cat===cCat);
+    if (cSearch.trim()) { const q=cSearch.toLowerCase(); items=items.filter(p=>p.modelo.toLowerCase().includes(q)||p.codigo.toLowerCase().includes(q)); }
+
+    const g = {};
+    items.forEach(p => { if(!g[p.cat]) g[p.cat]=[]; g[p.cat].push(p); });
+
+    a.innerHTML='';
+    const gr = IS_AUTO ? '#1d327b,#e30613' : '#1d327b,#25bbee';
+
+    if (!items.length) { a.innerHTML='<div class="empty"><p style="font-size:18px">Nenhum produto encontrado</p></div>'; }
+    else {
+        CATS.filter(c => g[c]).forEach(cat => { const ps = g[cat];
+            const d = document.createElement('div'); d.className='cat-group';
+            d.innerHTML = `<div class="cat-header" style="background:linear-gradient(90deg,${gr})"><span>${cat}</span><span class="cat-badge">${ps.length} itens</span></div>`;
+            let r = '';
+            ps.forEach(p => {
+                const tb = p.pv_sp * parseFloat(st.mult_4_icms) / (1 - parseFloat(st.mult_total)/100);
+                const dim = IS_AUTO ? p.catGroup : p.porte;
+                const k = cSeg+cCls+dim;
+                const scm = M[k];
+                let pc = scm!==undefined ? `<td class="td-price-final">${fmt(tb*scm)}</td>` : `<td style="text-align:right;color:#a0aec0;font-style:italic;font-size:12px">N/D</td>`;
+                const ic = cState==='SP' ? p.icms : 4;
+                const jaSel = selecionados.has(p.codigo);
+                const celQtdA = `<td class="ac"><input type="number" class="qtd-input" min="1" placeholder="qtd" data-codigo="${p.codigo}" value="${QTD[p.codigo]||''}" style="width:56px;text-align:center"></td>`;
+                const celDisp = `<td class="ac">${badgeEstoque(ESTOQUE[p.codigo])}</td><td class="ac disp-cell" data-codigo="${p.codigo}">${dispHtml(p.codigo)}</td>`;
+                if (IS_AUTO) {
+                    const podeSelecionar = ['Laser', 'Robô', 'Máquinas'].includes(p.catGroup);
+                    const celSel = podeSelecionar
+                        ? `<td class="ac"><button class="btn-sel${jaSel?' selecionado':''}" data-sel="${p.codigo}" data-modelo="${p.modelo.replace(/"/g,'&quot;')}" data-cat="${p.cat}" data-pvsp="${p.pv_sp}" data-final="${(tb*(scm||1)).toFixed(2)}" data-mult="${scm||''}" data-porte="${p.porte}" onclick="toggleSel(this)">${jaSel?'✓ Selecionado':'+ Selecionar'}</button></td>`
+                        : `<td class="ac"></td>`;
+                    r += `<tr${jaSel?' class="row-sel"':''}>${celSel}${celQtdA}<td class="td-code">${p.codigo}</td><td class="td-name">${p.modelo}</td><td class="ac"><span class="size-badge ${SZC[p.porte]||'sz-grd'}">${SZ[p.porte]||p.porte}</span></td><td class="td-price-base">${fmt(tb)}</td>${pc}<td class="td-pct">${ic}%</td><td class="td-pct">${p.ipi}%</td><td class="td-ncm">${p.ncm}</td>${celDisp}</tr>`;
+                } else {
+                    const celQtd = IS_TEST ? `<td class="ac"><input type="number" class="qtd-input" min="0" placeholder="0" data-codigo="${p.codigo}" style="width:56px;text-align:center"></td>` : '';
+                    const celExtra = IS_TEST ? `<td class="ac disponivel-cell" data-codigo="${p.codigo}"></td><td class="ac previsao-cell" data-codigo="${p.codigo}"></td>` : '';
+                    r += `<tr>${celQtd}<td class="td-code">${p.codigo}</td><td class="td-name">${p.modelo}</td><td class="ac"><span class="size-badge ${SZC[p.porte]||'sz-grd'}">${SZ[p.porte]||p.porte}</span></td><td class="td-price-base">${fmt(tb)}</td>${pc}<td class="td-pct">${ic}%</td><td class="td-pct">${p.ipi}%</td><td class="td-ncm">${p.ncm}</td>${celExtra}</tr>`;
+                }
+            });
+            const propHeader = IS_AUTO ? '<th class="ac" style="width:110px">Proposta</th><th class="ac" style="width:70px">QTD</th>' : '';
+            const qtdHeader = IS_TEST ? '<th class="ac" style="width:70px">QTD</th>' : '';
+            const extraHeader = IS_AUTO ? '<th class="ac" style="width:80px">Estoque</th><th class="ac" style="width:170px">Disponibilidade</th>' : '';
+            d.innerHTML += `<div class="tbl-wrap"><table><thead><tr>${propHeader}${qtdHeader}<th class="al">Código</th><th class="al">Descrição</th><th class="ac">Porte</th><th class="ar">Tabela</th><th class="ar">c/ Desconto</th><th class="ar">ICMS</th><th class="ar">IPI</th><th class="al">NCM</th>${extraHeader}</tr></thead><tbody>${r}</tbody></table></div>`;
+            a.appendChild(d);
+        });
+    }
+    document.getElementById('footState').textContent = cState;
+    document.getElementById('footSeg').textContent = cSeg;
+    document.getElementById('footCls').textContent = cCls;
+    updateComissao();
+}
+
+function updateBar() {
+    const n = selecionados.size;
+    const bar = document.getElementById('barProposta');
+    if (n > 0) {
+        bar.classList.add('visible');
+        document.getElementById('barContador').innerHTML = '<strong>'+n+'</strong> item'+(n>1?'s selecionados':' selecionado');
+    } else {
+        bar.classList.remove('visible');
+    }
+}
+
+function toggleSel(btn) {
+    const cod = btn.dataset.sel;
+    const tr  = btn.closest('tr');
+    if (selecionados.has(cod)) {
+        selecionados.delete(cod);
+        btn.textContent = '+ Selecionar';
+        btn.classList.remove('selecionado');
+        tr.classList.remove('row-sel');
+    } else {
+        selecionados.set(cod, {
+            codigo:        cod,
+            modelo:        btn.dataset.modelo,
+            cat:           btn.dataset.cat,
+            pv_sp:         parseFloat(btn.dataset.pvsp),
+            preco_final:   parseFloat(btn.dataset.final),
+            multiplicador: btn.dataset.mult ? parseFloat(btn.dataset.mult) : null,
+            porte:         btn.dataset.porte
+        });
+        btn.textContent = '✓ Selecionado';
+        btn.classList.add('selecionado');
+        tr.classList.add('row-sel');
+    }
+    updateBar();
+    logUso(selecionados.has(cod) ? 'selecionar_item' : 'desselecionar_item', { codigo: cod, modelo: btn.dataset.modelo });
+}
+
+function limparSelecao() {
+    selecionados.clear();
+    document.querySelectorAll('.btn-sel.selecionado').forEach(b => {
+        b.textContent = '+ Selecionar';
+        b.classList.remove('selecionado');
+        b.closest('tr')?.classList.remove('row-sel');
+    });
+    updateBar();
+}
+
+function gerarProposta() {
+    if (selecionados.size === 0) return;
+    logUso('gerar_proposta', { itens: [...selecionados.keys()], uf: cState, segmento: cSeg, classe: cCls, grupo: cCatGrupo || null });
+    sessionStorage.setItem('proposta_draft', JSON.stringify({
+        itens:    [...selecionados.values()],
+        politica: { uf: cState, segmento: cSeg, classe: cCls, categoria_grupo: cCatGrupo || null }
+    }));
+    window.location.href = '/propostas/login.html';
+}
+
+function avaliarDisponibilidade(qtdInput) {
+    const codigo = qtdInput.dataset.codigo;
+    const row = qtdInput.closest('tr');
+    const cel = row.querySelector('.disponivel-cell');
+    if (!cel) return;
+    const qtd = parseFloat(qtdInput.value);
+    if (!qtd || qtd <= 0) { cel.innerHTML = ''; return; }
+    const saldo = ESTOQUE[codigo];
+    if (saldo === undefined) { cel.innerHTML = '<span style="color:#a0aec0;font-size:12px">?</span>'; return; }
+    const disponivel = saldo >= qtd;
+    cel.innerHTML = `<span title="Saldo: ${saldo}" style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${disponivel?'#38a169':'#e53e3e'}"></span>`;
+}
+
+document.getElementById('tableArea').addEventListener('input', e => {
+    if (e.target.classList.contains('qtd-input')) aoDigitarQtd(e.target);
+});
+$('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+$('loginEmail').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+document.addEventListener('DOMContentLoaded', initAuth);
+</script>
+</body>
+</html>
