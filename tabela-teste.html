@@ -350,7 +350,7 @@ function dispHtml(codigo) {
         default: return '<span class="disp muted">Consultando…</span>';
     }
     if (r.em) {
-        const dica = 'Estoque sincronizado com o ZEN a cada hora' + (FUP_EM ? '; previsão de chegada atualizada em ' + fmtHora(FUP_EM) : '') + '. Os valores podem mudar depois desta consulta.';
+        const dica = 'Estoque sincronizado com o ZEN a cada hora' + (FUP_EM ? '; previsão de chegada (FUP): ' + String(FUP_EM).replace(/[<>"&]/g, '') : '') + '. Os valores podem mudar depois desta consulta.';
         h += '<div class="disp-hora" title="' + dica + '">Atualizado em ' + fmtHora(r.em) + '</div>';
     }
     return h;
