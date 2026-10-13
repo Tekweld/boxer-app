@@ -111,7 +111,8 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 <div class="tab admin-only hidden" onclick="showTab('multiplicadores',this)">Multiplicadores</div>
 <div class="tab admin-only hidden" onclick="showTab('comissoes',this)">Comissões</div>
 <div class="tab admin-only hidden" onclick="showTab('usuarios',this)">Usuários</div>
-<div class="tab admin-only hidden" onclick="showTab('uso',this)">Uso da Tabela</div>
+<div class="tab admin-only hidden" onclick="showTab('acessos',this)">Acessos</div>
+<div class="tab admin-only hidden" onclick="showTab('uso',this)">Log de Uso</div>
 </div>
 <div class="panel">
 <div class="panel-content" id="tab-produtos">
@@ -155,12 +156,18 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 <div id="usersList"><div class="loading">Carregando...</div></div>
 </div>
 
+<div class="panel-content hidden" id="tab-acessos">
+<div class="panel-header"><div><div class="panel-title">Acessos à Tabela de Preços</div><div class="panel-sub">Quem pode entrar na tela com login por código enviado ao email</div></div>
+<button class="btn btn-primary btn-sm" onclick="openAcessoModal()">+ Adicionar pessoa</button></div>
+<div id="acessosWrap"><div class="loading">Carregando...</div></div>
+</div>
+
 <div class="panel-content hidden" id="tab-uso">
-<div class="panel-header"><div><div class="panel-title">Uso da Tabela de Preços</div><div class="panel-sub" id="usoSub">Quem acessa, o que consulta e quais propostas gera na tela com login</div></div>
+<div class="panel-header"><div><div class="panel-title">Log de Uso da Tabela de Preços</div><div class="panel-sub" id="usoSub">Quem acessa, o que consulta e quais propostas gera na tela com login</div></div>
 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
 <select id="usoPeriodo" class="select-sm" onchange="loadUsoTabela()"><option value="1">Últimas 24h</option><option value="7" selected>Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option></select>
 <select id="usoUsuario" class="select-sm" onchange="renderUso()"><option value="">Todos os usuários</option></select>
-<select id="usoEvento" class="select-sm" onchange="renderUso()"><option value="">Todos os eventos</option><option value="login">Login</option><option value="acesso">Acesso</option><option value="acesso_negado">Acesso negado</option><option value="consulta">Consulta (filtros)</option><option value="consulta_disponibilidade">Consulta de estoque</option><option value="selecionar_item">Selecionou item</option><option value="gerar_proposta">Gerou proposta</option><option value="logout">Logout</option></select>
+<select id="usoEvento" class="select-sm" onchange="renderUso()"><option value="">Todos os eventos</option><option value="login">Login</option><option value="acesso">Acesso</option><option value="acesso_negado">Acesso negado</option><option value="consulta">Consulta (filtros)</option><option value="consulta_disponibilidade">Consulta de estoque</option><option value="selecionar_item">Selecionou item</option><option value="gerar_proposta">Gerou proposta</option><option value="logout">Logout</option><option value="codigo_enviado">Código enviado</option><option value="codigo_negado">Código negado</option><option value="solicitacao_acesso">Solicitou acesso</option><option value="acesso_aprovado">Acesso aprovado</option><option value="acesso_revogado">Acesso revogado</option></select>
 <button class="btn btn-outline btn-sm" onclick="loadUsoTabela()">Atualizar</button>
 </div></div>
 <div id="usoWrap"><div class="loading">Carregando...</div></div>
@@ -388,6 +395,7 @@ function showTab(n,el){
     if(n==='multiplicadores')loadMult();
     if(n==='comissoes')loadComissoes();
     if(n==='usuarios')loadUsuarios();
+    if(n==='acessos')loadAcessos();
     if(n==='uso')loadUsoTabela();
 }
 
@@ -637,7 +645,7 @@ async function applyReajuste(){
 
 
 // USO DA TABELA (log da tela de teste com login)
-const USO_EVENTOS={login:'Login',acesso:'Acesso',acesso_negado:'Acesso negado',logout:'Logout',consulta:'Consulta (filtros)',consulta_disponibilidade:'Consulta de estoque',selecionar_item:'Selecionou item',desselecionar_item:'Removeu item',gerar_proposta:'Gerou proposta'};
+const USO_EVENTOS={login:'Login',acesso:'Acesso',acesso_negado:'Acesso negado',logout:'Logout',consulta:'Consulta (filtros)',consulta_disponibilidade:'Consulta de estoque',selecionar_item:'Selecionou item',desselecionar_item:'Removeu item',gerar_proposta:'Gerou proposta',codigo_enviado:'Código enviado',codigo_negado:'Código negado (email não liberado)',codigo_limite:'Limite de códigos atingido',codigo_erro:'Erro ao enviar código',acesso_auto_dominio:'Acesso automático (domínio Boxer)',solicitacao_acesso:'Solicitou acesso',acesso_aprovado:'Acesso aprovado',acesso_adicionado:'Acesso adicionado',acesso_editado:'Acesso editado',acesso_renovado:'Acesso renovado',acesso_revogado:'Acesso revogado',acesso_reativado:'Acesso reativado',solicitacao_negada:'Solicitação negada'};
 let USO_ROWS=[];
 function escUso(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function descUso(ev,d){
@@ -646,7 +654,9 @@ function descUso(ev,d){
     if(ev==='consulta_disponibilidade'){const r={ok:'disponível',prev:'previsão '+(d.previsao?String(d.previsao).slice(0,10):''),sem_prev:'sem previsão',sem_info:'sem info',prev_indisponivel:'previsão indisponível'}[d.resultado]||'';return d.codigo+' × '+d.qtd+(r?' → '+r:'');}
     if(ev==='selecionar_item'||ev==='desselecionar_item')return (d.codigo||'')+(d.modelo?' · '+d.modelo:'');
     if(ev==='gerar_proposta')return (d.itens||[]).length+' item(ns): '+(d.itens||[]).join(', ');
-    if(ev==='login'||ev==='acesso')return d.origem?(d.origem+(d.role?' / '+d.role:'')):'';
+    if(ev==='login'||ev==='acesso')return d.origem?(d.origem+(d.role?' / '+d.role:'')+(d.via?' · via '+d.via:'')):'';
+    if(ev==='solicitacao_acesso')return (d.nome||'')+(d.empresa?' · '+d.empresa:'');
+    if(/^acesso_(aprovado|adicionado|editado|renovado|revogado|reativado)$/.test(ev)||ev==='solicitacao_negada')return (d.pessoa||'')+(d.tipo?' · '+d.tipo:'')+(d.validade?' · até '+d.validade:'');
     return '';
 }
 async function loadUsoTabela(){
@@ -683,6 +693,103 @@ function renderUso(){
     if(!rows.length)h+='<tr><td colspan="4" style="text-align:center;color:#a0aec0;padding:16px">Nada para mostrar</td></tr>';
     h+='</tbody></table></div>'+(rows.length>300?'<p style="font-size:11px;color:#718096;margin-top:6px">Mostrando os 300 mais recentes de '+rows.length+'.</p>':'');
     document.getElementById('usoWrap').innerHTML=h;
+}
+
+
+// ACESSOS À TABELA DE PREÇOS (tela com login por código)
+let ACESSOS_USU = [], ACESSOS_SOL = [];
+function fmtDataBR(d){ if(!d) return '—'; const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(d)); return m? m[3]+'/'+m[2]+'/'+m[1] : new Date(d).toLocaleDateString('pt-BR'); }
+function statusAcesso(u){
+    if(!u.ativo) return {t:'Revogado',c:'#fee2e2',f:'#991b1b'};
+    if(u.validade && u.validade < new Date().toISOString().slice(0,10)) return {t:'Expirado',c:'#fef9c3',f:'#854d0e'};
+    return {t:'Ativo',c:'#dcfce7',f:'#166534'};
+}
+async function loadAcessos(){
+    const wrap=document.getElementById('acessosWrap');
+    try{
+        const [sol,usu,logs]=await Promise.all([
+            sb('/tabela_solicitacoes?status=eq.pendente&select=*&order=criado_em.desc'),
+            sb('/tabela_usuarios?select=*&order=criado_em.desc'),
+            sb('/tabela_acessos_log?evento=in.(login,acesso)&select=email,criado_em&order=criado_em.desc&limit=1000')
+        ]);
+        ACESSOS_SOL=sol;ACESSOS_USU=usu;
+        const ult={};logs.forEach(l=>{const k=(l.email||'').toLowerCase();if(k&&!ult[k])ult[k]=l.criado_em;});
+        let h='<div style="font-weight:600;color:#1d327b;margin:0 0 6px">Solicitações pendentes <span style="font-weight:400;color:#718096">('+sol.length+')</span></div>';
+        if(sol.length){
+            h+='<table><thead><tr><th>Quando</th><th>Nome</th><th>Email</th><th>Empresa</th><th>Mensagem</th><th class="text-center">Ação</th></tr></thead><tbody>';
+            sol.forEach(s=>{h+=`<tr><td style="white-space:nowrap">${new Date(s.criado_em).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</td><td>${escUso(s.nome)}</td><td>${escUso(s.email)}</td><td>${escUso(s.empresa||'—')}</td><td style="font-size:12px;color:#4a5568;max-width:260px">${escUso(s.mensagem||'—')}</td><td class="text-center" style="white-space:nowrap"><button class="btn btn-primary btn-sm" onclick="openAcessoModal(null,'${s.id}')">Aprovar</button> <button class="btn btn-danger btn-sm" onclick="negarSolicitacao('${s.id}')">Negar</button></td></tr>`;});
+            h+='</tbody></table>';
+        } else h+='<div style="color:#a0aec0;padding:8px 0 14px">Nenhuma solicitação pendente.</div>';
+        h+='<div style="font-weight:600;color:#1d327b;margin:20px 0 6px">Pessoas com acesso <span style="font-weight:400;color:#718096">('+usu.length+')</span></div>';
+        h+='<table><thead><tr><th>Nome</th><th>Email</th><th>Empresa</th><th>Tipo</th><th>Validade</th><th>Status</th><th>Último acesso</th><th class="text-center">Ação</th></tr></thead><tbody>';
+        usu.forEach(u=>{const st=statusAcesso(u);const ua=ult[u.email.toLowerCase()];
+            h+=`<tr><td>${escUso(u.nome||'—')}</td><td>${escUso(u.email)}</td><td>${escUso(u.empresa||'—')}</td><td>${u.tipo==='interno'?'Interno':'Externo'}${u.origem==='dominio'?' <span style="font-size:10px;color:#a0aec0">(domínio Boxer)</span>':''}</td><td>${u.validade?fmtDataBR(u.validade):'Sem prazo'}</td><td><span class="size-badge" style="background:${st.c};color:${st.f}">${st.t}</span></td><td style="font-size:12px">${ua?new Date(ua).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'nunca'}</td><td class="text-center" style="white-space:nowrap"><button class="btn btn-outline btn-sm" onclick="openAcessoModal('${u.id}')">Editar</button> <button class="btn btn-outline btn-sm" onclick="renovarAcesso('${u.id}')">+90 dias</button> ${u.ativo?`<button class="btn btn-danger btn-sm" onclick="alterarAtivoAcesso('${u.id}',false)">Revogar</button>`:`<button class="btn btn-outline btn-sm" onclick="alterarAtivoAcesso('${u.id}',true)">Reativar</button>`}</td></tr>`;});
+        if(!usu.length)h+='<tr><td colspan="8" style="text-align:center;color:#a0aec0;padding:16px">Ninguém cadastrado ainda</td></tr>';
+        h+='</tbody></table><p style="font-size:11px;color:#718096;margin-top:10px">A equipe já cadastrada no painel admin e no sistema de propostas entra automaticamente, sem aparecer aqui. Quem tem email @boxersoldas.com.br é adicionado como Interno no primeiro acesso. A sessão vale 15 dias; depois disso é preciso pedir um novo código.</p>';
+        wrap.innerHTML=h;
+    }catch(e){
+        wrap.innerHTML=`<div style="text-align:center;padding:20px;color:#dc2626">Erro ao carregar acessos: ${escUso(e.message)} <button class="btn btn-outline btn-sm" onclick="loadAcessos()">Tentar novamente</button></div>`;
+    }
+}
+function logAdmin(evento,detalhe){
+    sb('/tabela_acessos_log','POST',{user_id:SESSION.user.id,email:SESSION.user.email,evento,detalhe}).catch(()=>{});
+}
+function openAcessoModal(id,solId){
+    const u=id?ACESSOS_USU.find(x=>x.id===id):null;
+    const s=solId?ACESSOS_SOL.find(x=>x.id===solId):null;
+    const base=u||(s?{nome:s.nome,email:s.email,empresa:s.empresa,tipo:'externo',validade:new Date(Date.now()+90*864e5).toISOString().slice(0,10)}:{tipo:'externo',validade:new Date(Date.now()+90*864e5).toISOString().slice(0,10)});
+    openModal(`<h3>${u?'Editar acesso':(s?'Aprovar solicitação':'Adicionar pessoa')}</h3>
+<div class="form-row"><label>Nome</label><input id="ac_n" value="${escUso(base.nome||'')}"></div>
+<div class="form-row"><label>Email</label><input id="ac_e" type="email" value="${escUso(base.email||'')}" ${u?'readonly style="background:#f7fafc"':''}></div>
+<div class="form-row"><label>Empresa</label><input id="ac_emp" value="${escUso(base.empresa||'')}"></div>
+<div class="form-row-inline"><div class="form-row"><label>Tipo</label><select id="ac_t"><option value="externo" ${base.tipo==='externo'?'selected':''}>Externo</option><option value="interno" ${base.tipo==='interno'?'selected':''}>Interno</option></select></div>
+<div class="form-row"><label>Válido até (vazio = sem prazo)</label><input id="ac_v" type="date" value="${base.validade||''}"></div></div>
+<p style="font-size:11px;color:#718096">Ao salvar${s?' esta aprovação':' uma pessoa nova'}, enviamos um email avisando que o acesso foi liberado.</p>
+<div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveAcesso(${u?`'${u.id}'`:'null'},${s?`'${s.id}'`:'null'})">Salvar</button></div>`);
+}
+async function saveAcesso(id,solId){
+    const email=document.getElementById('ac_e').value.trim().toLowerCase();
+    const body={email,nome:document.getElementById('ac_n').value.trim()||null,empresa:document.getElementById('ac_emp').value.trim()||null,tipo:document.getElementById('ac_t').value,validade:document.getElementById('ac_v').value||null,ativo:true};
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){toast('Informe um email válido.','error');return;}
+    try{
+        const existente=ACESSOS_USU.find(x=>x.email.toLowerCase()===email);
+        const alvoId=id||(existente&&existente.id);
+        if(alvoId){await sb('/tabela_usuarios?id=eq.'+alvoId,'PATCH',body);}
+        else{await sb('/tabela_usuarios','POST',Object.assign({origem:solId?'solicitacao':'admin',criado_por:SESSION.user.email},body));}
+        if(solId){await sb('/tabela_solicitacoes?id=eq.'+solId,'PATCH',{status:'aprovada',decidido_por:SESSION.user.email,decidido_em:new Date().toISOString()});}
+        logAdmin(id?'acesso_editado':(solId?'acesso_aprovado':'acesso_adicionado'),{pessoa:email,tipo:body.tipo,validade:body.validade});
+        if(!id){
+            fetch('https://hub.boxersoldas.com.br/api/email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo:'acesso_liberado',dados:{email,nome:body.nome,validade:body.validade?fmtDataBR(body.validade):''}})}).catch(()=>{});
+        }
+        toast(id?'Acesso atualizado':'Acesso liberado e pessoa avisada por email');closeModal();loadAcessos();
+    }catch(e){toast('Erro: '+e.message,'error');}
+}
+async function negarSolicitacao(id){
+    const s=ACESSOS_SOL.find(x=>x.id===id);
+    if(!confirm('Negar a solicitação de "'+(s?s.nome:'')+'"?'))return;
+    try{
+        await sb('/tabela_solicitacoes?id=eq.'+id,'PATCH',{status:'negada',decidido_por:SESSION.user.email,decidido_em:new Date().toISOString()});
+        logAdmin('solicitacao_negada',{pessoa:s&&s.email});
+        toast('Solicitação negada');loadAcessos();
+    }catch(e){toast('Erro: '+e.message,'error');}
+}
+async function renovarAcesso(id){
+    const u=ACESSOS_USU.find(x=>x.id===id);
+    const nova=new Date(Date.now()+90*864e5).toISOString().slice(0,10);
+    try{
+        await sb('/tabela_usuarios?id=eq.'+id,'PATCH',{validade:nova,ativo:true});
+        logAdmin('acesso_renovado',{pessoa:u&&u.email,validade:nova});
+        toast('Acesso renovado até '+fmtDataBR(nova));loadAcessos();
+    }catch(e){toast('Erro: '+e.message,'error');}
+}
+async function alterarAtivoAcesso(id,ativo){
+    const u=ACESSOS_USU.find(x=>x.id===id);
+    if(!ativo&&!confirm('Revogar o acesso de "'+(u?(u.nome||u.email):'')+'"? Ele perde o acesso em até 2 minutos, mesmo com a tela aberta.'))return;
+    try{
+        await sb('/tabela_usuarios?id=eq.'+id,'PATCH',{ativo});
+        logAdmin(ativo?'acesso_reativado':'acesso_revogado',{pessoa:u&&u.email});
+        toast(ativo?'Acesso reativado':'Acesso revogado');loadAcessos();
+    }catch(e){toast('Erro: '+e.message,'error');}
 }
 
 // ESTADOS
