@@ -221,7 +221,7 @@ async function init() {
     const li = document.createElement('li');
     li.innerHTML = `<div class="item-codigo">${item.codigo} · ${item.cat}</div>
       <div class="item-modelo">${item.modelo}</div>
-      <div class="item-preco">${fmt(item.preco_final)}</div>`;
+      <div class="item-preco">${fmt(item.preco_final)}${item.quantidade > 1 ? " × " + item.quantidade : ""}</div>`;
     lista.appendChild(li);
   });
 
@@ -408,7 +408,7 @@ async function gerarProposta() {
     preco_base:             item.pv_sp,
     multiplicador_aplicado: item.multiplicador,
     preco_final:            item.preco_final,
-    quantidade:             1
+    quantidade:             (parseInt(item.quantidade, 10) > 0 ? parseInt(item.quantidade, 10) : 1)
   }));
   await sb.schema('comercial').from('proposta_itens').insert(itensInsert);
 
