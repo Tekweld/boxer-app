@@ -108,6 +108,24 @@ const ORDEM_GRUPO = {'Robô':0,'Laser':1,'Máquinas':2,'Outros':3};
 
 const selecionados = new Map();
 
+// Tabela viva: quando alguem altera produto/preco no admin (tabelas.atualizado_em muda),
+// a tela recarrega sozinha. So recarrega se mudou; filtros e selecao sao mantidos.
+let TABELA_ATUALIZADA_EM = null;
+async function checarAtualizacaoTabela() {
+    if (document.hidden || !TABELA_ATUALIZADA_EM) return;
+    try {
+        const r = await sbFetch('/tabelas?id=eq.' + TID + '&select=atualizado_em');
+        const novo = r[0] && r[0].atualizado_em;
+        if (novo && novo !== TABELA_ATUALIZADA_EM) {
+            await carregarDados(true);
+            [...selecionados.keys()].forEach(c => { if (!P.some(p => p.codigo === c)) selecionados.delete(c); });
+            updateBar();
+        }
+    } catch (e) { /* tenta de novo no proximo ciclo */ }
+}
+setInterval(checarAtualizacaoTabela, 120000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checarAtualizacaoTabela(); });
+
 function fmt(v){return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
 
 const SB_TIMEOUT_MS = 15000;
@@ -167,7 +185,7 @@ async function load() {
     }
 }
 
-async function carregarDados() {
+async function carregarDados(recarga) {
     const [tabelaRes, estadosRes, multsRes, prodsRes, catsRes, comsRes, estoqueRes] = await Promise.all([
         sbFetch('/tabelas?id=eq.'+TID+'&select=*'),
         sbFetch('/estados?select=uf,mult_4_icms,mult_total&order=uf'),
@@ -195,10 +213,13 @@ async function carregarDados() {
 
     P = prodsRes.map(p => ({...p, cat: catMap[p.categoria_id] || 'SEM CATEGORIA', catGroup: catGroupById[p.categoria_id] || null}));
 
-    if (IS_AUTO) { cSeg=''; cCls=0; cCatGrupo=''; }
-    else { cSeg = SEG[0]; cCls = CLS[CLS.length-1]; }
+    if (!recarga) {
+        if (IS_AUTO) { cSeg=''; cCls=0; cCatGrupo=''; }
+        else { cSeg = SEG[0]; cCls = CLS[CLS.length-1]; }
+    }
 
     const atualizado = new Date(tabela.atualizado_em).toLocaleDateString('pt-BR');
+    TABELA_ATUALIZADA_EM = tabela.atualizado_em;
     document.getElementById('pageSubtitle').textContent = `Atualizado em ${atualizado} · ${P.length} produtos`;
 
     if (IS_AUTO) {
@@ -214,7 +235,7 @@ async function carregarDados() {
         document.getElementById('navBtn').innerHTML = '<img src="bmax-logo.png" height="32" style="display:block">';
     }
 
-    buildFilters();
+    if (!recarga) buildFilters();
     render();
 }
 
