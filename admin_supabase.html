@@ -421,6 +421,7 @@ async function syncPdmTabelaPrecos(){
         const d=await r.json();
         if(!r.ok||!d.ok) throw new Error(d.error||'Falha na sincronização');
         toast(`PDM sincronizado: ${d.produtos_atualizados} produto(s) atualizado(s), ${d.produtos_sem_mudanca} sem mudança, ${d.produtos_sem_pdm.length} sem PDM.`);
+        if(d.produtos_atualizados>0){try{await sb('/tabelas?id=eq.2','PATCH',{atualizado_em:new Date().toISOString()});}catch(_){}}
         loadProdutos();
     }catch(e){
         toast('Erro ao sincronizar PDM: '+e.message,'error');
@@ -526,6 +527,21 @@ async function mudarStatusProd(id,n,novoStatus,msgOk){
         const antigo=allProd.find(p=>p.id===id);
         await sb('/produtos?id=eq.'+id,'PATCH',{status:novoStatus});
         await sb('/log_alteracoes','POST',{usuario_id:SESSION.user.id,usuario_email:SESSION.user.email,tabela_ref:'produtos',registro_id:id,campo:'status',valor_anterior:antigo?.status||'',valor_novo:novoStatus});
+        const tocadas=new Set([String(document.getElementById('prodTabela').value)]);
+        if(antigo){
+            const outros=await sb('/produtos?codigo=eq.'+encodeURIComponent(antigo.codigo)+'&id=neq.'+id+'&status=eq.'+encodeURIComponent(antigo.status)+'&select=id,tabela_id');
+            if(outros.length){
+                const nomes={1:'Revendas',2:'BMAX',3:'Revendas Teste'};
+                if(confirm('O código '+antigo.codigo+' também está como "'+antigo.status+'" em: '+outros.map(o=>nomes[o.tabela_id]||o.tabela_id).join(', ')+'.\n\nAplicar a mesma mudança ('+novoStatus+') nessas tabelas também?')){
+                    for(const o of outros){
+                        await sb('/produtos?id=eq.'+o.id,'PATCH',{status:novoStatus});
+                        await sb('/log_alteracoes','POST',{usuario_id:SESSION.user.id,usuario_email:SESSION.user.email,tabela_ref:'produtos',registro_id:o.id,campo:'status',valor_anterior:antigo.status,valor_novo:novoStatus});
+                        tocadas.add(String(o.tabela_id));
+                    }
+                }
+            }
+        }
+        for(const t of tocadas)await sb('/tabelas?id=eq.'+t,'PATCH',{atualizado_em:new Date().toISOString()});
         toast(msgOk);loadProdutos();
     }catch(e){
         if(/produtos_tabela_codigo_ativo_uniq/.test(e.message)){toast('Já existe outro produto ativo com esse código nesta tabela — resolva a duplicidade antes de reativar.','error');return;}
