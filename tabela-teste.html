@@ -252,12 +252,32 @@ async function pedirCodigo(reenviar) {
     const btn = $('btnCodigo');
     btn.disabled = true; btn.textContent = 'Enviando...';
     try {
-        await chamarAcesso({ acao: 'codigo', email });
+        const r = await chamarAcesso({ acao: 'codigo', email });
+        const st = r.status || 'enviado';
+        if (st !== 'enviado') {
+            const msgs = {
+                nao_cadastrado: 'Este email ainda não tem acesso. Preencha abaixo para solicitar.',
+                pendente: 'Sua solicitação de acesso já está em análise. Você receberá um email quando for liberada.',
+                expirado: 'O prazo do seu acesso terminou. Solicite a renovação abaixo.',
+                revogado: 'O acesso deste email foi encerrado. Se precisar dele de novo, solicite abaixo.',
+                limite: 'Muitas tentativas. Aguarde alguns minutos e tente de novo.',
+                erro: 'Não foi possível enviar o código agora. Tente novamente em instantes.'
+            };
+            if (st === 'nao_cadastrado' || st === 'expirado' || st === 'revogado') {
+                $('sEmail').value = email;
+                mostrarVista('vSolicitar');
+                msgLogin(msgs[st]);
+            } else {
+                mostrarVista('vEmail');
+                msgLogin(msgs[st] || msgs.erro, st === 'pendente' ? 'ok' : undefined);
+            }
+            return;
+        }
         EMAIL_LOGIN = email;
         $('codigoPara').textContent = email;
         $('loginCodigo').value = '';
         mostrarVista('vCodigo');
-        msgLogin('Se o email estiver liberado, enviamos um código. Confira também a caixa de spam.', 'ok');
+        msgLogin('Código enviado! Pode levar alguns instantes — confira também a caixa de spam.', 'ok');
         iniciarCooldown();
         $('loginCodigo').focus();
     } catch (e) {
@@ -292,7 +312,11 @@ async function enviarSolicitacao() {
     const btn = $('btnSolicitar');
     btn.disabled = true; btn.textContent = 'Enviando...';
     try {
-        await chamarAcesso({ acao: 'solicitar', nome, email, empresa: $('sEmpresa').value, mensagem: $('sMensagem').value, website: $('sWebsite').value });
+        const r = await chamarAcesso({ acao: 'solicitar', nome, email, empresa: $('sEmpresa').value, mensagem: $('sMensagem').value, website: $('sWebsite').value });
+        const st = r.status;
+        if (st === 'ja_liberado') { $('loginEmail').value = email; mostrarVista('vEmail'); msgLogin('Este email já tem acesso. Clique em "Enviar código" para entrar.', 'ok'); return; }
+        if (st === 'pendente') { mostrarVista('vEmail'); msgLogin('Sua solicitação já está em análise. Você receberá um email quando for liberada.', 'ok'); return; }
+        if (st === 'limite' || st === 'erro') { msgLogin(st === 'limite' ? 'Muitas solicitações para este email. Tente novamente amanhã.' : 'Não foi possível enviar a solicitação agora. Tente novamente.'); return; }
         msgLogin('');
         mostrarVista('vSolicitado');
     } catch (e) {
