@@ -95,6 +95,11 @@ body.locked .header,body.locked .content,body.locked #barProposta,body.locked #t
 .disp.no{color:#b91c1c}
 .disp.muted{color:#a0aec0;font-weight:400}
 .disp-hora{font-family:Outfit;font-size:10px;color:#a0aec0;font-weight:400;margin-top:1px;cursor:help}
+.login-card .err-msg.ok{background:#dcfce7;color:#166534;border-color:#bbf7d0}
+.login-card .field textarea{width:100%;padding:10px 14px;border:1px solid #c3cfe2;border-radius:8px;font-size:14px;font-family:Outfit;outline:none;resize:vertical}
+.login-card .field textarea:focus{border-color:#25bbee}
+.link-btn{background:none;border:none;color:#1d327b;text-decoration:underline;cursor:pointer;font:inherit;padding:0}
+.link-btn:disabled{color:#a0aec0;cursor:default;text-decoration:none}
 </style>
 </head>
 <body class="locked">
@@ -110,16 +115,43 @@ body.locked .header,body.locked .content,body.locked #barProposta,body.locked #t
   <div class="login-card">
     <div style="text-align:center"><img src="Estrela-Boxer.svg" width="40" height="40" alt=""></div>
     <h1>Tabela de Preços Boxer</h1>
-    <p class="sub" id="loginSub">Acesso restrito à equipe Boxer · versão de teste</p>
     <div id="loginErr" class="err-msg"></div>
-    <div id="loginForm">
-      <div class="field"><label for="loginEmail">Email</label><input id="loginEmail" type="email" autocomplete="username" placeholder="seu@boxersoldas.com.br"></div>
-      <div class="field"><label for="loginPass">Senha</label><input id="loginPass" type="password" autocomplete="current-password" placeholder="••••••••"></div>
-      <button class="btn-login" id="btnLogin" onclick="doLogin()">Entrar</button>
-      <div class="links"><a href="/propostas/login.html">Esqueci minha senha</a></div>
+
+    <div id="vEmail">
+      <p class="sub">Informe seu email e enviaremos um código de acesso. Sem senha.</p>
+      <div class="field"><label for="loginEmail">Email</label><input id="loginEmail" type="email" autocomplete="username" placeholder="seu@email.com"></div>
+      <button class="btn-login" id="btnCodigo" onclick="pedirCodigo(false)">Enviar código</button>
+      <div class="links">Ainda não tem acesso? <a onclick="irPara('vSolicitar')">Solicitar acesso</a></div>
     </div>
-    <div id="deniedBox" style="display:none">
+
+    <div id="vCodigo" style="display:none">
+      <p class="sub">Digite o código de 6 dígitos enviado para <strong id="codigoPara"></strong></p>
+      <div class="field"><label for="loginCodigo">Código</label><input id="loginCodigo" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="000000" style="text-align:center;font-size:22px;letter-spacing:6px"></div>
+      <button class="btn-login" id="btnEntrar" onclick="confirmarCodigo()">Entrar</button>
+      <div class="links"><button class="link-btn" id="btnReenviar" onclick="pedirCodigo(true)" disabled>Reenviar código</button> · <a onclick="irPara('vEmail')">Usar outro email</a></div>
+      <div class="links" style="margin-top:8px">Não recebeu e não tem acesso? <a onclick="irPara('vSolicitar')">Solicitar acesso</a></div>
+    </div>
+
+    <div id="vSolicitar" style="display:none">
+      <p class="sub">Preencha para pedir acesso. A equipe Boxer vai analisar e avisar por email.</p>
+      <div class="field"><label for="sNome">Nome</label><input id="sNome" type="text" maxlength="120" autocomplete="name"></div>
+      <div class="field"><label for="sEmail">Email</label><input id="sEmail" type="email" maxlength="200" autocomplete="email"></div>
+      <div class="field"><label for="sEmpresa">Empresa</label><input id="sEmpresa" type="text" maxlength="160" autocomplete="organization"></div>
+      <div class="field"><label for="sMensagem">Por que precisa de acesso? (opcional)</label><textarea id="sMensagem" rows="3" maxlength="600"></textarea></div>
+      <input id="sWebsite" type="text" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;opacity:0" aria-hidden="true">
+      <button class="btn-login" id="btnSolicitar" onclick="enviarSolicitacao()">Enviar solicitação</button>
+      <div class="links"><a onclick="irPara('vEmail')">Voltar</a></div>
+    </div>
+
+    <div id="vSolicitado" style="display:none">
+      <p class="sub" style="font-size:14px;color:#166534">Solicitação enviada! Você receberá um email assim que o acesso for liberado.</p>
+      <div class="links"><a onclick="irPara('vEmail')">Voltar ao início</a></div>
+    </div>
+
+    <div id="vNegado" style="display:none">
+      <p class="sub" style="color:#991b1b">Seu usuário ainda não tem acesso à tabela de preços.</p>
       <button class="btn-login" onclick="doLogout()">Sair</button>
+      <div class="links"><a onclick="doLogout()">Solicitar acesso com outro email</a></div>
     </div>
   </div>
 </div>
@@ -168,52 +200,105 @@ const ORDEM_GRUPO = {'Robô':0,'Laser':1,'Máquinas':2,'Outros':3};
 
 const selecionados = new Map();
 
-// === TESTE: login, log de uso e disponibilidade (estoque/previsão calculados no servidor do Hub) ===
+// === TESTE: login por codigo de email, log de uso e disponibilidade (estoque/previsão calculados no servidor do Hub) ===
 const HUB_API = 'https://hub.boxersoldas.com.br';
 const sbc = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 let USER = null, TOKEN = null, DADOS_CARREGADOS = false;
 let QTD = {}, DISP = {}, FUP_EM = null, TABELA_ATUALIZADA_EM = null;
+let EMAIL_LOGIN = '', _cooldownTimer = null;
 
 function $(id){ return document.getElementById(id); }
 
-function showLogin(msg) {
-    DADOS_CARREGADOS = false;
+// --- telas de acesso: email -> codigo | solicitar -> enviado | negado ---
+function mostrarVista(v) {
     document.body.classList.add('locked');
     $('loginOverlay').classList.add('show');
-    $('loginForm').style.display = '';
-    $('deniedBox').style.display = 'none';
-    $('loginSub').textContent = 'Acesso restrito à equipe Boxer · versão de teste';
+    ['vEmail', 'vCodigo', 'vSolicitar', 'vSolicitado', 'vNegado'].forEach(id => { $(id).style.display = (id === v) ? '' : 'none'; });
+}
+function msgLogin(texto, tipo) {
     const e = $('loginErr');
-    if (msg) { e.textContent = msg; e.classList.add('show'); } else e.classList.remove('show');
+    if (!texto) { e.className = 'err-msg'; e.textContent = ''; return; }
+    e.textContent = texto;
+    e.className = 'err-msg show' + (tipo === 'ok' ? ' ok' : '');
+}
+function showLogin(msg) { DADOS_CARREGADOS = false; mostrarVista('vEmail'); msgLogin(msg); }
+function showDenied() { mostrarVista('vNegado'); msgLogin(''); }
+function irPara(v) { msgLogin(''); mostrarVista(v); }
+
+async function chamarAcesso(payload) {
+    const r = await fetch(HUB_API + '/api/disponibilidade?target=acesso', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || ('erro ' + r.status));
+    return j;
 }
 
-function showDenied() {
-    document.body.classList.add('locked');
-    $('loginOverlay').classList.add('show');
-    $('loginForm').style.display = 'none';
-    $('deniedBox').style.display = '';
-    $('loginSub').textContent = '';
-    const e = $('loginErr');
-    e.textContent = 'Seu usuário não tem acesso à tabela de preços. Fale com o administrador.';
-    e.classList.add('show');
+function iniciarCooldown() {
+    const btn = $('btnReenviar');
+    let s = 30;
+    clearInterval(_cooldownTimer);
+    btn.disabled = true; btn.textContent = 'Reenviar código (' + s + 's)';
+    _cooldownTimer = setInterval(() => {
+        s--;
+        if (s <= 0) { clearInterval(_cooldownTimer); btn.disabled = false; btn.textContent = 'Reenviar código'; }
+        else btn.textContent = 'Reenviar código (' + s + 's)';
+    }, 1000);
 }
 
-async function doLogin() {
-    const email = $('loginEmail').value.trim();
-    const pass = $('loginPass').value;
-    const err = $('loginErr');
-    if (!email || !pass) { err.textContent = 'Preencha email e senha'; err.classList.add('show'); return; }
-    err.classList.remove('show');
-    const btn = $('btnLogin');
+async function pedirCodigo(reenviar) {
+    const email = (reenviar ? EMAIL_LOGIN : $('loginEmail').value).trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msgLogin('Informe um email válido.'); return; }
+    const btn = $('btnCodigo');
+    btn.disabled = true; btn.textContent = 'Enviando...';
+    try {
+        await chamarAcesso({ acao: 'codigo', email });
+        EMAIL_LOGIN = email;
+        $('codigoPara').textContent = email;
+        $('loginCodigo').value = '';
+        mostrarVista('vCodigo');
+        msgLogin('Se o email estiver liberado, enviamos um código. Confira também a caixa de spam.', 'ok');
+        iniciarCooldown();
+        $('loginCodigo').focus();
+    } catch (e) {
+        msgLogin('Não foi possível enviar o código agora. Tente novamente em instantes.');
+    } finally {
+        btn.disabled = false; btn.textContent = 'Enviar código';
+    }
+}
+
+async function confirmarCodigo() {
+    const token = $('loginCodigo').value.replace(/\D/g, '');
+    if (token.length < 6) { msgLogin('Digite o código recebido por email.'); return; }
+    const btn = $('btnEntrar');
     btn.disabled = true; btn.textContent = 'Entrando...';
     try {
-        const { data, error } = await sbc.auth.signInWithPassword({ email, password: pass });
-        if (error || !data.session) { showLogin('Email ou senha incorretos'); return; }
-        await onSession(data.session, true);
+        let r = await sbc.auth.verifyOtp({ email: EMAIL_LOGIN, token, type: 'email' });
+        if (r.error) r = await sbc.auth.verifyOtp({ email: EMAIL_LOGIN, token, type: 'magiclink' });
+        if (r.error || !r.data.session) { msgLogin('Código inválido ou expirado. Peça um novo código.'); return; }
+        msgLogin('');
+        await onSession(r.data.session, true);
     } catch (e) {
-        showLogin('Erro de conexão. Tente novamente.');
+        msgLogin('Erro de conexão. Tente novamente.');
     } finally {
         btn.disabled = false; btn.textContent = 'Entrar';
+    }
+}
+
+async function enviarSolicitacao() {
+    const nome = $('sNome').value.trim(), email = $('sEmail').value.trim().toLowerCase();
+    if (nome.length < 2) { msgLogin('Informe seu nome.'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msgLogin('Informe um email válido.'); return; }
+    const btn = $('btnSolicitar');
+    btn.disabled = true; btn.textContent = 'Enviando...';
+    try {
+        await chamarAcesso({ acao: 'solicitar', nome, email, empresa: $('sEmpresa').value, mensagem: $('sMensagem').value, website: $('sWebsite').value });
+        msgLogin('');
+        mostrarVista('vSolicitado');
+    } catch (e) {
+        msgLogin('Não foi possível enviar a solicitação agora. Tente novamente.');
+    } finally {
+        btn.disabled = false; btn.textContent = 'Enviar solicitação';
     }
 }
 
@@ -221,7 +306,7 @@ async function doLogout() {
     logUso('logout');
     await new Promise(r => setTimeout(r, 150));
     USER = null; TOKEN = null; QTD = {};
-    await sbc.auth.signOut();
+    await sbc.auth.signOut({ scope: 'local' });
     location.reload();
 }
 
@@ -238,14 +323,22 @@ async function onSession(session, novoLogin) {
         return;
     }
     if (!acesso || !acesso.permitido) {
+        const motivo = acesso && acesso.motivo;
+        if (motivo === 'sem_codigo' || motivo === 'sessao_expirada' || motivo === 'sem_login') {
+            await sbc.auth.signOut({ scope: 'local' });
+            USER = null; TOKEN = null;
+            showLogin(motivo === 'sessao_expirada' ? 'Sua sessão expirou. Peça um novo código para entrar.' : 'Entre com o código enviado ao seu email.');
+            return;
+        }
         logUso('acesso_negado');
         showDenied();
         return;
     }
     $('loginOverlay').classList.remove('show');
     document.body.classList.remove('locked');
-    $('userInfo').textContent = (acesso.nome || USER.email) + ' · ' + USER.email;
-    logUso(novoLogin ? 'login' : 'acesso', { origem: acesso.origem, role: acesso.role, tabela: TID });
+    const ate = acesso.sessao_expira_em ? new Date(acesso.sessao_expira_em).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '';
+    $('userInfo').textContent = (acesso.nome || USER.email) + ' · ' + USER.email + (ate ? ' · conectado até ' + ate : '');
+    logUso(novoLogin ? 'login' : 'acesso', { origem: acesso.origem, role: acesso.role, tabela: TID, via: 'codigo' });
     if (!DADOS_CARREGADOS) { DADOS_CARREGADOS = true; await load(); }
 }
 
@@ -364,6 +457,9 @@ function atualizarTodasDisponibilidades() {
 async function checarAtualizacaoTabela() {
     if (!DADOS_CARREGADOS || document.hidden || !TABELA_ATUALIZADA_EM) return;
     try {
+        // acesso revogado/expirado enquanto a tela estava aberta: volta pro login
+        const { data: ac } = await sbc.rpc('tabela_acesso');
+        if (ac && !ac.permitido) { location.reload(); return; }
         const r = await sbFetch('/tabelas?id=eq.' + TID + '&select=atualizado_em');
         const novo = r[0] && r[0].atualizado_em;
         if (novo && novo !== TABELA_ATUALIZADA_EM) {
@@ -696,8 +792,8 @@ function avaliarDisponibilidade(qtdInput) {
 document.getElementById('tableArea').addEventListener('input', e => {
     if (e.target.classList.contains('qtd-input')) aoDigitarQtd(e.target);
 });
-$('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-$('loginEmail').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+$('loginEmail').addEventListener('keydown', e => { if (e.key === 'Enter') pedirCodigo(false); });
+$('loginCodigo').addEventListener('keydown', e => { if (e.key === 'Enter') confirmarCodigo(); });
 
 document.addEventListener('DOMContentLoaded', initAuth);
 </script>
