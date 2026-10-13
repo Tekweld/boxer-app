@@ -99,7 +99,7 @@ body.locked .header,body.locked .content,body.locked #barProposta,body.locked #t
 <body class="locked">
 <div id="testBanner">
   <strong>VERSÃO DE TESTE</strong>
-  <span>Estoque e previsão de chegada · uso registrado</span>
+  <span>Disponibilidade e previsão de chegada · uso registrado</span>
   <span class="sp"></span>
   <span id="userInfo"></span>
   <a onclick="doLogout()">Sair</a>
@@ -154,7 +154,7 @@ const SUPABASE_URL = 'https://bmepxcnrsofofoswubuu.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtZXB4Y25yc29mb2Zvc3d1YnV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MTczNzMsImV4cCI6MjA5NTI5MzM3M30.S55ouFczRYlUYNFf5PotYKXBPT5idypTSmbzR-x2Pk0';
 
 const params = new URLSearchParams(window.location.search);
-const TID = 2; // tela de teste: só a tabela BMAX
+const TID = (parseInt(params.get('t')) === 1) ? 1 : 2;
 const IS_AUTO = TID === 2;
 const IS_TEST = TID === 3;
 
@@ -167,11 +167,11 @@ const ORDEM_GRUPO = {'Robô':0,'Laser':1,'Máquinas':2,'Outros':3};
 
 const selecionados = new Map();
 
-// === TESTE: login, log de uso, estoque (Hub/ZEN) e previsão de chegada (FUP via Hub) ===
+// === TESTE: login, log de uso e disponibilidade (estoque/previsão calculados no servidor do Hub) ===
 const HUB_API = 'https://hub.boxersoldas.com.br';
 const sbc = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 let USER = null, TOKEN = null, DADOS_CARREGADOS = false;
-let QTD = {}, PREV = {}, PREV_OK = false, PREV_ATUALIZADO = null;
+let QTD = {}, DISP = {};
 
 function $(id){ return document.getElementById(id); }
 
@@ -244,7 +244,7 @@ async function onSession(session, novoLogin) {
     $('loginOverlay').classList.remove('show');
     document.body.classList.remove('locked');
     $('userInfo').textContent = (acesso.nome || USER.email) + ' · ' + USER.email;
-    logUso(novoLogin ? 'login' : 'acesso', { origem: acesso.origem, role: acesso.role });
+    logUso(novoLogin ? 'login' : 'acesso', { origem: acesso.origem, role: acesso.role, tabela: TID });
     if (!DADOS_CARREGADOS) { DADOS_CARREGADOS = true; await load(); }
 }
 
@@ -275,8 +275,8 @@ function agendarLogFiltro() {
     if (!DADOS_CARREGADOS) return;
     clearTimeout(_filtroTimer);
     _filtroTimer = setTimeout(() => {
-        const d = { uf: cState, segmento: cSeg, classe: cCls, grupo: cCatGrupo, categoria: cCat, busca: (cSearch || '').trim() };
-        if (!d.grupo && !d.busca) return;
+        const d = { tabela: TID, uf: cState, segmento: cSeg, classe: cCls, grupo: cCatGrupo, categoria: cCat, busca: (cSearch || '').trim() };
+        if (TID === 2 && !d.grupo && !d.busca) return;
         const s = JSON.stringify(d);
         if (s === _filtroUltimo) return;
         _filtroUltimo = s;
@@ -284,59 +284,38 @@ function agendarLogFiltro() {
     }, 2000);
 }
 
-// --- estoque: RPC que lê o estoque do Hub (regra do sync-estoque) ---
-async function carregarEstoque() {
-    try {
-        const { data, error } = await sbc.rpc('tabela_estoque_bmax');
-        if (error) throw error;
-        (data || []).forEach(r => { ESTOQUE[r.codigo] = { q: r.estoque === null ? null : Number(r.estoque), origem: r.origem }; });
-    } catch (e) {
-        console.error('Falha ao carregar estoque', e);
-    }
+// --- disponibilidade: o navegador manda "codigo:qtd" e recebe só o veredito (nunca o saldo) ---
+let _dispPend = new Set(), _dispTimer = null;
+function dispKey(codigo, qtd) { return codigo + '|' + qtd; }
+
+function pedirDisp(codigo, qtd) {
+    const k = dispKey(codigo, qtd);
+    if (DISP[k] && DISP[k].tipo !== 'erro') return;
+    DISP[k] = { tipo: 'carregando' };
+    _dispPend.add(k);
+    clearTimeout(_dispTimer);
+    _dispTimer = setTimeout(flushDisp, 300);
 }
 
-// --- previsão de chegada: FUP via Hub (função da Vercel, só equipe interna) ---
-async function carregarPrevisao() {
+async function flushDisp() {
+    const keys = [..._dispPend];
+    _dispPend.clear();
+    if (!keys.length) return;
     try {
-        const r = await fetch(HUB_API + '/api/disponibilidade?target=tabela', { headers: { 'Authorization': 'Bearer ' + TOKEN } });
+        const itens = keys.map(k => k.replace('|', ':')).join(',');
+        const r = await fetch(HUB_API + '/api/disponibilidade?target=tabela&itens=' + encodeURIComponent(itens), { headers: { 'Authorization': 'Bearer ' + TOKEN } });
         if (!r.ok) throw new Error('Hub respondeu ' + r.status);
         const j = await r.json();
-        PREV = j.porCodigo || {};
-        PREV_ATUALIZADO = j.lastUpdate || null;
-        PREV_OK = true;
+        keys.forEach(k => {
+            DISP[k] = (j.resultados && j.resultados[k]) || { tipo: 'sem_info' };
+            const [codigo, qtd] = k.split('|');
+            logUso('consulta_disponibilidade', { tabela: TID, codigo, qtd: Number(qtd), resultado: DISP[k].tipo, previsao: DISP[k].iso || null });
+        });
     } catch (e) {
-        console.error('Falha ao carregar previsão', e);
-        PREV_OK = false;
+        console.error('Falha ao consultar disponibilidade', e);
+        keys.forEach(k => { DISP[k] = { tipo: 'erro' }; });
     }
     atualizarTodasDisponibilidades();
-}
-
-// Mesma regra do Hub (hub.js): anda pelas remessas por data prevista, desconta a fila de reservas
-// e devolve a data em que o déficit passa a estar coberto.
-function calcularDisponibilidadePrevista(records, deficit) {
-    if (!Array.isArray(records) || !records.length || !(deficit > 0)) return null;
-    const toDate = v => { const d = v ? new Date(v) : null; return d && !isNaN(d) ? d : null; };
-    const ordenados = [...records].sort((a, b) => {
-        const da = toDate(a.prevRep), db = toDate(b.prevRep);
-        if (!da && !db) return 0;
-        if (!da) return 1;
-        if (!db) return -1;
-        return da - db;
-    });
-    let reservasRestantes = Number(ordenados[0].reservas) || 0;
-    let acumulado = 0;
-    for (const rec of ordenados) {
-        const qty = Number(rec.qtd) || 0;
-        if (reservasRestantes > 0) {
-            if (qty <= reservasRestantes) { reservasRestantes -= qty; continue; }
-            acumulado += (qty - reservasRestantes);
-            reservasRestantes = 0;
-        } else {
-            acumulado += qty;
-        }
-        if (acumulado >= deficit) return rec.prevRep || null;
-    }
-    return null;
 }
 
 function fmtData(iso) {
@@ -346,31 +325,19 @@ function fmtData(iso) {
     return isNaN(d) ? String(iso) : d.toLocaleDateString('pt-BR');
 }
 
-function badgeEstoque(e) {
-    if (!e || e.q === null || e.q === undefined) return '<span class="est none" title="Sem informação de estoque no ZEN">—</span>';
-    return '<span class="est ' + (e.q > 0 ? 'pos' : 'zero') + '">' + e.q + '</span>';
-}
-
-function dispCalc(codigo, qtd) {
-    if (!qtd || qtd <= 0) return null;
-    const e = ESTOQUE[codigo];
-    if (!e || e.q === null || e.q === undefined) return { tipo: 'sem_info' };
-    if (e.q >= qtd) return { tipo: 'ok' };
-    const deficit = qtd - e.q;
-    if (!PREV_OK) return { tipo: 'prev_indisponivel', deficit, estoque: e.q };
-    const iso = calcularDisponibilidadePrevista(PREV[String(codigo).trim().toUpperCase()], deficit);
-    return iso ? { tipo: 'prev', iso, deficit, estoque: e.q } : { tipo: 'sem_prev', deficit, estoque: e.q };
-}
-
 function dispHtml(codigo) {
-    const r = dispCalc(codigo, QTD[codigo]);
-    if (!r) return '';
-    if (r.tipo === 'ok') return '<span class="disp ok">✓ Disponível</span>';
-    if (r.tipo === 'sem_info') return '<span class="disp muted">Sem info de estoque</span>';
-    const falta = 'Faltam ' + r.deficit + ' un. (estoque: ' + r.estoque + ')';
-    if (r.tipo === 'prev') return '<span class="disp prev" title="' + falta + '">Previsão: ' + fmtData(r.iso) + '</span>';
-    if (r.tipo === 'prev_indisponivel') return '<span class="disp muted" title="' + falta + '">Previsão indisponível</span>';
-    return '<span class="disp no" title="' + falta + '">Sem previsão</span>';
+    const q = QTD[codigo];
+    if (!q || q <= 0) return '';
+    const r = DISP[dispKey(codigo, q)];
+    if (!r) { pedirDisp(codigo, q); return '<span class="disp muted">Consultando…</span>'; }
+    switch (r.tipo) {
+        case 'ok': return '<span class="disp ok">✓ Disponível</span>';
+        case 'prev': return '<span class="disp prev">Previsão: ' + fmtData(r.iso) + '</span>';
+        case 'sem_prev': return '<span class="disp no">Sem previsão</span>';
+        case 'sem_info': return '<span class="disp muted">Sem informação</span>';
+        case 'erro': return '<span class="disp muted">Indisponível no momento</span>';
+        default: return '<span class="disp muted">Consultando…</span>';
+    }
 }
 
 function atualizarTodasDisponibilidades() {
@@ -382,15 +349,15 @@ function aoDigitarQtd(input) {
     const codigo = input.dataset.codigo;
     const v = parseInt(input.value, 10);
     QTD[codigo] = v > 0 ? v : 0;
+    if (selecionados.has(codigo)) selecionados.get(codigo).quantidade = QTD[codigo] > 0 ? QTD[codigo] : 1;
     const cel = input.closest('tr').querySelector('.disp-cell');
-    if (cel) cel.innerHTML = dispHtml(codigo);
     clearTimeout(_qtdTimers[codigo]);
-    if (QTD[codigo] > 0) {
-        _qtdTimers[codigo] = setTimeout(() => {
-            const r = dispCalc(codigo, QTD[codigo]);
-            logUso('consulta_disponibilidade', { codigo, qtd: QTD[codigo], resultado: r ? r.tipo : null, previsao: r && r.iso ? r.iso : null });
-        }, 1500);
-    }
+    if (!cel) return;
+    if (!(QTD[codigo] > 0)) { cel.innerHTML = ''; return; }
+    const r = DISP[dispKey(codigo, QTD[codigo])];
+    if (r && r.tipo !== 'erro' && r.tipo !== 'carregando') { cel.innerHTML = dispHtml(codigo); return; }
+    cel.innerHTML = '<span class="disp muted">Consultando…</span>';
+    _qtdTimers[codigo] = setTimeout(() => pedirDisp(codigo, QTD[codigo]), 600);
 }
 
 
@@ -490,20 +457,18 @@ async function carregarDados() {
     if (IS_AUTO) {
         document.getElementById('pageTitle').innerHTML = 'Tabela de Preços Boxer <img src="bmax-logo.png" alt="BMax" style="height:26px;vertical-align:middle;margin-left:8px">';
         document.querySelector('.header').style.borderBottomColor = '#e30613';
-        document.getElementById('navBtn').href = 'tabela-de-precos.html?t=1';
+        document.getElementById('navBtn').href = 'tabela-teste.html?t=1';
         document.getElementById('navBtn').innerHTML = '&#10132; Tabela Revendas';
         document.title = 'Tabela de Preços Boxer - Automação';
         document.getElementById('segLabel').textContent = 'Origem do lead';
         document.getElementById('catGrupoWrap').style.display = '';
     } else {
-        document.getElementById('navBtn').href = 'tabela-de-precos.html?t=2';
+        document.getElementById('navBtn').href = 'tabela-teste.html?t=2';
         document.getElementById('navBtn').innerHTML = '<img src="bmax-logo.png" height="32" style="display:block">';
     }
 
-    await carregarEstoque();
     buildFilters();
     render();
-    carregarPrevisao();
 }
 
 function buildFilters() {
@@ -595,23 +560,22 @@ function render() {
                 let pc = scm!==undefined ? `<td class="td-price-final">${fmt(tb*scm)}</td>` : `<td style="text-align:right;color:#a0aec0;font-style:italic;font-size:12px">N/D</td>`;
                 const ic = cState==='SP' ? p.icms : 4;
                 const jaSel = selecionados.has(p.codigo);
-                const celQtdA = `<td class="ac"><input type="number" class="qtd-input" min="1" placeholder="qtd" data-codigo="${p.codigo}" value="${QTD[p.codigo]||''}" style="width:56px;text-align:center"></td>`;
-                const celDisp = `<td class="ac">${badgeEstoque(ESTOQUE[p.codigo])}</td><td class="ac disp-cell" data-codigo="${p.codigo}">${dispHtml(p.codigo)}</td>`;
+                const celFim = `<td class="ac"><input type="number" class="qtd-input" min="1" placeholder="qtd" data-codigo="${p.codigo}" value="${QTD[p.codigo]||''}" style="width:56px;text-align:center"></td><td class="ac disp-cell" data-codigo="${p.codigo}">${dispHtml(p.codigo)}</td>`;
                 if (IS_AUTO) {
                     const podeSelecionar = ['Laser', 'Robô', 'Máquinas'].includes(p.catGroup);
                     const celSel = podeSelecionar
                         ? `<td class="ac"><button class="btn-sel${jaSel?' selecionado':''}" data-sel="${p.codigo}" data-modelo="${p.modelo.replace(/"/g,'&quot;')}" data-cat="${p.cat}" data-pvsp="${p.pv_sp}" data-final="${(tb*(scm||1)).toFixed(2)}" data-mult="${scm||''}" data-porte="${p.porte}" onclick="toggleSel(this)">${jaSel?'✓ Selecionado':'+ Selecionar'}</button></td>`
                         : `<td class="ac"></td>`;
-                    r += `<tr${jaSel?' class="row-sel"':''}>${celSel}${celQtdA}${celDisp}<td class="td-code">${p.codigo}</td><td class="td-name">${p.modelo}</td><td class="ac"><span class="size-badge ${SZC[p.porte]||'sz-grd'}">${SZ[p.porte]||p.porte}</span></td><td class="td-price-base">${fmt(tb)}</td>${pc}<td class="td-pct">${ic}%</td><td class="td-pct">${p.ipi}%</td><td class="td-ncm">${p.ncm}</td></tr>`;
+                    r += `<tr${jaSel?' class="row-sel"':''}>${celSel}<td class="td-code">${p.codigo}</td><td class="td-name">${p.modelo}</td><td class="ac"><span class="size-badge ${SZC[p.porte]||'sz-grd'}">${SZ[p.porte]||p.porte}</span></td><td class="td-price-base">${fmt(tb)}</td>${pc}<td class="td-pct">${ic}%</td><td class="td-pct">${p.ipi}%</td><td class="td-ncm">${p.ncm}</td>${celFim}</tr>`;
                 } else {
                     const celQtd = IS_TEST ? `<td class="ac"><input type="number" class="qtd-input" min="0" placeholder="0" data-codigo="${p.codigo}" style="width:56px;text-align:center"></td>` : '';
                     const celExtra = IS_TEST ? `<td class="ac disponivel-cell" data-codigo="${p.codigo}"></td><td class="ac previsao-cell" data-codigo="${p.codigo}"></td>` : '';
-                    r += `<tr>${celQtd}<td class="td-code">${p.codigo}</td><td class="td-name">${p.modelo}</td><td class="ac"><span class="size-badge ${SZC[p.porte]||'sz-grd'}">${SZ[p.porte]||p.porte}</span></td><td class="td-price-base">${fmt(tb)}</td>${pc}<td class="td-pct">${ic}%</td><td class="td-pct">${p.ipi}%</td><td class="td-ncm">${p.ncm}</td>${celExtra}</tr>`;
+                    r += `<tr>${celQtd}<td class="td-code">${p.codigo}</td><td class="td-name">${p.modelo}</td><td class="ac"><span class="size-badge ${SZC[p.porte]||'sz-grd'}">${SZ[p.porte]||p.porte}</span></td><td class="td-price-base">${fmt(tb)}</td>${pc}<td class="td-pct">${ic}%</td><td class="td-pct">${p.ipi}%</td><td class="td-ncm">${p.ncm}</td>${celFim}</tr>`;
                 }
             });
-            const propHeader = IS_AUTO ? '<th class="ac" style="width:110px">Proposta</th><th class="ac" style="width:70px">QTD</th><th class="ac" style="width:80px">Estoque</th><th class="ac" style="width:170px">Disponibilidade</th>' : '';
+            const propHeader = IS_AUTO ? '<th class="ac" style="width:110px">Proposta</th>' : '';
             const qtdHeader = IS_TEST ? '<th class="ac" style="width:70px">QTD</th>' : '';
-            const extraHeader = IS_TEST ? '<th class="ac" style="width:90px">Disponível?</th><th class="ac" style="width:100px">Previsão</th>' : '';
+            const extraHeader = '<th class="ac" style="width:70px">QTD</th><th class="ac" style="width:170px">Disponibilidade</th>';
             d.innerHTML += `<div class="tbl-wrap"><table><thead><tr>${propHeader}${qtdHeader}<th class="al">Código</th><th class="al">Descrição</th><th class="ac">Porte</th><th class="ar">Tabela</th><th class="ar">c/ Desconto</th><th class="ar">ICMS</th><th class="ar">IPI</th><th class="al">NCM</th>${extraHeader}</tr></thead><tbody>${r}</tbody></table></div>`;
             a.appendChild(d);
         });
@@ -649,14 +613,15 @@ function toggleSel(btn) {
             pv_sp:         parseFloat(btn.dataset.pvsp),
             preco_final:   parseFloat(btn.dataset.final),
             multiplicador: btn.dataset.mult ? parseFloat(btn.dataset.mult) : null,
-            porte:         btn.dataset.porte
+            porte:         btn.dataset.porte,
+            quantidade:    QTD[cod] > 0 ? QTD[cod] : 1
         });
         btn.textContent = '✓ Selecionado';
         btn.classList.add('selecionado');
         tr.classList.add('row-sel');
     }
     updateBar();
-    logUso(selecionados.has(cod) ? 'selecionar_item' : 'desselecionar_item', { codigo: cod, modelo: btn.dataset.modelo });
+    logUso(selecionados.has(cod) ? 'selecionar_item' : 'desselecionar_item', { codigo: cod, modelo: btn.dataset.modelo, quantidade: QTD[cod] > 0 ? QTD[cod] : 1 });
 }
 
 function limparSelecao() {
@@ -671,7 +636,8 @@ function limparSelecao() {
 
 function gerarProposta() {
     if (selecionados.size === 0) return;
-    logUso('gerar_proposta', { itens: [...selecionados.keys()], uf: cState, segmento: cSeg, classe: cCls, grupo: cCatGrupo || null });
+    selecionados.forEach((it, c) => { it.quantidade = QTD[c] > 0 ? QTD[c] : 1; });
+    logUso('gerar_proposta', { itens: [...selecionados.values()].map(i => i.codigo + ' x' + i.quantidade), uf: cState, segmento: cSeg, classe: cCls, grupo: cCatGrupo || null });
     sessionStorage.setItem('proposta_draft', JSON.stringify({
         itens:    [...selecionados.values()],
         politica: { uf: cState, segmento: cSeg, classe: cCls, categoria_grupo: cCatGrupo || null }
