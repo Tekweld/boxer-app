@@ -94,6 +94,7 @@ body.locked .header,body.locked .content,body.locked #barProposta,body.locked #t
 .disp.prev{color:#92400e}
 .disp.no{color:#b91c1c}
 .disp.muted{color:#a0aec0;font-weight:400}
+.disp-hora{font-family:Outfit;font-size:10px;color:#a0aec0;font-weight:400;margin-top:1px;cursor:help}
 </style>
 </head>
 <body class="locked">
@@ -171,7 +172,7 @@ const selecionados = new Map();
 const HUB_API = 'https://hub.boxersoldas.com.br';
 const sbc = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 let USER = null, TOKEN = null, DADOS_CARREGADOS = false;
-let QTD = {}, DISP = {};
+let QTD = {}, DISP = {}, FUP_EM = null, TABELA_ATUALIZADA_EM = null;
 
 function $(id){ return document.getElementById(id); }
 
@@ -307,7 +308,8 @@ async function flushDisp() {
         if (!r.ok) throw new Error('Hub respondeu ' + r.status);
         const j = await r.json();
         keys.forEach(k => {
-            DISP[k] = (j.resultados && j.resultados[k]) || { tipo: 'sem_info' };
+            DISP[k] = Object.assign({}, (j.resultados && j.resultados[k]) || { tipo: 'sem_info' }, { em: j.consultado_em, t: Date.now() });
+            if (j.fup_em) FUP_EM = j.fup_em;
             const [codigo, qtd] = k.split('|');
             logUso('consulta_disponibilidade', { tabela: TID, codigo, qtd: Number(qtd), resultado: DISP[k].tipo, previsao: DISP[k].iso || null });
         });
@@ -325,24 +327,54 @@ function fmtData(iso) {
     return isNaN(d) ? String(iso) : d.toLocaleDateString('pt-BR');
 }
 
+function fmtHora(iso) {
+    const d = new Date(iso);
+    if (isNaN(d)) return '';
+    return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }).replace(',', '');
+}
+
 function dispHtml(codigo) {
     const q = QTD[codigo];
     if (!q || q <= 0) return '';
-    const r = DISP[dispKey(codigo, q)];
+    const k = dispKey(codigo, q);
+    let r = DISP[k];
+    if (r && r.t && Date.now() - r.t > 10 * 60 * 1000) { delete DISP[k]; r = null; }
     if (!r) { pedirDisp(codigo, q); return '<span class="disp muted">Consultando…</span>'; }
+    let h;
     switch (r.tipo) {
-        case 'ok': return '<span class="disp ok">✓ Disponível</span>';
-        case 'prev': return '<span class="disp prev">Previsão: ' + fmtData(r.iso) + '</span>';
-        case 'sem_prev': return '<span class="disp no">Sem previsão</span>';
-        case 'sem_info': return '<span class="disp muted">Sem informação</span>';
+        case 'ok': h = '<span class="disp ok">✓ Disponível</span>'; break;
+        case 'prev': h = '<span class="disp prev">Previsão: ' + fmtData(r.iso) + '</span>'; break;
+        case 'sem_prev': h = '<span class="disp no">Sem previsão</span>'; break;
+        case 'sem_info': h = '<span class="disp muted">Sem informação</span>'; break;
         case 'erro': return '<span class="disp muted">Indisponível no momento</span>';
         default: return '<span class="disp muted">Consultando…</span>';
     }
+    if (r.em) {
+        const dica = 'Estoque sincronizado com o ZEN a cada hora' + (FUP_EM ? '; previsão de chegada atualizada em ' + fmtHora(FUP_EM) : '') + '. Os valores podem mudar depois desta consulta.';
+        h += '<div class="disp-hora" title="' + dica + '">Atualizado em ' + fmtHora(r.em) + '</div>';
+    }
+    return h;
 }
 
 function atualizarTodasDisponibilidades() {
     document.querySelectorAll('.disp-cell').forEach(c => { c.innerHTML = dispHtml(c.dataset.codigo); });
 }
+
+// --- tabela viva: se um admin mexer em produto/preco, a tela recarrega sozinha (so quando muda) ---
+async function checarAtualizacaoTabela() {
+    if (!DADOS_CARREGADOS || document.hidden || !TABELA_ATUALIZADA_EM) return;
+    try {
+        const r = await sbFetch('/tabelas?id=eq.' + TID + '&select=atualizado_em');
+        const novo = r[0] && r[0].atualizado_em;
+        if (novo && novo !== TABELA_ATUALIZADA_EM) {
+            await carregarDados(true);
+            [...selecionados.keys()].forEach(c => { if (!P.some(p => p.codigo === c)) selecionados.delete(c); });
+            updateBar();
+        }
+    } catch (e) { /* tenta de novo no proximo ciclo */ }
+}
+setInterval(checarAtualizacaoTabela, 120000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checarAtualizacaoTabela(); });
 
 const _qtdTimers = {};
 function aoDigitarQtd(input) {
@@ -420,7 +452,7 @@ async function load() {
     }
 }
 
-async function carregarDados() {
+async function carregarDados(recarga) {
     const [tabelaRes, estadosRes, multsRes, prodsRes, catsRes, comsRes, estoqueRes] = await Promise.all([
         sbFetch('/tabelas?id=eq.'+TID+'&select=*'),
         sbFetch('/estados?select=uf,mult_4_icms,mult_total&order=uf'),
@@ -448,10 +480,13 @@ async function carregarDados() {
 
     P = prodsRes.map(p => ({...p, cat: catMap[p.categoria_id] || 'SEM CATEGORIA', catGroup: catGroupById[p.categoria_id] || null}));
 
-    if (IS_AUTO) { cSeg=''; cCls=0; cCatGrupo=''; }
-    else { cSeg = SEG[0]; cCls = CLS[CLS.length-1]; }
+    if (!recarga) {
+        if (IS_AUTO) { cSeg=''; cCls=0; cCatGrupo=''; }
+        else { cSeg = SEG[0]; cCls = CLS[CLS.length-1]; }
+    }
 
-    const atualizado = new Date(tabela.atualizado_em).toLocaleDateString('pt-BR');
+    const atualizado = new Date(tabela.atualizado_em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    TABELA_ATUALIZADA_EM = tabela.atualizado_em;
     document.getElementById('pageSubtitle').textContent = `Atualizado em ${atualizado} · ${P.length} produtos`;
 
     if (IS_AUTO) {
@@ -467,7 +502,7 @@ async function carregarDados() {
         document.getElementById('navBtn').innerHTML = '<img src="bmax-logo.png" height="32" style="display:block">';
     }
 
-    buildFilters();
+    if (!recarga) buildFilters();
     render();
 }
 
