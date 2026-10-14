@@ -682,8 +682,7 @@ async function carregarDados(recarga) {
 
     const atualizado = new Date(tabela.atualizado_em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
     TABELA_ATUALIZADA_EM = tabelaRes.slice().sort((a, b) => a.id - b.id).map(x => x.atualizado_em).join('|');
-    if (TID === 1) document.getElementById('pageSubtitle').textContent += ' · regras novas (simulação)';
-    document.getElementById('pageSubtitle').textContent = `Atualizado em ${atualizado} · ${P.length} produtos`;
+    document.getElementById('pageSubtitle').textContent = `Atualizado em ${atualizado} · ${P.length} produtos${TID === 1 ? ' · regras novas (simulação)' : ''}`;
 
     if (IS_AUTO) {
         document.getElementById('pageTitle').innerHTML = 'Tabela de Preços Boxer <img src="bmax-logo.png" alt="BMax" style="height:26px;vertical-align:middle;margin-left:8px">';
