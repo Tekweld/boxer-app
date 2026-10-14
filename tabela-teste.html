@@ -6,6 +6,7 @@
 <title>Tabela de Preços Boxer - TESTE</title>
 <meta name="robots" content="noindex,nofollow">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f4f8;color:#1a202c}
@@ -119,6 +120,23 @@ td.td-name:hover{color:#1d327b;text-decoration:underline}
 .det-lista{list-style:none;margin:0;padding:0;font-size:13.5px;color:#1a202c}
 .det-lista li{padding:5px 0;border-bottom:1px solid #f0f4f8}
 .det-vazio{color:#a0aec0;text-align:center;padding:28px 0;font-size:14px}
+.btn-export{padding:9px 16px;border-radius:8px;border:1px solid #1d327b;background:#fff;color:#1d327b;font-family:Outfit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn-export:hover{background:#1d327b;color:#fff}
+#expOverlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:2600;padding:16px}
+#expOverlay.show{display:flex}
+#expOverlay .det-card{max-width:520px}
+.exp-corpo{padding:16px 20px 20px;font-family:Outfit}
+.exp-row{margin-bottom:12px}
+.exp-row label.t{display:block;font-size:12px;font-weight:500;color:#4a5568;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.exp-row select{width:100%;padding:8px 12px;border:1px solid #c3cfe2;border-radius:6px;font-family:Outfit;font-size:13px;background:#fff}
+.exp-checks{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:#1a202c}
+.exp-checks label{display:flex;align-items:center;gap:5px;cursor:pointer}
+.exp-cont{font-size:13px;color:#1d327b;font-weight:600;margin:6px 0 14px}
+.exp-msg{font-size:12px;color:#991b1b;min-height:16px;margin-bottom:8px}
+.exp-acoes{display:flex;gap:8px;justify-content:flex-end}
+.exp-acoes button{padding:9px 18px;border-radius:8px;font-family:Outfit;font-size:13px;font-weight:600;cursor:pointer;border:1px solid #c3cfe2;background:#fff;color:#4a5568}
+.exp-acoes button.p{background:#1d327b;border-color:#1d327b;color:#fff}
+.exp-acoes button:disabled{opacity:.6;cursor:default}
 </style>
 </head>
 <body class="locked">
@@ -175,6 +193,27 @@ td.td-name:hover{color:#1d327b;text-decoration:underline}
   </div>
 </div>
 
+<div id="expOverlay" onclick="if(event.target===this)fecharExportacao()">
+  <div class="det-card">
+    <div class="det-head"><div><h3>Exportar disponibilidade</h3><div class="cod">Excel com código, descrição e disponibilidade de cada item</div></div><button class="det-x" onclick="fecharExportacao()" aria-label="Fechar">&times;</button></div>
+    <div class="exp-corpo">
+      <div class="exp-row" id="expGrupoWrap"><label class="t" for="expGrupo">Grupo</label><select id="expGrupo" onchange="refreshExpCats();contarExport()"></select></div>
+      <div class="exp-row"><label class="t" for="expCat">Categoria</label><select id="expCat" onchange="contarExport()"></select></div>
+      <div class="exp-row"><label class="t" for="expPorte">Porte</label><select id="expPorte" onchange="contarExport()"></select></div>
+      <div class="exp-row"><label class="t">Incluir na lista</label>
+        <div class="exp-checks">
+          <label><input type="checkbox" id="expOk" checked> Disponível</label>
+          <label><input type="checkbox" id="expPrev" checked> Previsão</label>
+          <label><input type="checkbox" id="expSemPrev" checked> Sem previsão</label>
+          <label><input type="checkbox" id="expSemInfo" checked> Sem informação</label>
+        </div></div>
+      <div class="exp-cont" id="expCont"></div>
+      <div class="exp-msg" id="expMsg"></div>
+      <div class="exp-acoes"><button onclick="fecharExportacao()">Cancelar</button><button class="p" id="btnExportar" onclick="gerarExportacao()">Gerar Excel</button></div>
+    </div>
+  </div>
+</div>
+
 <div id="detOverlay" onclick="if(event.target===this)fecharDetalhes()">
   <div class="det-card">
     <div class="det-head"><div><h3 id="detTitulo"></h3><div class="cod" id="detCodigo"></div></div><button class="det-x" onclick="fecharDetalhes()" aria-label="Fechar">&times;</button></div>
@@ -195,7 +234,7 @@ td.td-name:hover{color:#1d327b;text-decoration:underline}
 <div class="comissao-box" id="comissaoBox"><label class="filter-label">Comissionamento</label><div class="comissao-text" id="comissaoText"></div></div>
 </div></div></div>
 <div class="content">
-<div class="search-row"><input id="searchInput" class="search-input" placeholder="Buscar por nome ou código..."/><select id="selCat" class="cat-select"></select></div>
+<div class="search-row"><input id="searchInput" class="search-input" placeholder="Buscar por nome ou código..."/><select id="selCat" class="cat-select"></select><button class="btn-export" onclick="abrirExportacao()" title="Baixar a lista de itens com a disponibilidade de cada um">⬇ Exportar disponibilidade</button></div>
 <div id="tableArea"><div class="loading">Carregando tabela de preços...</div></div>
 <div class="footer"><p>Configuração: <strong id="footState"></strong> · <strong id="footSeg"></strong> · Classe <strong id="footCls"></strong></p></div>
 </div>
@@ -917,6 +956,80 @@ document.getElementById('tableArea').addEventListener('input', e => {
 });
 $('loginEmail').addEventListener('keydown', e => { if (e.key === 'Enter') pedirCodigo(false); });
 $('loginCodigo').addEventListener('keydown', e => { if (e.key === 'Enter') confirmarCodigo(); });
+
+// --- exportar disponibilidade (Excel): codigo, descricao e disponibilidade; nunca informa quantidade ---
+function itensExport() {
+    const g = $('expGrupo').value, c = $('expCat').value, p = $('expPorte').value;
+    return P.filter(x => (!g || x.catGroup === g) && (!c || x.cat === c) && (!p || x.porte === p));
+}
+function contarExport() { const n = itensExport().length; $('expCont').textContent = n + (n === 1 ? ' item selecionado' : ' itens selecionados'); $('expMsg').textContent = ''; }
+function refreshExpCats() {
+    const g = $('expGrupo').value;
+    const presentes = new Set(P.filter(x => !g || x.catGroup === g).map(x => x.cat));
+    $('expCat').innerHTML = '<option value="">Todas as categorias</option>' + CATS.filter(c => presentes.has(c)).map(c => '<option>' + escDet(c) + '</option>').join('');
+}
+function abrirExportacao() {
+    $('expGrupoWrap').style.display = IS_AUTO ? '' : 'none';
+    $('expGrupo').innerHTML = '<option value="">Todos os grupos</option>' + GRUPOS.map(x => '<option>' + escDet(x) + '</option>').join('');
+    $('expPorte').innerHTML = '<option value="">Todos os portes</option>' + [...new Set(P.map(x => x.porte).filter(Boolean))].map(x => '<option>' + escDet(x) + '</option>').join('');
+    refreshExpCats(); contarExport();
+    $('expOverlay').classList.add('show');
+}
+function fecharExportacao() { $('expOverlay').classList.remove('show'); }
+function rotuloDisp(r) {
+    if (r.tipo === 'ok') return 'Disponível';
+    if (r.tipo === 'prev') return 'Previsão: ' + fmtData(r.iso);
+    if (r.tipo === 'sem_prev') return 'Sem previsão';
+    return 'Sem informação';
+}
+async function gerarExportacao() {
+    const itens = itensExport();
+    if (!itens.length) { $('expMsg').textContent = 'Nenhum item nos filtros escolhidos.'; return; }
+    if (typeof XLSX === 'undefined') { $('expMsg').textContent = 'Não foi possível carregar o gerador de Excel. Verifique a conexão e tente de novo.'; return; }
+    const btn = $('btnExportar');
+    btn.disabled = true; btn.textContent = 'Consultando...'; $('expMsg').textContent = '';
+    try {
+        const r = await fetch(HUB_API + '/api/disponibilidade?target=tabela', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + TOKEN, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ codigos: itens.map(i => i.codigo) })
+        });
+        if (!r.ok) throw new Error('Hub respondeu ' + r.status);
+        const j = await r.json();
+        const incluir = { ok: $('expOk').checked, prev: $('expPrev').checked, sem_prev: $('expSemPrev').checked, sem_info: $('expSemInfo').checked };
+        const linhas = [];
+        itens.forEach(i => {
+            const res = (j.resultados || {})[String(i.codigo).toUpperCase() + '|1'] || { tipo: 'sem_info' };
+            if (incluir[res.tipo]) linhas.push([String(i.codigo), i.modelo, rotuloDisp(res)]);
+        });
+        if (!linhas.length) { $('expMsg').textContent = 'Nenhum item com os status escolhidos.'; return; }
+        const quando = new Date(j.consultado_em || Date.now());
+        const ws = XLSX.utils.aoa_to_sheet([['Código', 'Descrição', 'Disponibilidade']].concat(linhas));
+        ws['!cols'] = [{ wch: 14 }, { wch: 72 }, { wch: 24 }];
+        const filtros = [$('expGrupo').value, $('expCat').value, $('expPorte').value].filter(Boolean).join(' · ') || 'sem filtros';
+        const info = XLSX.utils.aoa_to_sheet([
+            ['Tabela', TID === 1 ? 'Revendas' : 'BMAX'],
+            ['Consulta em', quando.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })],
+            ['Filtros', filtros],
+            ['Itens', linhas.length],
+            ['Observação', 'Disponibilidade calculada para 1 unidade e sujeita a alteração após a consulta.']
+        ]);
+        info['!cols'] = [{ wch: 14 }, { wch: 80 }];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Disponibilidade');
+        XLSX.utils.book_append_sheet(wb, info, 'Informações');
+        const dia = quando.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+        XLSX.writeFile(wb, 'disponibilidade-' + (TID === 1 ? 'revendas' : 'bmax') + '-' + dia + '.xlsx');
+        logUso('exportar_disponibilidade', { tabela: TID, grupo: $('expGrupo').value || null, categoria: $('expCat').value || null, porte: $('expPorte').value || null, itens: linhas.length });
+        fecharExportacao();
+    } catch (e) {
+        console.error(e);
+        $('expMsg').textContent = 'Não foi possível consultar a disponibilidade agora. Tente novamente em instantes.';
+    } finally {
+        btn.disabled = false; btn.textContent = 'Gerar Excel';
+    }
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharExportacao(); });
 
 document.addEventListener('DOMContentLoaded', initAuth);
 </script>
