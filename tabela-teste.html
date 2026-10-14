@@ -1000,19 +1000,22 @@ async function gerarExportacao() {
         const linhas = [];
         itens.forEach(i => {
             const res = (j.resultados || {})[String(i.codigo).toUpperCase() + '|1'] || { tipo: 'sem_info' };
-            if (incluir[res.tipo]) linhas.push([String(i.codigo), i.modelo, rotuloDisp(res)]);
+            if (incluir[res.tipo]) linhas.push([String(i.codigo), i.modelo, Math.round(i.pv_sp * parseFloat(st.mult_4_icms) / (1 - parseFloat(st.mult_total) / 100) * 100) / 100, rotuloDisp(res)]);
         });
         if (!linhas.length) { $('expMsg').textContent = 'Nenhum item com os status escolhidos.'; return; }
         const quando = new Date(j.consultado_em || Date.now());
-        const ws = XLSX.utils.aoa_to_sheet([['Código', 'Descrição', 'Disponibilidade']].concat(linhas));
-        ws['!cols'] = [{ wch: 14 }, { wch: 72 }, { wch: 24 }];
+        const st = ST.find(s => s.uf === cState) || ST[0];
+        const ws = XLSX.utils.aoa_to_sheet([['Código', 'Descrição', 'Tabela', 'Disponibilidade']].concat(linhas));
+        ws['!cols'] = [{ wch: 14 }, { wch: 72 }, { wch: 16 }, { wch: 24 }];
+        for (let r = 2; r <= linhas.length + 1; r++) { if (ws['C' + r]) ws['C' + r].z = '"R$" #,##0.00'; }
         const filtros = [$('expGrupo').value, $('expCat').value, $('expPorte').value].filter(Boolean).join(' · ') || 'sem filtros';
         const info = XLSX.utils.aoa_to_sheet([
             ['Tabela', TID === 1 ? 'Revendas' : 'BMAX'],
+            ['Preço da coluna Tabela', 'preço base de tabela para ' + (st ? st.uf : cState) + ' (antes de segmento e classe)'],
             ['Consulta em', quando.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })],
             ['Filtros', filtros],
             ['Itens', linhas.length],
-            ['Observação', 'Disponibilidade calculada para 1 unidade e sujeita a alteração após a consulta.']
+            ['Observação', 'Disponibilidade calculada para 1 unidade e sujeita a alteração após a consulta. Preços e disponibilidade podem mudar.']
         ]);
         info['!cols'] = [{ wch: 14 }, { wch: 80 }];
         const wb = XLSX.utils.book_new();
