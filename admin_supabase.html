@@ -136,7 +136,7 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 
 <div class="panel-content hidden" id="tab-multiplicadores">
 <div class="panel-header"><div><div class="panel-title">Multiplicadores Comerciais</div></div>
-<select id="multTabela" class="select-sm" onchange="loadMult()"><option value="1">Revendas</option><option value="2">BMAX</option><option value="3">Revendas Teste</option></select></div>
+<select id="multTabela" class="select-sm" onchange="loadMult()"><option value="1">Revendas</option><option value="2">BMAX</option><option value="3">Revendas Teste</option><option value="4">Revendas — novas regras (teste)</option></select></div>
 <div id="multGrid"><div class="loading">Carregando...</div></div>
 </div>
 
@@ -858,7 +858,7 @@ async function saveMult(id,seg,cls,dim,antigo){
     try{
         await sb('/multiplicadores?id=eq.'+id,'PATCH',{valor:novo});
         if(novo!==antigo)await sb('/log_alteracoes','POST',{usuario_id:SESSION.user.id,usuario_email:SESSION.user.email,tabela_ref:'multiplicadores',registro_id:id,campo:seg+' · Classe '+cls+' · '+dim,valor_anterior:String(antigo),valor_novo:String(novo)});
-        await sb('/tabelas?id=in.(1,2)','PATCH',{atualizado_em:new Date().toISOString()});
+        await sb('/tabelas?id=in.(1,2,'+document.getElementById('multTabela').value+')','PATCH',{atualizado_em:new Date().toISOString()});
         toast('Multiplicador atualizado');closeModal();loadMult();
     }catch(e){toast('Erro: '+e.message,'error');}
 }
