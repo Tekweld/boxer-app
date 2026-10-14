@@ -216,6 +216,7 @@ const params = new URLSearchParams(window.location.search);
 const TID = (parseInt(params.get('t')) === 1) ? 1 : 2;
 const IS_AUTO = TID === 2;
 const IS_TEST = TID === 3;
+const MULT_TID = (TID === 1) ? 4 : TID; // teste: Revendas usa os multiplicadores das regras novas (tabela 4)
 
 const SZ = {Pequenas:'PEQ',Médias:'MED',Grandes:'GRD','Maquinário':'MAQ'};
 const SZC = {Pequenas:'sz-peq',Médias:'sz-med',Grandes:'sz-grd','Maquinário':'sz-maq'};
@@ -510,8 +511,8 @@ async function checarAtualizacaoTabela() {
         // acesso revogado/expirado enquanto a tela estava aberta: volta pro login
         const { data: ac } = await sbc.rpc('tabela_acesso');
         if (ac && !ac.permitido) { location.reload(); return; }
-        const r = await sbFetch('/tabelas?id=eq.' + TID + '&select=atualizado_em');
-        const novo = r[0] && r[0].atualizado_em;
+        const r = await sbFetch('/tabelas?id=in.(' + TID + ',' + MULT_TID + ')&select=id,atualizado_em');
+        const novo = r.slice().sort((x, y) => x.id - y.id).map(x => x.atualizado_em).join('|');
         if (novo && novo !== TABELA_ATUALIZADA_EM) {
             await carregarDados(true);
             [...selecionados.keys()].forEach(c => { if (!P.some(p => p.codigo === c)) selecionados.delete(c); });
@@ -647,9 +648,9 @@ async function load() {
 
 async function carregarDados(recarga) {
     const [tabelaRes, estadosRes, multsRes, prodsRes, catsRes, comsRes, estoqueRes] = await Promise.all([
-        sbFetch('/tabelas?id=eq.'+TID+'&select=*'),
+        sbFetch('/tabelas?id=in.('+TID+','+MULT_TID+')&select=*'),
         sbFetch('/estados?select=uf,mult_4_icms,mult_total&order=uf'),
-        sbFetch('/multiplicadores?tabela_id=eq.'+TID+'&select=segmento,classe,porte,categoria_grupo,valor'),
+        sbFetch('/multiplicadores?tabela_id=eq.'+MULT_TID+'&select=segmento,classe,porte,categoria_grupo,valor'),
         sbFetch('/produtos?tabela_id=eq.'+TID+'&ativo=eq.true&pv_sp=gt.0&select=codigo,modelo,pv_sp,porte,icms,ipi,ncm,categoria_id&order=pv_sp'),
         sbFetch('/categorias?tabela_id=eq.'+TID+'&select=id,nome,ordem,categoria_grupo&order=ordem'),
         sbFetch('/comissoes?tabela_id=eq.'+TID+'&select=segmento,classe,categoria_grupo,rep_pct,revenda_pct,vendedor_tecnico_pct'),
@@ -658,10 +659,11 @@ async function carregarDados(recarga) {
 
     estoqueRes.forEach(e => { ESTOQUE[e.codigo] = parseFloat(e.quantity_balance); });
 
-    const tabela = tabelaRes[0];
+    const tabela = tabelaRes.find(t => t.id === TID);
+    const tabMult = tabelaRes.find(t => t.id === MULT_TID) || tabela;
     ST = estadosRes;
-    SEG = tabela.segmentos;
-    CLS = tabela.classes;
+    SEG = tabMult.segmentos;
+    CLS = tabMult.classes;
 
     multsRes.forEach(m => { const dim = m.categoria_grupo || m.porte; M[m.segmento+m.classe+dim] = parseFloat(m.valor); });
     comsRes.forEach(c => { CM[c.segmento+'-'+c.classe+'-'+c.categoria_grupo] = c; });
@@ -679,7 +681,8 @@ async function carregarDados(recarga) {
     }
 
     const atualizado = new Date(tabela.atualizado_em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-    TABELA_ATUALIZADA_EM = tabela.atualizado_em;
+    TABELA_ATUALIZADA_EM = tabelaRes.slice().sort((a, b) => a.id - b.id).map(x => x.atualizado_em).join('|');
+    if (TID === 1) document.getElementById('pageSubtitle').textContent += ' · regras novas (simulação)';
     document.getElementById('pageSubtitle').textContent = `Atualizado em ${atualizado} · ${P.length} produtos`;
 
     if (IS_AUTO) {
@@ -751,6 +754,8 @@ function updateComissao() {
 
 function render() {
     agendarLogFiltro();
+    if (cSeg === 'BMax' && cState !== 'SP') { cSeg = SEG[0]; updBtns(); }
+    document.querySelectorAll('#segBtns .fb').forEach(b => { if (b.textContent === 'BMax') b.style.display = (cState === 'SP') ? '' : 'none'; });
     const st = ST.find(s => s.uf===cState);
     const a = document.getElementById('tableArea');
 
