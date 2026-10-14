@@ -221,6 +221,7 @@ const MULT_TID = (TID === 1) ? 4 : TID; // teste: Revendas usa os multiplicadore
 const SZ = {Pequenas:'PEQ',Médias:'MED',Grandes:'GRD','Maquinário':'MAQ'};
 const SZC = {Pequenas:'sz-peq',Médias:'sz-med',Grandes:'sz-grd','Maquinário':'sz-maq'};
 
+let CLASSES_SEG = {};
 let P=[], ST=[], M={}, CM={}, SEG=[], CLS=[], CATS=[], GRUPOS=[], catGroupById={}, catGroupByName={}, ESTOQUE={};
 let cState='SP', cSeg='', cCls=0, cCat='TODAS', cCatGrupo='', cSearch='';
 const ORDEM_GRUPO = {'Robô':0,'Laser':1,'Máquinas':2,'Outros':3};
@@ -649,7 +650,7 @@ async function load() {
 async function carregarDados(recarga) {
     const [tabelaRes, estadosRes, multsRes, prodsRes, catsRes, comsRes, estoqueRes] = await Promise.all([
         sbFetch('/tabelas?id=in.('+TID+','+MULT_TID+')&select=*'),
-        sbFetch('/estados?select=uf,mult_4_icms,mult_total&order=uf'),
+        sbFetch('/estados?select=uf,mult_4_icms,mult_total,bmax_ativo&order=uf'),
         sbFetch('/multiplicadores?tabela_id=eq.'+MULT_TID+'&select=segmento,classe,porte,categoria_grupo,valor'),
         sbFetch('/produtos?tabela_id=eq.'+TID+'&ativo=eq.true&pv_sp=gt.0&select=codigo,modelo,pv_sp,porte,icms,ipi,ncm,categoria_id&order=pv_sp'),
         sbFetch('/categorias?tabela_id=eq.'+TID+'&select=id,nome,ordem,categoria_grupo&order=ordem'),
@@ -665,6 +666,8 @@ async function carregarDados(recarga) {
     SEG = tabMult.segmentos;
     CLS = tabMult.classes;
 
+    CLASSES_SEG = {};
+    multsRes.forEach(m => { (CLASSES_SEG[m.segmento] = CLASSES_SEG[m.segmento] || new Set()).add(m.classe); });
     multsRes.forEach(m => { const dim = m.categoria_grupo || m.porte; M[m.segmento+m.classe+dim] = parseFloat(m.valor); });
     comsRes.forEach(c => { CM[c.segmento+'-'+c.classe+'-'+c.categoria_grupo] = c; });
 
@@ -751,10 +754,29 @@ function updateComissao() {
     } else { box.style.display='none'; }
 }
 
+// BMax aparece so nos estados marcados no admin (Estados > Segmento BMax)
+function bmaxAtivoNaUF() { const s = ST.find(x => x.uf === cState); return !!(s && s.bmax_ativo); }
+function dicaClasse(seg, c) {
+    if (seg === 'Híbrido' || seg === 'Ecommerce') return c === 1 ? 'Cliente sem ocorrência ou restrição de PMA' : (c === 2 ? 'Cliente com alguma ocorrência de PMA' : '');
+    return '';
+}
+// cada segmento mostra so as classes que existem nos multiplicadores (Hibrido/Ecommerce: 1 e 2)
+function ajustarClasses() {
+    const set = CLASSES_SEG[cSeg];
+    if (IS_AUTO || !set) return;
+    const permitidas = [...set].sort((a, b) => a - b);
+    if (!permitidas.includes(cCls)) { cCls = permitidas[permitidas.length - 1]; updBtns(); }
+    document.querySelectorAll('#clsBtns .fb').forEach(b => {
+        const c = parseInt(b.textContent);
+        b.style.display = permitidas.includes(c) ? '' : 'none';
+        b.title = dicaClasse(cSeg, c);
+    });
+}
 function render() {
     agendarLogFiltro();
-    if (cSeg === 'BMax' && cState !== 'SP') { cSeg = SEG[0]; updBtns(); }
-    document.querySelectorAll('#segBtns .fb').forEach(b => { if (b.textContent === 'BMax') b.style.display = (cState === 'SP') ? '' : 'none'; });
+    if (cSeg === 'BMax' && !bmaxAtivoNaUF()) { cSeg = SEG[0]; updBtns(); }
+    document.querySelectorAll('#segBtns .fb').forEach(b => { if (b.textContent === 'BMax') b.style.display = bmaxAtivoNaUF() ? '' : 'none'; });
+    ajustarClasses();
     const st = ST.find(s => s.uf===cState);
     const a = document.getElementById('tableArea');
 
@@ -814,7 +836,7 @@ function render() {
     }
     document.getElementById('footState').textContent = cState;
     document.getElementById('footSeg').textContent = cSeg;
-    document.getElementById('footCls').textContent = cCls;
+    document.getElementById('footCls').textContent = cCls + (dicaClasse(cSeg, cCls) ? ' — ' + dicaClasse(cSeg, cCls) : '');
     updateComissao();
 }
 
