@@ -101,8 +101,8 @@ body.locked .header,body.locked .content,body.locked #barProposta,body.locked #t
 .login-card .field textarea:focus{border-color:#25bbee}
 .link-btn{background:none;border:none;color:#1d327b;text-decoration:underline;cursor:pointer;font:inherit;padding:0}
 .link-btn:disabled{color:#a0aec0;cursor:default;text-decoration:none}
-td.td-name,td.td-code{cursor:pointer}
-td.td-name:hover{color:#1d327b;text-decoration:underline}
+.info-i{display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:#e8f0fe;color:#1d327b;font-size:12px;font-weight:700;cursor:pointer;margin-right:7px;font-style:normal;user-select:none}
+.info-i:hover,.info-i:focus{background:#1d327b;color:#fff;outline:none}
 #detOverlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:2500;padding:16px}
 #detOverlay.show{display:flex}
 .det-card{background:#fff;border-radius:12px;width:100%;max-width:680px;max-height:88vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);font-family:Outfit,sans-serif}
@@ -619,10 +619,18 @@ async function abrirDetalhes(codigo, nome) {
 }
 function fecharDetalhes() { $('detOverlay').classList.remove('show'); }
 document.getElementById('tableArea').addEventListener('click', e => {
-    const c = e.target.closest('td.td-name, td.td-code');
+    const c = e.target.closest('.info-i');
     if (!c) return;
     const tr = c.closest('tr');
     abrirDetalhes(tr.querySelector('.td-code').textContent.trim(), tr.querySelector('.td-name').textContent.trim());
+});
+document.getElementById('tableArea').addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const c = e.target.closest && e.target.closest('.info-i');
+    if (!c) return;
+    e.preventDefault();
+    const tr = c.closest('tr');
+    abrirDetalhes(tr.querySelector('.td-code').textContent.trim(), tr.querySelector('.td-name').textContent.replace(/^ⓘ\s*/, '').trim());
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharDetalhes(); });
 
@@ -859,11 +867,11 @@ function render() {
                     const celSel = podeSelecionar
                         ? `<td class="ac"><button class="btn-sel${jaSel?' selecionado':''}" data-sel="${p.codigo}" data-modelo="${p.modelo.replace(/"/g,'&quot;')}" data-cat="${p.cat}" data-pvsp="${p.pv_sp}" data-final="${(tb*(scm||1)).toFixed(2)}" data-mult="${scm||''}" data-porte="${p.porte}" onclick="toggleSel(this)">${jaSel?'✓ Selecionado':'+ Selecionar'}</button></td>`
                         : `<td class="ac"></td>`;
-                    r += `<tr${jaSel?' class="row-sel"':''}>${celSel}<td class="td-code">${p.codigo}</td><td class="td-name">${p.modelo}</td><td class="ac"><span class="size-badge ${SZC[p.porte]||'sz-grd'}">${SZ[p.porte]||p.porte}</span></td><td class="td-price-base">${fmt(tb)}</td>${pc}<td class="td-pct">${ic}%</td><td class="td-pct">${p.ipi}%</td><td class="td-ncm">${p.ncm}</td>${celFim}</tr>`;
+                    r += `<tr${jaSel?' class="row-sel"':''}>${celSel}<td class="td-code">${p.codigo}</td><td class="td-name"><span class="info-i" title="Ver foto, descrição e características" role="button" tabindex="0">ⓘ</span>${p.modelo}</td><td class="ac"><span class="size-badge ${SZC[p.porte]||'sz-grd'}">${SZ[p.porte]||p.porte}</span></td><td class="td-price-base">${fmt(tb)}</td>${pc}<td class="td-pct">${ic}%</td><td class="td-pct">${p.ipi}%</td><td class="td-ncm">${p.ncm}</td>${celFim}</tr>`;
                 } else {
                     const celQtd = IS_TEST ? `<td class="ac"><input type="number" class="qtd-input" min="0" placeholder="0" data-codigo="${p.codigo}" style="width:56px;text-align:center"></td>` : '';
                     const celExtra = IS_TEST ? `<td class="ac disponivel-cell" data-codigo="${p.codigo}"></td><td class="ac previsao-cell" data-codigo="${p.codigo}"></td>` : '';
-                    r += `<tr>${celQtd}<td class="td-code">${p.codigo}</td><td class="td-name">${p.modelo}</td><td class="ac"><span class="size-badge ${SZC[p.porte]||'sz-grd'}">${SZ[p.porte]||p.porte}</span></td><td class="td-price-base">${fmt(tb)}</td>${pc}<td class="td-pct">${ic}%</td><td class="td-pct">${p.ipi}%</td><td class="td-ncm">${p.ncm}</td>${celFim}</tr>`;
+                    r += `<tr>${celQtd}<td class="td-code">${p.codigo}</td><td class="td-name"><span class="info-i" title="Ver foto, descrição e características" role="button" tabindex="0">ⓘ</span>${p.modelo}</td><td class="ac"><span class="size-badge ${SZC[p.porte]||'sz-grd'}">${SZ[p.porte]||p.porte}</span></td><td class="td-price-base">${fmt(tb)}</td>${pc}<td class="td-pct">${ic}%</td><td class="td-pct">${p.ipi}%</td><td class="td-ncm">${p.ncm}</td>${celFim}</tr>`;
                 }
             });
             const propHeader = IS_AUTO ? '<th class="ac" style="width:110px">Proposta</th>' : '';
