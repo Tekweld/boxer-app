@@ -796,14 +796,23 @@ async function alterarAtivoAcesso(id,ativo){
 // ESTADOS
 async function loadEstados(){
     try{
-        const d=await sb('/estados?select=id,uf,mult_4_icms,mult_total&order=uf');
-        let h='<table><thead><tr><th>UF</th><th class="text-right">Mult 4% ICMS</th><th class="text-right">Mult Total %</th>';
+        const d=await sb('/estados?select=id,uf,mult_4_icms,mult_total,bmax_ativo&order=uf');
+        let h='<table><thead><tr><th>UF</th><th class="text-right">Mult 4% ICMS</th><th class="text-right">Mult Total %</th><th class="text-center" title="Mostra o botão BMax na tabela de preços para este estado">Segmento BMax</th>';
         if(IS_ADMIN)h+='<th class="text-center">Ação</th>';h+='</tr></thead><tbody>';
-        d.forEach(e=>{h+=`<tr><td style="font-weight:600">${e.uf}</td><td class="text-right">${parseFloat(e.mult_4_icms).toFixed(3)}</td><td class="text-right">${parseFloat(e.mult_total).toFixed(4)}%</td>`;if(IS_ADMIN)h+=`<td class="text-center"><button class="btn btn-outline btn-sm" onclick="openEstModal(${e.id})">Editar</button></td>`;h+='</tr>';});
+        d.forEach(e=>{h+=`<tr><td style="font-weight:600">${e.uf}</td><td class="text-right">${parseFloat(e.mult_4_icms).toFixed(3)}</td><td class="text-right">${parseFloat(e.mult_total).toFixed(4)}%</td><td class="text-center"><input type="checkbox" ${e.bmax_ativo?'checked':''} ${IS_ADMIN?'':'disabled'} onchange="toggleBmaxUF(${e.id},'${e.uf}',this.checked,this)" style="width:auto;cursor:pointer"></td>`;if(IS_ADMIN)h+=`<td class="text-center"><button class="btn btn-outline btn-sm" onclick="openEstModal(${e.id})">Editar</button></td>`;h+='</tr>';});
         h+='</tbody></table>';document.getElementById('estadosTable').innerHTML=h;
     }catch(e){
         document.getElementById('estadosTable').innerHTML=`<div style="text-align:center;padding:20px;color:#dc2626">Erro ao carregar estados: ${e.message} <button class="btn btn-outline btn-sm" onclick="loadEstados()">Tentar novamente</button></div>`;
     }
+}
+async function toggleBmaxUF(id,uf,ativo,el){
+    try{
+        await sb('/estados?id=eq.'+id,'PATCH',{bmax_ativo:ativo});
+        await sb('/log_alteracoes','POST',{usuario_id:SESSION.user.id,usuario_email:SESSION.user.email,tabela_ref:'estados',registro_id:id,campo:'bmax_ativo · '+uf,valor_anterior:String(!ativo),valor_novo:String(ativo)});
+        const ts=await sb('/tabelas?segmentos=cs.'+encodeURIComponent('["BMax"]')+'&select=id');
+        if(ts.length)await sb('/tabelas?id=in.('+ts.map(t=>t.id).join(',')+')','PATCH',{atualizado_em:new Date().toISOString()});
+        toast('Segmento BMax '+(ativo?'liberado':'removido')+' para '+uf);
+    }catch(e){el.checked=!ativo;toast('Erro: '+e.message,'error');}
 }
 async function openEstModal(id){
     const r=await sb('/estados?id=eq.'+id+'&select=*');const e=r[0];
