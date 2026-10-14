@@ -645,7 +645,7 @@ async function applyReajuste(){
 
 
 // USO DA TABELA (log da tela de teste com login)
-const USO_EVENTOS={login:'Login',acesso:'Acesso',acesso_negado:'Acesso negado',logout:'Logout',consulta:'Consulta (filtros)',consulta_disponibilidade:'Consulta de estoque',selecionar_item:'Selecionou item',desselecionar_item:'Removeu item',gerar_proposta:'Gerou proposta',ver_detalhes:'Abriu detalhes do produto',codigo_enviado:'Código enviado',codigo_negado:'Código negado (email não liberado)',codigo_limite:'Limite de códigos atingido',codigo_erro:'Erro ao enviar código',acesso_auto_dominio:'Acesso automático (domínio Boxer)',solicitacao_acesso:'Solicitou acesso',acesso_aprovado:'Acesso aprovado',acesso_adicionado:'Acesso adicionado',acesso_editado:'Acesso editado',acesso_renovado:'Acesso renovado',acesso_revogado:'Acesso revogado',acesso_reativado:'Acesso reativado',solicitacao_negada:'Solicitação negada'};
+const USO_EVENTOS={login:'Login',acesso:'Acesso',acesso_negado:'Acesso negado',logout:'Logout',consulta:'Consulta (filtros)',consulta_disponibilidade:'Consulta de estoque',selecionar_item:'Selecionou item',desselecionar_item:'Removeu item',gerar_proposta:'Gerou proposta',ver_detalhes:'Abriu detalhes do produto',exportar_disponibilidade:'Exportou disponibilidade (Excel)',codigo_enviado:'Código enviado',codigo_negado:'Código negado (email não liberado)',codigo_limite:'Limite de códigos atingido',codigo_erro:'Erro ao enviar código',acesso_auto_dominio:'Acesso automático (domínio Boxer)',solicitacao_acesso:'Solicitou acesso',acesso_aprovado:'Acesso aprovado',acesso_adicionado:'Acesso adicionado',acesso_editado:'Acesso editado',acesso_renovado:'Acesso renovado',acesso_revogado:'Acesso revogado',acesso_reativado:'Acesso reativado',solicitacao_negada:'Solicitação negada'};
 let USO_ROWS=[];
 function escUso(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function descUso(ev,d){
@@ -654,6 +654,7 @@ function descUso(ev,d){
     if(ev==='consulta_disponibilidade'){const r={ok:'disponível',prev:'previsão '+(d.previsao?String(d.previsao).slice(0,10):''),sem_prev:'sem previsão',sem_info:'sem info',prev_indisponivel:'previsão indisponível'}[d.resultado]||'';return d.codigo+' × '+d.qtd+(r?' → '+r:'');}
     if(ev==='selecionar_item'||ev==='desselecionar_item')return (d.codigo||'')+(d.modelo?' · '+d.modelo:'');
     if(ev==='ver_detalhes')return d.codigo||'';
+    if(ev==='exportar_disponibilidade')return [d.tabela===1?'Revendas':'BMAX',d.grupo,d.categoria,d.porte].filter(Boolean).join(' · ')+' · '+d.itens+' itens';
     if(ev==='gerar_proposta')return (d.itens||[]).length+' item(ns): '+(d.itens||[]).join(', ');
     if(ev==='login'||ev==='acesso')return d.origem?(d.origem+(d.role?' / '+d.role:'')+(d.via?' · via '+d.via:'')):'';
     if(ev==='solicitacao_acesso')return (d.nome||'')+(d.empresa?' · '+d.empresa:'');
