@@ -998,13 +998,13 @@ async function gerarExportacao() {
         const j = await r.json();
         const incluir = { ok: $('expOk').checked, prev: $('expPrev').checked, sem_prev: $('expSemPrev').checked, sem_info: $('expSemInfo').checked };
         const linhas = [];
+        const st = ST.find(s => s.uf === cState) || ST[0];
         itens.forEach(i => {
             const res = (j.resultados || {})[String(i.codigo).toUpperCase() + '|1'] || { tipo: 'sem_info' };
             if (incluir[res.tipo]) linhas.push([String(i.codigo), i.modelo, Math.round(i.pv_sp * parseFloat(st.mult_4_icms) / (1 - parseFloat(st.mult_total) / 100) * 100) / 100, rotuloDisp(res)]);
         });
         if (!linhas.length) { $('expMsg').textContent = 'Nenhum item com os status escolhidos.'; return; }
         const quando = new Date(j.consultado_em || Date.now());
-        const st = ST.find(s => s.uf === cState) || ST[0];
         const ws = XLSX.utils.aoa_to_sheet([['Código', 'Descrição', 'Tabela', 'Disponibilidade']].concat(linhas));
         ws['!cols'] = [{ wch: 14 }, { wch: 72 }, { wch: 16 }, { wch: 24 }];
         for (let r = 2; r <= linhas.length + 1; r++) { if (ws['C' + r]) ws['C' + r].z = '"R$" #,##0.00'; }
