@@ -622,7 +622,7 @@ document.getElementById('tableArea').addEventListener('click', e => {
     const c = e.target.closest('.info-i');
     if (!c) return;
     const tr = c.closest('tr');
-    abrirDetalhes(tr.querySelector('.td-code').textContent.trim(), tr.querySelector('.td-name').textContent.trim());
+    abrirDetalhes(tr.querySelector('.td-code').textContent.trim(), tr.querySelector('.td-name').textContent.replace(/^ⓘ\s*/, '').trim());
 });
 document.getElementById('tableArea').addEventListener('keydown', e => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
