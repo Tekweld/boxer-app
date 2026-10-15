@@ -255,12 +255,13 @@ const params = new URLSearchParams(window.location.search);
 const TID = (parseInt(params.get('t')) === 1) ? 1 : 2;
 const IS_AUTO = TID === 2;
 const IS_TEST = TID === 3;
-const MULT_TID = (TID === 1) ? 4 : TID; // teste: Revendas usa os multiplicadores das regras novas (tabela 4)
+const MULT_TID = (TID === 1) ? 4 : (TID === 2 ? 5 : TID); // teste: Revendas usa os multiplicadores das regras novas (tabela 4)
 
 const SZ = {Pequenas:'PEQ',Médias:'MED',Grandes:'GRD','Maquinário':'MAQ'};
 const SZC = {Pequenas:'sz-peq',Médias:'sz-med',Grandes:'sz-grd','Maquinário':'sz-maq'};
 
 let CLASSES_SEG = {};
+let CLASSES_GRP = {};
 let P=[], ST=[], M={}, CM={}, SEG=[], CLS=[], CATS=[], GRUPOS=[], catGroupById={}, catGroupByName={}, ESTOQUE={};
 let cState='SP', cSeg='', cCls=0, cCat='TODAS', cCatGrupo='', cSearch='';
 const ORDEM_GRUPO = {'Robô':0,'Laser':1,'Máquinas':2,'Outros':3};
@@ -714,7 +715,9 @@ async function carregarDados(recarga) {
     CLS = tabMult.classes;
 
     CLASSES_SEG = {};
+    CLASSES_GRP = {};
     multsRes.forEach(m => { (CLASSES_SEG[m.segmento] = CLASSES_SEG[m.segmento] || new Set()).add(m.classe); });
+    multsRes.forEach(m => { if (m.categoria_grupo) { const g = m.categoria_grupo.replace(' (estado com BMax)', ''); (CLASSES_GRP[m.segmento + '|' + g] = CLASSES_GRP[m.segmento + '|' + g] || new Set()).add(m.classe); } });
     multsRes.forEach(m => { const dim = m.categoria_grupo || m.porte; M[m.segmento+m.classe+dim] = parseFloat(m.valor); });
     comsRes.forEach(c => { CM[c.segmento+'-'+c.classe+'-'+c.categoria_grupo] = c; });
 
@@ -732,7 +735,7 @@ async function carregarDados(recarga) {
 
     const atualizado = new Date(tabela.atualizado_em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
     TABELA_ATUALIZADA_EM = tabelaRes.slice().sort((a, b) => a.id - b.id).map(x => x.atualizado_em).join('|');
-    document.getElementById('pageSubtitle').textContent = `Atualizado em ${atualizado} · ${P.length} produtos${TID === 1 ? ' · regras novas (simulação)' : ''}`;
+    document.getElementById('pageSubtitle').textContent = `Atualizado em ${atualizado} · ${P.length} produtos${(TID === 1 || TID === 2) ? ' · regras novas (simulação)' : ''}`;
 
     if (IS_AUTO) {
         document.getElementById('pageTitle').innerHTML = 'Tabela de Preços Boxer <img src="bmax-logo.png" alt="BMax" style="height:26px;vertical-align:middle;margin-left:8px">';
@@ -761,7 +764,7 @@ function buildFilters() {
     SEG.forEach(s => { const b=document.createElement('button'); b.className='fb'+(s===cSeg?' on':''); b.textContent=s; b.addEventListener('click',()=>{cSeg=s;updBtns();render();}); sd.appendChild(b); });
 
     const cd = document.getElementById('clsBtns');
-    CLS.forEach(c => { const b=document.createElement('button'); b.className='fb fb-classe'+(c===cCls?' on':''); b.textContent=c; b.addEventListener('click',()=>{cCls=c;updBtns();render();}); cd.appendChild(b); });
+    CLS.forEach(c => { const b=document.createElement('button'); b.className='fb fb-classe'+(c===cCls?' on':''); b.textContent = (IS_AUTO && c === 7) ? 'Sem revenda' : c; b.dataset.cls = c; b.addEventListener('click',()=>{cCls=c;updBtns();render();}); cd.appendChild(b); });
 
     const gd = document.getElementById('catGrupoBtns');
     GRUPOS.forEach(g => { const b=document.createElement('button'); b.className='fb'+(g===cCatGrupo?' on':''); b.textContent=g; b.addEventListener('click',()=>{cCatGrupo=g;refreshCatSelect();updBtns();render();}); gd.appendChild(b); });
@@ -784,7 +787,7 @@ function refreshCatSelect() {
 
 function updBtns() {
     document.querySelectorAll('#segBtns .fb').forEach(b => b.className='fb'+(b.textContent===cSeg?' on':''));
-    document.querySelectorAll('#clsBtns .fb').forEach(b => b.className='fb fb-classe'+(parseInt(b.textContent)===cCls?' on':''));
+    document.querySelectorAll('#clsBtns .fb').forEach(b => b.className='fb fb-classe'+(parseInt(b.dataset.cls)===cCls?' on':''));
     document.querySelectorAll('#catGrupoBtns .fb').forEach(b => b.className='fb'+(b.textContent===cCatGrupo?' on':''));
 }
 
@@ -803,14 +806,35 @@ function updateComissao() {
 
 // BMax aparece so nos estados marcados no admin (Estados > Segmento BMax)
 function bmaxAtivoNaUF() { const s = ST.find(x => x.uf === cState); return !!(s && s.bmax_ativo); }
+// BMAX: em estado COM revenda BMax o preco das maquinas usa o conjunto 'estado com BMax' (referencia = revenda BMax); nos demais, o conjunto padrao (referencia = Varejo)
+function grupoPreco(g) { return (g === 'Máquinas' && bmaxAtivoNaUF()) ? 'Máquinas (estado com BMax)' : g; }
 function dicaClasse(seg, c) {
     if (seg === 'Híbrido' || seg === 'Ecommerce') return c === 1 ? 'Cliente sem ocorrência ou restrição de PMA' : (c === 2 ? 'Cliente com alguma ocorrência de PMA' : '');
     return '';
 }
 // cada segmento mostra so as classes que existem nos multiplicadores (Hibrido/Ecommerce: 1 e 2)
 function ajustarClasses() {
+    if (IS_AUTO) {
+        // BMAX: cada grupo/segmento mostra so as classes que existem; 'Sem revenda' (classe 7) so em Maquinas + segmento Boxer e so em estado SEM revenda BMax
+        const set = CLASSES_GRP[cSeg + '|' + cCatGrupo];
+        const existentes = (cCatGrupo && set) ? [...set] : CLS.filter(c => c !== 7);
+        const bloqueada7 = bmaxAtivoNaUF();
+        if (cCls === 7 && (!existentes.includes(7) || bloqueada7)) { cCls = 0; updBtns(); }
+        document.querySelectorAll('#clsBtns .fb').forEach(b => {
+            const c = parseInt(b.dataset.cls);
+            const existe = existentes.includes(c);
+            b.style.display = existe ? '' : 'none';
+            b.disabled = (c === 7 && bloqueada7);
+            b.style.opacity = b.disabled ? '.45' : '';
+            b.style.cursor = b.disabled ? 'not-allowed' : '';
+            b.title = c === 7
+                ? ('Para PCIs do projeto BMax sem revenda envolvida. Use somente nesses casos.' + (bloqueada7 ? ' Indisponível: este estado tem revenda BMax.' : ''))
+                : dicaClasse(cSeg, c);
+        });
+        return;
+    }
     const set = CLASSES_SEG[cSeg];
-    if (IS_AUTO || !set) return;
+    if (!set) return;
     const permitidas = [...set].sort((a, b) => a - b);
     if (!permitidas.includes(cCls)) { cCls = permitidas[permitidas.length - 1]; updBtns(); }
     document.querySelectorAll('#clsBtns .fb').forEach(b => {
@@ -855,7 +879,7 @@ function render() {
             let r = '';
             ps.forEach(p => {
                 const tb = p.pv_sp * parseFloat(st.mult_4_icms) / (1 - parseFloat(st.mult_total)/100);
-                const dim = IS_AUTO ? p.catGroup : p.porte;
+                const dim = IS_AUTO ? grupoPreco(p.catGroup) : p.porte;
                 const k = cSeg+cCls+dim;
                 const scm = M[k];
                 let pc = scm!==undefined ? `<td class="td-price-final">${fmt(tb*scm)}</td>` : `<td style="text-align:right;color:#a0aec0;font-style:italic;font-size:12px">N/D</td>`;
@@ -937,6 +961,7 @@ function limparSelecao() {
 
 function gerarProposta() {
     if (selecionados.size === 0) return;
+    if (TID === 2) { alert('Nesta tela de teste os preços da BMAX são uma simulação das regras novas e NÃO geram proposta. Para gerar uma proposta de verdade, use a tabela atual (tabela-de-precos.html?t=2).'); return; }
     selecionados.forEach((it, c) => { it.quantidade = QTD[c] > 0 ? QTD[c] : 1; });
     logUso('gerar_proposta', { itens: [...selecionados.values()].map(i => i.codigo + ' x' + i.quantidade), uf: cState, segmento: cSeg, classe: cCls, grupo: cCatGrupo || null });
     sessionStorage.setItem('proposta_draft', JSON.stringify({
