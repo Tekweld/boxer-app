@@ -136,7 +136,7 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 
 <div class="panel-content hidden" id="tab-multiplicadores">
 <div class="panel-header"><div><div class="panel-title">Multiplicadores Comerciais</div></div>
-<select id="multTabela" class="select-sm" onchange="loadMult()"><option value="1">Revendas</option><option value="2">BMAX</option><option value="3">Revendas Teste</option><option value="4">Revendas — novas regras (teste)</option></select></div>
+<select id="multTabela" class="select-sm" onchange="loadMult()"><option value="1">Revendas</option><option value="2">BMAX</option><option value="3">Revendas Teste</option><option value="4">Revendas — novas regras (teste)</option><option value="5">BMAX — novas regras (teste)</option></select></div>
 <div id="multGrid"><div class="loading">Carregando...</div></div>
 </div>
 
@@ -842,7 +842,7 @@ async function saveEst(id,uf,antigoM4,antigoMt){
 async function loadMult(){
     try{
         const tid=document.getElementById('multTabela').value;
-        const isBmax=tid==='2';
+        const isBmax=(tid==='2'||tid==='5');
         const filtro=isBmax?'&categoria_grupo=not.is.null':'';
         const d=await sb('/multiplicadores?tabela_id=eq.'+tid+filtro+'&select=*&order=segmento,classe');
         const dimOf=m=>isBmax?m.categoria_grupo:m.porte;
