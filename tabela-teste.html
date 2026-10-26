@@ -738,7 +738,7 @@ async function carregarDados(recarga) {
     document.getElementById('pageSubtitle').textContent = `Atualizado em ${atualizado} · ${P.length} produtos${(TID === 1 || TID === 2) ? ' · regras novas (simulação)' : ''}`;
 
     if (IS_AUTO) {
-        document.getElementById('pageTitle').innerHTML = 'Tabela de Preços Boxer <img src="bmax-logo.png" alt="BMax" style="height:26px;vertical-align:middle;margin-left:8px">';
+        document.getElementById('pageTitle').innerHTML = 'Tabela de Preços Boxer <img src="bpartner-logo.png" alt="BPartner" style="height:28px;vertical-align:middle;margin-left:10px">';
         document.querySelector('.header').style.borderBottomColor = '#e30613';
         document.getElementById('navBtn').href = 'tabela-teste.html?t=1';
         document.getElementById('navBtn').innerHTML = '&#10132; Tabela Revendas';
@@ -747,7 +747,7 @@ async function carregarDados(recarga) {
         document.getElementById('catGrupoWrap').style.display = '';
     } else {
         document.getElementById('navBtn').href = 'tabela-teste.html?t=2';
-        document.getElementById('navBtn').innerHTML = '<img src="bmax-logo.png" height="32" style="display:block">';
+        document.getElementById('navBtn').innerHTML = '<img src="bpartner-logo.png" alt="BPartner" height="26" style="display:block">';
     }
 
     if (!recarga) buildFilters();
@@ -808,6 +808,16 @@ function updateComissao() {
 function bmaxAtivoNaUF() { const s = ST.find(x => x.uf === cState); return !!(s && s.bmax_ativo); }
 // BMAX: em estado COM revenda BMax o preco das maquinas usa o conjunto 'estado com BMax' (referencia = revenda BMax); nos demais, o conjunto padrao (referencia = Varejo)
 function grupoPreco(g) { return (g === 'Máquinas' && bmaxAtivoNaUF()) ? 'Máquinas (estado com BMax)' : g; }
+// BMAX Maquinas: markup da classe sobre o preco de referencia (revenda BMax F1 em estado com BMax; Varejo Fisica F1 nos demais)
+function dicaMarkup(seg, c) {
+    if (!IS_AUTO || cCatGrupo !== 'Máquinas') return '';
+    const m = M[seg + c + grupoPreco('Máquinas')];
+    if (!m) return '';
+    const com = bmaxAtivoNaUF();
+    const ref = (com ? 0.92 : 0.9844) / 1.308;
+    const pct = Math.round((m / ref - 1) * 1000) / 10;
+    return 'Markup de ' + String(pct).replace('.', ',') + '% sobre o preço de ' + (com ? 'revenda BMax (classe 1)' : 'Varejo Física (classe 1, Grandes)');
+}
 function dicaClasse(seg, c) {
     if (seg === 'Híbrido' || seg === 'Ecommerce') return c === 1 ? 'Cliente sem ocorrência ou restrição de PMA' : (c === 2 ? 'Cliente com alguma ocorrência de PMA' : '');
     return '';
@@ -829,7 +839,7 @@ function ajustarClasses() {
             b.style.cursor = b.disabled ? 'not-allowed' : '';
             b.title = c === 7
                 ? ('Para PCIs do projeto BMax sem revenda envolvida. Use somente nesses casos.' + (bloqueada7 ? ' Indisponível: este estado tem revenda BMax.' : ''))
-                : dicaClasse(cSeg, c);
+                : (dicaMarkup(cSeg, c) || dicaClasse(cSeg, c));
         });
         return;
     }
