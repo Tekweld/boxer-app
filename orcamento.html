@@ -30,20 +30,23 @@ body{font-family:Outfit,sans-serif;background:var(--bg);color:var(--tx);padding-
 .chip.exp{background:#fee2e2;color:#991b1b}
 .card{background:#fff;border:1px solid var(--bd);border-radius:14px;margin-bottom:16px;overflow:hidden}
 .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--tx2);font-weight:600;padding:16px 22px 0}
-.item{display:grid;grid-template-columns:92px 1fr auto;gap:16px;padding:18px 22px;border-bottom:1px solid var(--bd2);align-items:center}
-.item:last-child{border-bottom:none}
-.item .foto{width:92px;height:92px;border-radius:10px;background:#f7fafc;border:1px solid var(--bd2);display:flex;align-items:center;justify-content:center;overflow:hidden}
-.item .foto img{max-width:100%;max-height:100%;object-fit:contain}
-.item .foto svg{opacity:.35}
-.item h3{font-size:16px;color:var(--az);font-weight:600;line-height:1.3}
-.item .meta{font-size:12.5px;color:var(--tx2);margin-top:3px}
-.item .desc{font-size:13px;color:#4a5568;margin-top:6px;line-height:1.45}
-.item .val{text-align:right;white-space:nowrap}
-.item .val .q{font-size:12.5px;color:var(--tx2)}
-.item .val .riscado{font-size:12px;color:#a0aec0;text-decoration:line-through}
-.item .val .u{font-size:14px;color:#4a5568}
-.item .val .s{font-size:18px;font-weight:700;color:var(--az)}
-.resumo{padding:8px 22px 20px}
+.tab{width:100%;border-collapse:collapse;font-size:14px}
+.tab th{font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--tx2);font-weight:600;text-align:left;padding:12px 14px;border-bottom:2px solid var(--bd2);background:#f7fafc}
+.tab td{padding:14px;border-bottom:1px solid var(--bd2);vertical-align:middle}
+.tab .r{text-align:right;white-space:nowrap}
+.tab .prod{display:flex;gap:12px;align-items:center}
+.tab .foto{width:56px;height:56px;border-radius:8px;background:#f7fafc;border:1px solid var(--bd2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex:none}
+.tab .foto img{max-width:100%;max-height:100%;object-fit:contain}
+.tab .foto svg{opacity:.35}
+.tab .nm{font-weight:600;color:var(--az);line-height:1.3}
+.tab .cd{font-size:12px;color:var(--tx2);margin-top:2px}
+.tab .riscado{font-size:11.5px;color:#a0aec0;text-decoration:line-through;display:block}
+.tab tfoot td{border-bottom:none;padding:8px 14px;font-size:14.5px}
+.tab tfoot tr.tg td{border-top:2px solid var(--az);padding-top:14px;font-size:17px;font-weight:600}
+.tab tfoot tr.tg td.r{font-size:24px;color:var(--az);font-weight:700}
+.est{display:inline-block;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600;white-space:nowrap}
+.est.ok{background:#dcfce7;color:#166534}.est.prev{background:#fff4e5;color:#9a5b00}.est.sem{background:#fee2e2;color:#991b1b}.est.info{background:#e2e8f0;color:#4a5568}
+.tab .obs{font-size:11.5px;color:var(--tx2);margin-top:4px;white-space:normal}.resumo{padding:8px 22px 20px}
 .lin{display:flex;justify-content:space-between;padding:8px 0;font-size:14.5px;color:#4a5568;border-bottom:1px dashed var(--bd2)}
 .lin.desc b{color:var(--ok)}
 .lin.total{border:none;margin-top:6px;padding-top:12px;font-size:17px;color:var(--tx);font-weight:600;border-top:2px solid var(--az)}
@@ -91,8 +94,16 @@ body{font-family:Outfit,sans-serif;background:var(--bg);color:var(--tx);padding-
 .estado p{font-size:14.5px;color:#4a5568;line-height:1.5}
 .err{color:#991b1b;background:#fee2e2;border-radius:8px;padding:9px 12px;font-size:13px;margin-bottom:12px;display:none}
 @media(max-width:640px){
-  .item{grid-template-columns:72px 1fr;gap:12px;padding:16px}
-  .item .foto{width:72px;height:72px}
+  .tab thead{display:none}
+  .tab,.tab tbody,.tab tr,.tab td,.tab tfoot{display:block;width:100%}
+  .tab tbody tr{padding:14px;border-bottom:1px solid var(--bd2);display:grid;grid-template-columns:1fr 1fr;gap:6px 10px}
+  .tab tbody td{padding:0;border:none}
+  .tab tbody td:first-child{grid-column:1/-1}
+  .tab tbody td[data-l]::before{content:attr(data-l) ' ';font-size:11px;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px;display:block}
+  .tab .r{text-align:left}
+  .tab tfoot tr{display:flex;justify-content:space-between;padding:6px 14px}
+  .tab tfoot td{padding:0;width:auto}
+  .tab tfoot tr.tg td{font-size:15px}.tab tfoot tr.tg td.r{font-size:20px}
   .item .val{grid-column:1/-1;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 10px;text-align:left;border-top:1px dashed var(--bd2);padding-top:10px;white-space:normal}
   .item .val .s{font-size:17px}
   .hero{padding:22px 18px 18px}.hero h1{font-size:22px}
@@ -192,17 +203,27 @@ function desenhar() {
     ? '<span class="chip exp">Orçamento expirado em ' + dt(O.validade_em) + '</span>'
     : '<span class="chip val">Válido até ' + dt(O.validade_em) + (dias > 0 ? ' · ' + (dias === 1 ? 'último dia' : dias + ' dias') : '') + '</span>';
   const wa = contatoWhats();
+  const estRot = it => it.estoque === 'ok' ? '<span class="est ok">✓ Disponível</span>'
+    : it.estoque === 'prev' ? '<span class="est prev">Previsão ' + (it.previsao ? dt(it.previsao + 'T12:00:00') : 'a confirmar') + '</span>'
+    : '<span class="est sem">Sem previsão</span><div class="obs">Prazo a confirmar com o representante</div>';
   const itensHtml = O.itens.map(it => {
     const desc = it.unit < it.unit_tabela;
-    return '<div class="item"><div class="foto">' + (it.imagem_url ? '<img src="' + esc(it.imagem_url) + '" alt="" loading="lazy" onerror="this.replaceWith(semFoto())">' : semFotoHtml()) + '</div>'
-      + '<div><h3>' + esc(it.modelo) + '</h3><div class="meta">Código ' + esc(it.codigo) + (it.categoria ? ' · ' + esc(it.categoria) : '') + (it.ncm ? ' · NCM ' + esc(it.ncm) : '') + '</div>'
-      + (it.descricao ? '<div class="desc">' + esc(it.descricao) + '</div>' : '') + '</div>'
-      + '<div class="val"><div class="q">' + it.qtd + ' un.</div>' + (desc ? '<div class="riscado">' + brl(it.unit_tabela) + '</div>' : '') + '<div class="u">' + brl(it.unit) + ' cada</div><div class="s">' + brl(it.subtotal) + '</div></div></div>';
+    return '<tr><td><div class="prod"><div class="foto">' + (it.imagem_url ? '<img src="' + esc(it.imagem_url) + '" alt="" loading="lazy" onerror="this.replaceWith(semFoto())">' : semFotoHtml()) + '</div><div><div class="nm">' + esc(it.modelo) + '</div><div class="cd">Código ' + esc(it.codigo) + '</div></div></div></td>'
+      + '<td data-l="Estoque">' + estRot(it) + '</td>'
+      + '<td class="r" data-l="Qtd">' + it.qtd + '</td>'
+      + '<td class="r" data-l="Unitário">' + (desc ? '<span class="riscado">' + brl(it.unit_tabela) + '</span>' : '') + brl(it.unit) + '</td>'
+      + '<td class="r" data-l="Total"><b>' + brl(it.subtotal) + '</b></td></tr>';
   }).join('');
+  const un = O.itens.reduce((a, i) => a + i.qtd, 0);
+  const grp = { ok: 0, prev: 0, sem: 0 };
+  O.itens.forEach(i => { grp[i.estoque === 'ok' ? 'ok' : (i.estoque === 'prev' ? 'prev' : 'sem')] += i.subtotal; });
+  const linhaTot = (rot, v) => v > 0.004 ? '<tr><td colspan="4" class="r">' + rot + '</td><td class="r">' + brl(v) + '</td></tr>' : '';
+  const tfoot = '<tfoot><tr><td colspan="2" class="r"><b>Total de unidades</b></td><td class="r"><b>' + un + '</b></td><td colspan="2"></td></tr>'
+    + linhaTot('Itens disponíveis', grp.ok) + linhaTot('Itens com previsão de chegada', grp.prev) + linhaTot('Itens sem previsão', grp.sem)
+    + (O.frete_valor > 0 ? linhaTot('Frete', O.frete_valor) : '')
+    + '<tr class="tg"><td colspan="4" class="r">Total geral do orçamento</td><td class="r">' + brl(O.total_final) + '</td></tr></tfoot>';
+  const descTxt = O.desconto_vista_pct > 0 ? 'Valores com desconto à vista de ' + String(O.desconto_vista_pct).replace('.', ',') + '% já aplicado. ' : '';
 
-  const bruto = O.itens.reduce((a, i) => a + i.unit_tabela * i.qtd, 0);
-  const liquido = O.itens.reduce((a, i) => a + i.subtotal, 0);
-  const descVista = bruto - liquido;
   const pg = condPagamento(), fr = condFrete();
 
   $('app').innerHTML =
@@ -212,25 +233,13 @@ function desenhar() {
     + '<div class="hero"><small>Proposta comercial</small><h1>Orçamento para ' + esc(O.cliente_fantasia || O.cliente_nome) + '</h1>'
     + '<p>Preparamos esta proposta com os equipamentos e as condições combinadas. ' + (O.vendedor_nome ? 'Quem cuida do seu atendimento é <b>' + esc(O.vendedor_nome) + '</b>.' : '') + '</p>'
     + '<div class="chips">' + valChip + '<span class="chip">Emitido em ' + dt(O.criado_em) + '</span>' + (O.itens.length ? '<span class="chip">' + O.itens.length + (O.itens.length > 1 ? ' produtos' : ' produto') + '</span>' : '') + '</div></div>'
-    + '<div class="card"><h2>Produtos</h2>' + itensHtml + '</div>'
-    + '<div class="card"><h2>Resumo dos valores</h2><div class="resumo">'
-    + '<div class="lin"><span>Produtos</span><span>' + brl(bruto) + '</span></div>'
-    + (descVista > 0.004 ? '<div class="lin desc"><span>Desconto à vista (' + String(O.desconto_vista_pct).replace('.', ',') + '%)</span><b>− ' + brl(descVista) + '</b></div>' : '')
-    + (O.frete_valor > 0 ? '<div class="lin"><span>Frete</span><span>' + brl(O.frete_valor) + '</span></div>' : '')
-    + '<div class="lin total"><span>Total do orçamento</span><b>' + brl(O.total_final) + '</b></div>'
-    + '<div class="nota">Preços com todos os impostos inclusos.</div>'
-    + '</div></div>'
+    + '<div class="card"><h2>Produtos</h2><table class="tab"><thead><tr><th>Produto</th><th>Estoque</th><th class="r">Qtd</th><th class="r">Unitário</th><th class="r">Total</th></tr></thead><tbody>' + itensHtml + '</tbody>' + tfoot + '</table><div class="resumo"><div class="nota">' + descTxt + 'Preços com todos os impostos inclusos.' + (grp.sem > 0.004 ? ' Itens sem previsão de estoque têm prazo de entrega a confirmar com o representante.' : '') + '</div></div></div>'
     + '<div class="card"><h2>Condições</h2><div class="cond">'
     + '<div><div class="t">Pagamento</div><div class="v">' + pg.v + '<small>' + pg.s + '</small></div></div>'
     + '<div><div class="t">Frete</div><div class="v">' + fr.v + '<small>' + fr.s + '</small></div></div>'
     + '<div><div class="t">Validade</div><div class="v">' + dt(O.validade_em) + '<small>Os preços e condições valem até esta data.</small></div></div>'
     + '<div><div class="t">Entrega</div><div class="v">Sujeita à disponibilidade<small>O prazo é confirmado por ' + (O.vendedor_nome ? esc(O.vendedor_nome) : 'seu representante') + ' ao aprovar o pedido.</small></div></div>'
     + '</div>' + (O.observacoes ? '<div class="resumo" style="padding-top:0"><div class="t" style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#718096;font-weight:600;margin:6px 0">Observações</div><div style="font-size:14px;color:#4a5568;white-space:pre-line;line-height:1.5">' + esc(O.observacoes) + '</div></div>' : '') + '</div>'
-    + '<div class="card"><h2>Por que a Boxer</h2><div class="porque">'
-    + '<div><b>Fabricante nacional</b><span>Equipamentos de solda e corte desenvolvidos e fabricados no Brasil.</span></div>'
-    + '<div><b>Preço e condições claras</b><span>Valor, pagamento e frete definidos aqui, sem surpresa na hora de fechar.</span></div>'
-    + '<div><b>Atendimento direto</b><span>Seu representante acompanha o pedido até a entrega.</span></div>'
-    + '</div></div>'
     + '<div class="card"><h2>Dados</h2><div class="dados">'
     + '<div><b>Cliente</b>' + esc(O.cliente_nome) + '<br>' + fmtCnpj(O.cliente_cnpj) + (O.cliente_contato ? '<br>A/C ' + esc(O.cliente_contato) : '') + (O.cliente_cidade ? '<br>' + esc(O.cliente_cidade) + '/' + esc(O.cliente_uf || '') : '') + '</div>'
     + '<div><b>Seu representante</b>' + esc(O.vendedor_nome || '') + (O.vendedor_telefone ? '<br>' + fmtTel(O.vendedor_telefone) : '') + (O.vendedor_email ? '<br>' + esc(O.vendedor_email) : '') + '</div>'
