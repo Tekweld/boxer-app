@@ -123,6 +123,37 @@ body.locked .header,body.locked .content,body.locked #barProposta,body.locked #t
 .det-tab td{padding:6px 0;border-bottom:1px solid #f0f4f8;vertical-align:top}
 .det-tab td:first-child{color:#718096;width:42%;padding-right:10px}
 .det-nota{font-size:12px;color:#718096;margin-top:6px}
+.nav-top{position:absolute;right:24px;top:18px;display:flex;gap:10px;align-items:center}
+.nav-top .nav-btn{position:static}
+.nav-btn.sec{border-color:rgba(255,255,255,.35);background:rgba(255,255,255,.08)}
+.nav-btn.sec:hover{background:rgba(255,255,255,.25)}
+#regrasOverlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:2600;padding:16px}
+#regrasOverlay.show{display:flex}
+#regrasOverlay .det-card{max-width:640px}
+.regras-uf{background:#eef2fa;border-radius:8px;padding:10px 14px;margin:14px 20px 4px;font-size:13.5px;color:#1d327b;font-weight:600}
+.regras-corpo{padding:8px 20px 20px;font-family:Outfit,sans-serif}
+.regras-corpo details{border-bottom:1px solid #e2e8f0;padding:10px 0}
+.regras-corpo summary{font-weight:600;color:#1d327b;cursor:pointer;font-size:14.5px}
+.regras-corpo h5{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#718096;margin:12px 0 6px}
+.regras-corpo p{font-size:13.5px;margin:6px 0;color:#1a202c}
+.regras-corpo .det-lista{margin:6px 0}
+.regras-tab th{text-align:left;font-size:11px;color:#718096;font-weight:600;padding:5px 8px 5px 0;border-bottom:2px solid #e2e8f0}
+.regras-tab td{padding:5px 8px 5px 0}
+.regras-tab td:first-child{width:auto;color:#1a202c}
+.regras-tab tr.uf-hit td{background:#fef9c3;font-weight:600}
+.regras-scroll{max-height:300px;overflow:auto;margin:6px 0}
+.chip{padding:9px 14px;border-radius:8px;border:1px solid #c3cfe2;background:#fff;color:#4a5568;font-size:13px;font-family:Outfit;cursor:pointer;white-space:nowrap}
+.chip:hover{border-color:#1d327b;color:#1d327b}
+.chip.on{background:#1d327b;border-color:#1d327b;color:#fff}
+.tag-mud{font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px;margin-left:6px;background:#fef3c7;color:#92400e;vertical-align:middle;cursor:help}
+.tag-novo{background:#dcfce7;color:#166534}
+.aviso-mult{font-size:12px;color:#92400e;background:#fef3c7;border-radius:6px;padding:6px 10px}
+#barTotal{font-family:Outfit;font-size:14px;color:#fff;margin-left:18px}
+#barTotal strong{color:#25bbee;font-size:18px}
+#barClasse{font-family:Outfit;font-size:12.5px;color:#c8ddf0;margin-left:18px}
+#barClasse b{color:#fff}
+#barClasse button{margin-left:8px;background:#fff;color:#1d327b;border:none;border-radius:6px;padding:5px 10px;font-family:Outfit;font-size:12px;font-weight:600;cursor:pointer}
+.barEsq{display:flex;align-items:center;flex-wrap:wrap;row-gap:4px}
 .det-vazio{color:#a0aec0;text-align:center;padding:28px 0;font-size:14px}
 .btn-export{padding:9px 16px;border-radius:8px;border:1px solid #1d327b;background:#fff;color:#1d327b;font-family:Outfit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
 .btn-export:hover{background:#1d327b;color:#fff}
@@ -218,6 +249,14 @@ body.locked .header,body.locked .content,body.locked #barProposta,body.locked #t
   </div>
 </div>
 
+<div id="regrasOverlay" onclick="if(event.target===this)fecharRegras()">
+  <div class="det-card">
+    <div class="det-head"><div><h3 id="regrasTitulo">Regras</h3><div class="cod">Resumo da política para consulta</div></div><button class="det-x" onclick="fecharRegras()" aria-label="Fechar">&times;</button></div>
+    <div id="regrasUF"></div>
+    <div class="regras-corpo" id="regrasCorpo"></div>
+  </div>
+</div>
+
 <div id="detOverlay" onclick="if(event.target===this)fecharDetalhes()">
   <div class="det-card">
     <div class="det-head"><div><h3 id="detTitulo"></h3><div class="cod" id="detCodigo"></div></div><button class="det-x" onclick="fecharDetalhes()" aria-label="Fechar">&times;</button></div>
@@ -226,7 +265,7 @@ body.locked .header,body.locked .content,body.locked #barProposta,body.locked #t
 </div>
 
 <div class="header" style="position:relative;"><div class="header-inner">
-<a id="navBtn" href="#" class="nav-btn"></a>
+<div class="nav-top"><button id="regrasBtn" class="nav-btn sec" onclick="abrirRegras()" title="Regras da política para consulta rápida">📋 Regras</button><a id="navBtn" href="#" class="nav-btn"></a></div>
 <div class="logo-row">
 <img src="Estrela-Boxer.svg" width="40" height="40" style="display:block">
 <div><h1 id="pageTitle">Tabela de Preços Boxer</h1><p id="pageSubtitle">Carregando...</p></div></div>
@@ -238,15 +277,15 @@ body.locked .header,body.locked .content,body.locked #barProposta,body.locked #t
 <div class="comissao-box" id="comissaoBox"><label class="filter-label">Comissionamento</label><div class="comissao-text" id="comissaoText"></div></div>
 </div></div></div>
 <div class="content">
-<div class="search-row"><input id="searchInput" class="search-input" placeholder="Buscar por nome ou código..."/><select id="selCat" class="cat-select"></select><button class="btn-export" onclick="abrirExportacao()" title="Baixar a lista de itens com a disponibilidade de cada um">⬇ Exportar disponibilidade</button></div>
+<div class="search-row"><input id="searchInput" class="search-input" placeholder="Buscar por nome ou código..."/><select id="selCat" class="cat-select"></select><button class="chip" id="chipOk" onclick="alternarFiltroDisp('ok')" title="Itens disponíveis para 1 unidade">✓ Só disponíveis</button><button class="chip" id="chipPrev" onclick="alternarFiltroDisp('prev')" title="Itens sem estoque, com previsão de chegada">Com previsão</button><button class="chip" id="chipMud" style="display:none" onclick="alternarFiltroMud()" title="Itens novos ou com preço base alterado nos últimos 7 dias"></button><span class="aviso-mult" id="avisoMult" style="display:none"></span><button class="btn-export" onclick="abrirExportacao()" title="Baixar a lista de itens com a disponibilidade de cada um">⬇ Exportar disponibilidade</button></div>
 <div id="tableArea"><div class="loading">Carregando tabela de preços...</div></div>
 <div class="footer"><p>Configuração: <strong id="footState"></strong> · <strong id="footSeg"></strong> · Classe <strong id="footCls"></strong></p></div>
 </div>
 
 <div id="barProposta">
-  <span id="barContador"></span>
+  <div class="barEsq"><span id="barContador"></span><span id="barTotal"></span><span id="barClasse"></span></div>
   <div>
-    <button id="btnLimpar" onclick="limparSelecao()">Limpar seleção</button>
+    <button id="btnLimpar" onclick="limparSelecao()">Limpar</button>
     <button id="btnGerar" onclick="gerarProposta()">Gerar Proposta →</button>
   </div>
 </div>
@@ -266,7 +305,7 @@ const SZC = {Pequenas:'sz-peq',Médias:'sz-med',Grandes:'sz-grd','Maquinário':'
 
 let CLASSES_SEG = {};
 let CLASSES_GRP = {};
-let P=[], ST=[], M={}, CM={}, SEG=[], CLS=[], CATS=[], GRUPOS=[], catGroupById={}, catGroupByName={}, ESTOQUE={};
+let PBY={}, P=[], ST=[], M={}, CM={}, SEG=[], CLS=[], CATS=[], GRUPOS=[], catGroupById={}, catGroupByName={}, ESTOQUE={};
 let cState='SP', cSeg='', cCls=0, cCat='TODAS', cCatGrupo='', cSearch='';
 const ORDEM_GRUPO = {'Robô':0,'Laser':1,'Máquinas':2,'Outros':3};
 
@@ -573,6 +612,7 @@ function aoDigitarQtd(input) {
     const codigo = input.dataset.codigo;
     const v = parseInt(input.value, 10);
     QTD[codigo] = v > 0 ? v : 0;
+    updateBar();
     if (selecionados.has(codigo)) selecionados.get(codigo).quantidade = QTD[codigo] > 0 ? QTD[codigo] : 1;
     const cel = input.closest('tr').querySelector('.disp-cell');
     clearTimeout(_qtdTimers[codigo]);
@@ -759,10 +799,17 @@ async function carregarDados(recarga) {
 
     P = prodsRes.map(p => ({...p, cat: catMap[p.categoria_id] || 'SEM CATEGORIA', catGroup: catGroupById[p.categoria_id] || null}));
 
+    PBY = {}; P.forEach(p => { PBY[p.codigo] = p; });
     if (!recarga) {
         if (IS_AUTO) { cSeg=''; cCls=0; cCatGrupo=''; }
         else { cSeg = SEG[0]; cCls = CLS[CLS.length-1]; }
+        const pf = lerPrefs();
+        if (pf.uf && ST.some(s => s.uf === pf.uf)) cState = pf.uf;
+        if (pf.seg && SEG.includes(pf.seg)) cSeg = pf.seg;
+        if (pf.cls && CLS.includes(pf.cls)) cCls = pf.cls;
+        if (IS_AUTO && pf.grupo && GRUPOS.includes(pf.grupo)) cCatGrupo = pf.grupo;
     }
+    detectarMudancas();
 
     const atualizado = new Date(tabela.atualizado_em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
     TABELA_ATUALIZADA_EM = tabelaRes.slice().sort((a, b) => a.id - b.id).map(x => x.atualizado_em).join('|');
@@ -835,6 +882,172 @@ function updateComissao() {
     } else { box.style.display='none'; }
 }
 
+// --- preferencias do representante (ultima escolha) ---
+const PREFS_KEY = 'tabela_prefs_' + TID;
+function lerPrefs() { try { return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') || {}; } catch (e) { return {}; } }
+function salvarPrefs() { try { localStorage.setItem(PREFS_KEY, JSON.stringify({ uf: cState, seg: cSeg, cls: cCls, grupo: cCatGrupo })); } catch (e) {} }
+
+// --- O que mudou: comparacao feita no proprio aparelho (preco base e itens novos, 7 dias) ---
+const SNAP_KEY = 'tabela_snap_' + TID;
+let CHG = {}, FILTRO_MUD = false, FILTRO_DISP = '', _filtroDispCarregando = false;
+function detectarMudancas() {
+    try {
+        const ant = JSON.parse(localStorage.getItem(SNAP_KEY) || 'null');
+        const agora = {}; P.forEach(p => { agora[p.codigo] = p.pv_sp; });
+        const hoje = Date.now();
+        const chg = (ant && ant.chg) || {};
+        Object.keys(chg).forEach(k => { if (hoje - chg[k].em > 7 * 864e5) delete chg[k]; });
+        const mh = JSON.stringify(M).length + ':' + Object.keys(M).sort().map(k => k + '=' + M[k]).join(',').length + ':' + Object.values(M).reduce((a, v) => a + v, 0).toFixed(6);
+        let mhEm = ant && ant.mhEm;
+        if (ant && ant.p) {
+            P.forEach(p => {
+                const antes = ant.p[p.codigo];
+                if (antes === undefined) chg[p.codigo] = { t: 'novo', em: hoje };
+                else if (Math.abs(antes - p.pv_sp) > 0.005) chg[p.codigo] = { t: 'preco', de: antes, para: p.pv_sp, em: hoje };
+            });
+            if (ant.mh && ant.mh !== mh) mhEm = hoje;
+        }
+        localStorage.setItem(SNAP_KEY, JSON.stringify({ p: agora, chg, mh, mhEm, em: hoje }));
+        CHG = chg;
+        const av = $('avisoMult');
+        if (av) {
+            if (mhEm && hoje - mhEm < 7 * 864e5) { av.style.display = ''; av.textContent = 'Multiplicadores de preço atualizados em ' + new Date(mhEm).toLocaleDateString('pt-BR'); }
+            else av.style.display = 'none';
+        }
+    } catch (e) { CHG = {}; }
+    atualizarChips();
+}
+function tagMud(codigo) {
+    const c = CHG[codigo];
+    if (!c) return '';
+    if (c.t === 'novo') return '<span class="tag-mud tag-novo" title="Item novo na tabela">Novo</span>';
+    return '<span class="tag-mud" title="Preço base alterado: de ' + fmt(c.de) + ' para ' + fmt(c.para) + '">Preço alterado</span>';
+}
+function atualizarChips() {
+    const n = P.filter(p => CHG[p.codigo]).length;
+    const m = $('chipMud');
+    if (m) { m.style.display = n ? '' : 'none'; m.textContent = '🆕 ' + n + ' novos/alterados'; m.classList.toggle('on', FILTRO_MUD); }
+    const o = $('chipOk'), pv = $('chipPrev');
+    if (o) o.classList.toggle('on', FILTRO_DISP === 'ok');
+    if (pv) pv.classList.toggle('on', FILTRO_DISP === 'prev');
+}
+function alternarFiltroMud() { FILTRO_MUD = !FILTRO_MUD; atualizarChips(); render(); }
+function itensBaseFiltro() {
+    let it = P;
+    if (IS_AUTO) it = it.filter(p => p.catGroup === cCatGrupo);
+    if (cCat !== 'TODAS') it = it.filter(p => p.cat === cCat);
+    if (cSearch.trim()) { const q = cSearch.toLowerCase(); it = it.filter(p => p.modelo.toLowerCase().includes(q) || p.codigo.toLowerCase().includes(q)); }
+    return it;
+}
+function alternarFiltroDisp(t) {
+    FILTRO_DISP = (FILTRO_DISP === t) ? '' : t;
+    atualizarChips();
+    if (FILTRO_DISP) logUso('filtro_disponibilidade', { tabela: TID, filtro: FILTRO_DISP });
+    render();
+}
+async function carregarDispFiltro() {
+    if (_filtroDispCarregando) return;
+    const falta = itensBaseFiltro().filter(p => !DISP[dispKey(p.codigo, 1)]);
+    if (!falta.length) return;
+    _filtroDispCarregando = true;
+    render();
+    try {
+        const r = await fetch(HUB_API + '/api/disponibilidade?target=tabela', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + TOKEN, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ codigos: falta.map(p => p.codigo) })
+        });
+        if (!r.ok) throw new Error('Hub respondeu ' + r.status);
+        const j = await r.json();
+        falta.forEach(p => {
+            DISP[dispKey(p.codigo, 1)] = Object.assign({}, (j.resultados || {})[String(p.codigo).toUpperCase() + '|1'] || { tipo: 'sem_info' }, { em: j.consultado_em, t: Date.now() });
+        });
+        if (j.fup_em) FUP_EM = j.fup_em;
+    } catch (e) {
+        console.error('Falha ao consultar disponibilidade (filtro)', e);
+        falta.forEach(p => { DISP[dispKey(p.codigo, 1)] = { tipo: 'erro' }; });
+    }
+    _filtroDispCarregando = false;
+    render();
+}
+
+// --- botao Regras: resumo da politica (texto editavel no admin) ---
+let REGRAS = null;
+function regrasHtml(txt) {
+    const out = []; let tab = null, ul = null;
+    const fecharTab = () => { if (tab) { out.push('<div class="regras-scroll"><table class="det-tab regras-tab">' + tab.map((r, i) => {
+        const hit = i > 0 && r[0].split(',').map(s => s.trim()).includes(cState);
+        return '<tr' + (hit ? ' class="uf-hit"' : '') + '>' + r.map(c => (i === 0 ? '<th>' : '<td>') + escDet(c) + (i === 0 ? '</th>' : '</td>')).join('') + '</tr>'; }).join('') + '</table></div>'); tab = null; } };
+    const fecharUl = () => { if (ul) { out.push('<ul class="det-lista">' + ul.map(x => '<li>' + escDet(x) + '</li>').join('') + '</ul>'); ul = null; } };
+    String(txt || '').split(/\r?\n/).forEach(l => {
+        const t = l.trim(); if (!t) return;
+        if (t.includes(' | ')) { fecharUl(); (tab = tab || []).push(t.split(' | ').map(s => s.trim())); return; }
+        fecharTab();
+        if (t.startsWith('## ')) { fecharUl(); out.push('<h5>' + escDet(t.slice(3)) + '</h5>'); }
+        else if (t.startsWith('- ')) { (ul = ul || []).push(t.slice(2)); }
+        else { fecharUl(); out.push('<p>' + escDet(t) + '</p>'); }
+    });
+    fecharTab(); fecharUl();
+    return out.join('');
+}
+function resumoUF(regras) {
+    for (const r of regras) {
+        for (const l of String(r.conteudo || '').split(/\r?\n/)) {
+            const c = l.split(' | ').map(s => s.trim());
+            if (c.length >= 3 && c[0].split(',').map(s => s.trim()).includes(cState)) {
+                if (/FOB/i.test(c[1])) return cState + ' · Frete FOB: o cliente indica a transportadora';
+                return cState + ' · Frete CIF com pedido a partir de ' + c[2] + ' · abaixo disso, frete fixo de ' + (c[3] || '—');
+            }
+        }
+    }
+    return '';
+}
+async function abrirRegras() {
+    $('regrasTitulo').textContent = 'Regras — ' + (TID === 1 ? 'Revendas' : 'BMAX');
+    $('regrasUF').innerHTML = '';
+    $('regrasCorpo').innerHTML = '<p>Carregando…</p>';
+    $('regrasOverlay').classList.add('show');
+    logUso('ver_regras', { tabela: TID });
+    try {
+        if (!REGRAS) REGRAS = await sbFetch('/tabela_regras?tabela_id=eq.' + TID + '&select=ordem,titulo,conteudo&order=ordem,id');
+        if (!REGRAS.length) { $('regrasCorpo').innerHTML = '<p>Nenhuma regra cadastrada ainda.</p>'; return; }
+        const uf = resumoUF(REGRAS);
+        $('regrasUF').innerHTML = uf ? '<div class="regras-uf">' + escDet(uf) + '</div>' : '';
+        $('regrasCorpo').innerHTML = REGRAS.map((r, i) => '<details' + (i === 0 ? ' open' : '') + '><summary>' + escDet(r.titulo) + '</summary>' + regrasHtml(r.conteudo) + '</details>').join('');
+    } catch (e) {
+        $('regrasCorpo').innerHTML = '<p>Não foi possível carregar as regras agora.</p>';
+    }
+}
+function fecharRegras() { $('regrasOverlay').classList.remove('show'); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharRegras(); });
+
+// --- barra fixa: total do pedido (itens com QTD ou selecionados) e classe indicada pelo valor ---
+const CLASSES_VALOR_FISICA = [[1, 20000], [2, 7000], [3, -1]]; // politica de Revendas: classe da Fisica pelo valor do pedido
+function precoUnitCls(p, cls) {
+    const st = ST.find(s => s.uf === cState);
+    if (!st) return null;
+    const tb = p.pv_sp * parseFloat(st.mult_4_icms) / (1 - parseFloat(st.mult_total) / 100);
+    const scm = M[cSeg + cls + (IS_AUTO ? grupoPreco(p.catGroup) : p.porte)];
+    return scm === undefined ? null : tb * scm;
+}
+function itensDoPedido() {
+    const cods = new Set([...Object.keys(QTD).filter(k => QTD[k] > 0), ...selecionados.keys()]);
+    const out = [];
+    cods.forEach(c => { const p = PBY[c]; if (!p) return; const q = QTD[c] > 0 ? QTD[c] : (selecionados.has(c) ? 1 : 0); if (q > 0) out.push({ p, q }); });
+    return out;
+}
+function totalNaClasse(itens, cls) {
+    let t = 0, sem = 0;
+    itens.forEach(({ p, q }) => { const u = precoUnitCls(p, cls); if (u == null) sem++; else t += u * q; });
+    return { t, sem };
+}
+function classeIndicada(itens) {
+    const set = CLASSES_SEG[cSeg] || new Set();
+    for (const [c, min] of CLASSES_VALOR_FISICA) { if (set.has(c) && totalNaClasse(itens, c).t > min) return c; }
+    return null;
+}
+function aplicarClasse(c) { cCls = c; updBtns(); render(); }
+
 // BMax aparece so nos estados marcados no admin (Estados > Segmento BMax)
 function bmaxAtivoNaUF() { const s = ST.find(x => x.uf === cState); return !!(s && s.bmax_ativo); }
 // BMAX: em estado COM revenda BMax o preco das maquinas usa o conjunto 'estado com BMax' (referencia = revenda BMax); nos demais, o conjunto padrao (referencia = Varejo)
@@ -850,6 +1063,7 @@ function dicaMarkup(seg, c) {
     return 'Markup de ' + String(pct).replace('.', ',') + '% sobre o preço de ' + (com ? 'revenda BMax (classe 1)' : 'Varejo Física (classe 1, Grandes)');
 }
 function dicaClasse(seg, c) {
+    if (seg === 'Física') return c === 1 ? 'Pedidos acima de R$ 20.000' : (c === 2 ? 'Pedidos acima de R$ 7.000' : (c === 3 ? 'Pedidos até R$ 6.999' : ''));
     if (seg === 'Híbrido' || seg === 'Ecommerce') return c === 1 ? 'Cliente sem ocorrência ou restrição de PMA' : (c === 2 ? 'Cliente com alguma ocorrência de PMA' : '');
     return '';
 }
@@ -870,7 +1084,7 @@ function ajustarClasses() {
             b.style.cursor = b.disabled ? 'not-allowed' : '';
             b.title = c === 7
                 ? ('Para PCIs do projeto BMax sem revenda envolvida. Use somente nesses casos.' + (bloqueada7 ? ' Indisponível: este estado tem revenda BMax.' : ''))
-                : (dicaMarkup(cSeg, c) || dicaClasse(cSeg, c));
+                : (() => { let t = dicaMarkup(cSeg, c) || dicaClasse(cSeg, c); if (c === 6) t += (t ? ' · ' : '') + 'Também vale para pedido abaixo do mínimo e para o primeiro preço do PCI 12.'; return t || 'Classe 1 = menor preço e comissão; classe 6 = maior.'; })();
         });
         return;
     }
@@ -889,6 +1103,7 @@ function render() {
     if (cSeg === 'BMax' && !bmaxAtivoNaUF()) { cSeg = SEG[0]; updBtns(); }
     document.querySelectorAll('#segBtns .fb').forEach(b => { if (b.textContent === 'BMax') b.style.display = bmaxAtivoNaUF() ? '' : 'none'; });
     ajustarClasses();
+    salvarPrefs();
     const st = ST.find(s => s.uf===cState);
     const a = document.getElementById('tableArea');
 
@@ -905,6 +1120,13 @@ function render() {
     if (IS_AUTO) items = items.filter(p => p.catGroup === cCatGrupo);
     if (cCat !== 'TODAS') items = items.filter(p => p.cat===cCat);
     if (cSearch.trim()) { const q=cSearch.toLowerCase(); items=items.filter(p=>p.modelo.toLowerCase().includes(q)||p.codigo.toLowerCase().includes(q)); }
+
+    if (FILTRO_MUD) items = items.filter(p => CHG[p.codigo]);
+    if (FILTRO_DISP) {
+        if (_filtroDispCarregando) { a.innerHTML = '<div class="loading">Consultando disponibilidade…</div>'; updateComissao(); updateBar(); return; }
+        if (items.some(p => !DISP[dispKey(p.codigo, 1)])) { carregarDispFiltro(); a.innerHTML = '<div class="loading">Consultando disponibilidade…</div>'; updateComissao(); updateBar(); return; }
+        items = items.filter(p => { const r = DISP[dispKey(p.codigo, 1)]; return r && r.tipo === FILTRO_DISP; });
+    }
 
     const g = {};
     items.forEach(p => { if(!g[p.cat]) g[p.cat]=[]; g[p.cat].push(p); });
@@ -932,11 +1154,11 @@ function render() {
                     const celSel = podeSelecionar
                         ? `<td class="ac"><button class="btn-sel${jaSel?' selecionado':''}" data-sel="${p.codigo}" data-modelo="${p.modelo.replace(/"/g,'&quot;')}" data-cat="${p.cat}" data-pvsp="${p.pv_sp}" data-final="${(tb*(scm||1)).toFixed(2)}" data-mult="${scm||''}" data-porte="${p.porte}" onclick="toggleSel(this)">${jaSel?'✓ Selecionado':'+ Selecionar'}</button></td>`
                         : `<td class="ac"></td>`;
-                    r += `<tr${jaSel?' class="row-sel"':''}>${celSel}<td class="td-code">${p.codigo}</td><td class="td-name"><span class="info-i" title="Ver foto, descrição e características" role="button" tabindex="0">ⓘ</span>${p.modelo}</td><td class="ac"><span class="size-badge ${SZC[p.porte]||'sz-grd'}">${SZ[p.porte]||p.porte}</span></td><td class="td-price-base">${fmt(tb)}</td>${pc}<td class="td-pct">${ic}%</td><td class="td-pct">${p.ipi}%</td><td class="td-ncm">${p.ncm}</td>${celFim}</tr>`;
+                    r += `<tr${jaSel?' class="row-sel"':''}>${celSel}<td class="td-code">${p.codigo}</td><td class="td-name"><span class="info-i" title="Ver foto, descrição e características" role="button" tabindex="0">ⓘ</span>${p.modelo}${tagMud(p.codigo)}</td><td class="ac"><span class="size-badge ${SZC[p.porte]||'sz-grd'}">${SZ[p.porte]||p.porte}</span></td><td class="td-price-base">${fmt(tb)}</td>${pc}<td class="td-pct">${ic}%</td><td class="td-pct">${p.ipi}%</td><td class="td-ncm">${p.ncm}</td>${celFim}</tr>`;
                 } else {
                     const celQtd = IS_TEST ? `<td class="ac"><input type="number" class="qtd-input" min="0" placeholder="0" data-codigo="${p.codigo}" style="width:56px;text-align:center"></td>` : '';
                     const celExtra = IS_TEST ? `<td class="ac disponivel-cell" data-codigo="${p.codigo}"></td><td class="ac previsao-cell" data-codigo="${p.codigo}"></td>` : '';
-                    r += `<tr>${celQtd}<td class="td-code">${p.codigo}</td><td class="td-name"><span class="info-i" title="Ver foto, descrição e características" role="button" tabindex="0">ⓘ</span>${p.modelo}</td><td class="ac"><span class="size-badge ${SZC[p.porte]||'sz-grd'}">${SZ[p.porte]||p.porte}</span></td><td class="td-price-base">${fmt(tb)}</td>${pc}<td class="td-pct">${ic}%</td><td class="td-pct">${p.ipi}%</td><td class="td-ncm">${p.ncm}</td>${celFim}</tr>`;
+                    r += `<tr>${celQtd}<td class="td-code">${p.codigo}</td><td class="td-name"><span class="info-i" title="Ver foto, descrição e características" role="button" tabindex="0">ⓘ</span>${p.modelo}${tagMud(p.codigo)}</td><td class="ac"><span class="size-badge ${SZC[p.porte]||'sz-grd'}">${SZ[p.porte]||p.porte}</span></td><td class="td-price-base">${fmt(tb)}</td>${pc}<td class="td-pct">${ic}%</td><td class="td-pct">${p.ipi}%</td><td class="td-ncm">${p.ncm}</td>${celFim}</tr>`;
                 }
             });
             const propHeader = IS_AUTO ? '<th class="ac" style="width:110px">Proposta</th>' : '';
@@ -950,9 +1172,10 @@ function render() {
     document.getElementById('footSeg').textContent = cSeg;
     document.getElementById('footCls').textContent = cCls + (dicaClasse(cSeg, cCls) ? ' — ' + dicaClasse(cSeg, cCls) : '');
     updateComissao();
+    updateBar();
 }
 
-function updateBar() {
+function updateBarAntigo() {
     const n = selecionados.size;
     const bar = document.getElementById('barProposta');
     if (n > 0) {
@@ -961,6 +1184,27 @@ function updateBar() {
     } else {
         bar.classList.remove('visible');
     }
+}
+
+function updateBar() {
+    const bar = $('barProposta');
+    const itens = itensDoPedido();
+    const n = itens.length;
+    if (!n) { bar.classList.remove('visible'); return; }
+    bar.classList.add('visible');
+    $('btnGerar').style.display = IS_AUTO ? '' : 'none';
+    const un = itens.reduce((a, x) => a + x.q, 0);
+    $('barContador').innerHTML = '<strong>' + n + '</strong> ' + (n > 1 ? 'itens' : 'item') + ' · ' + un + ' un.';
+    if (!cSeg || !cCls) { $('barTotal').innerHTML = ''; $('barClasse').innerHTML = ''; return; }
+    const r = totalNaClasse(itens, cCls);
+    $('barTotal').innerHTML = 'Total: <strong>' + fmt(r.t) + '</strong>' + (r.sem ? ' <small>(' + r.sem + ' sem preço)</small>' : '');
+    let hint = '';
+    if (!IS_AUTO && cSeg === 'Física') {
+        const ind = classeIndicada(itens);
+        if (ind && ind !== cCls) hint = 'Pelo total, a classe indicada é a <b>' + ind + '</b> (' + fmt(totalNaClasse(itens, ind).t) + ') <button onclick="aplicarClasse(' + ind + ')">Usar classe ' + ind + '</button>';
+        else if (ind) hint = 'Classe ' + ind + ' conforme o valor do pedido ✓';
+    }
+    $('barClasse').innerHTML = hint;
 }
 
 function toggleSel(btn) {
@@ -992,6 +1236,9 @@ function toggleSel(btn) {
 
 function limparSelecao() {
     selecionados.clear();
+    QTD = {};
+    document.querySelectorAll('.qtd-input').forEach(i => { i.value = ''; });
+    atualizarTodasDisponibilidades();
     document.querySelectorAll('.btn-sel.selecionado').forEach(b => {
         b.textContent = '+ Selecionar';
         b.classList.remove('selecionado');
