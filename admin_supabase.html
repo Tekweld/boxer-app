@@ -727,15 +727,15 @@ async function loadAcessos(){
         const ult={};logs.forEach(l=>{const k=(l.email||'').toLowerCase();if(k&&!ult[k])ult[k]=l.criado_em;});
         let h='<div style="font-weight:600;color:#1d327b;margin:0 0 6px">Solicitações pendentes <span style="font-weight:400;color:#718096">('+sol.length+')</span></div>';
         if(sol.length){
-            h+='<table><thead><tr><th>Quando</th><th>Nome</th><th>Email</th><th>Empresa</th><th>Mensagem</th><th class="text-center">Ação</th></tr></thead><tbody>';
-            sol.forEach(s=>{h+=`<tr><td style="white-space:nowrap">${new Date(s.criado_em).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</td><td>${escUso(s.nome)}</td><td>${escUso(s.email)}</td><td>${escUso(s.empresa||'—')}</td><td style="font-size:12px;color:#4a5568;max-width:260px">${escUso(s.mensagem||'—')}</td><td class="text-center" style="white-space:nowrap"><button class="btn btn-primary btn-sm" onclick="openAcessoModal(null,'${s.id}')">Aprovar</button> <button class="btn btn-danger btn-sm" onclick="negarSolicitacao('${s.id}')">Negar</button></td></tr>`;});
+            h+='<table><thead><tr><th>Quando</th><th>Nome</th><th>Email</th><th>Telefone</th><th>Empresa</th><th>Mensagem</th><th class="text-center">Ação</th></tr></thead><tbody>';
+            sol.forEach(s=>{h+=`<tr><td style="white-space:nowrap">${new Date(s.criado_em).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</td><td>${escUso(s.nome)}</td><td>${escUso(s.email)}</td><td style="white-space:nowrap">${escUso(s.telefone||'—')}</td><td>${escUso(s.empresa||'—')}</td><td style="font-size:12px;color:#4a5568;max-width:260px">${escUso(s.mensagem||'—')}</td><td class="text-center" style="white-space:nowrap"><button class="btn btn-primary btn-sm" onclick="openAcessoModal(null,'${s.id}')">Aprovar</button> <button class="btn btn-danger btn-sm" onclick="negarSolicitacao('${s.id}')">Negar</button></td></tr>`;});
             h+='</tbody></table>';
         } else h+='<div style="color:#a0aec0;padding:8px 0 14px">Nenhuma solicitação pendente.</div>';
         h+='<div style="font-weight:600;color:#1d327b;margin:20px 0 6px">Pessoas com acesso <span style="font-weight:400;color:#718096">('+usu.length+')</span></div>';
-        h+='<table><thead><tr><th>Nome</th><th>Email</th><th>Empresa</th><th>Tipo</th><th>Validade</th><th>Status</th><th>Último acesso</th><th class="text-center">Ação</th></tr></thead><tbody>';
+        h+='<table><thead><tr><th>Nome</th><th>Email</th><th>Telefone</th><th>Empresa</th><th>Tipo</th><th>Validade</th><th>Status</th><th>Último acesso</th><th class="text-center">Ação</th></tr></thead><tbody>';
         usu.forEach(u=>{const st=statusAcesso(u);const ua=ult[u.email.toLowerCase()];
-            h+=`<tr><td>${escUso(u.nome||'—')}</td><td>${escUso(u.email)}</td><td>${escUso(u.empresa||'—')}</td><td>${u.tipo==='interno'?'Interno':'Externo'}${u.origem==='dominio'?' <span style="font-size:10px;color:#a0aec0">(domínio Boxer)</span>':''}</td><td>${u.validade?fmtDataBR(u.validade):'Sem prazo'}</td><td><span class="size-badge" style="background:${st.c};color:${st.f}">${st.t}</span></td><td style="font-size:12px">${ua?new Date(ua).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'nunca'}</td><td class="text-center" style="white-space:nowrap"><button class="btn btn-outline btn-sm" onclick="openAcessoModal('${u.id}')">Editar</button> <button class="btn btn-outline btn-sm" onclick="renovarAcesso('${u.id}')">+90 dias</button> ${u.ativo?`<button class="btn btn-danger btn-sm" onclick="alterarAtivoAcesso('${u.id}',false)">Revogar</button>`:`<button class="btn btn-outline btn-sm" onclick="alterarAtivoAcesso('${u.id}',true)">Reativar</button>`}</td></tr>`;});
-        if(!usu.length)h+='<tr><td colspan="8" style="text-align:center;color:#a0aec0;padding:16px">Ninguém cadastrado ainda</td></tr>';
+            h+=`<tr><td>${escUso(u.nome||'—')}</td><td>${escUso(u.email)}</td><td style="white-space:nowrap">${escUso(u.telefone||'—')}</td><td>${escUso(u.empresa||'—')}</td><td>${u.tipo==='interno'?'Interno':'Externo'}${u.origem==='dominio'?' <span style="font-size:10px;color:#a0aec0">(domínio Boxer)</span>':''}</td><td>${u.validade?fmtDataBR(u.validade):'Sem prazo'}</td><td><span class="size-badge" style="background:${st.c};color:${st.f}">${st.t}</span></td><td style="font-size:12px">${ua?new Date(ua).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'nunca'}</td><td class="text-center" style="white-space:nowrap"><button class="btn btn-outline btn-sm" onclick="openAcessoModal('${u.id}')">Editar</button> <button class="btn btn-outline btn-sm" onclick="renovarAcesso('${u.id}')">+90 dias</button> ${u.ativo?`<button class="btn btn-danger btn-sm" onclick="alterarAtivoAcesso('${u.id}',false)">Revogar</button>`:`<button class="btn btn-outline btn-sm" onclick="alterarAtivoAcesso('${u.id}',true)">Reativar</button>`}</td></tr>`;});
+        if(!usu.length)h+='<tr><td colspan="9" style="text-align:center;color:#a0aec0;padding:16px">Ninguém cadastrado ainda</td></tr>';
         h+='</tbody></table><p style="font-size:11px;color:#718096;margin-top:10px">A equipe já cadastrada no painel admin e no sistema de propostas entra automaticamente, sem aparecer aqui. Quem tem email @boxersoldas.com.br é adicionado como Interno no primeiro acesso. A sessão vale 15 dias; depois disso é preciso pedir um novo código.</p>';
         wrap.innerHTML=h;
     }catch(e){
@@ -782,10 +782,11 @@ function logAdmin(evento,detalhe){
 function openAcessoModal(id,solId){
     const u=id?ACESSOS_USU.find(x=>x.id===id):null;
     const s=solId?ACESSOS_SOL.find(x=>x.id===solId):null;
-    const base=u||(s?{nome:s.nome,email:s.email,empresa:s.empresa,tipo:'externo',validade:new Date(Date.now()+90*864e5).toISOString().slice(0,10)}:{tipo:'externo',validade:new Date(Date.now()+90*864e5).toISOString().slice(0,10)});
+    const base=u||(s?{nome:s.nome,email:s.email,telefone:s.telefone,empresa:s.empresa,tipo:'externo',validade:new Date(Date.now()+90*864e5).toISOString().slice(0,10)}:{tipo:'externo',validade:new Date(Date.now()+90*864e5).toISOString().slice(0,10)});
     openModal(`<h3>${u?'Editar acesso':(s?'Aprovar solicitação':'Adicionar pessoa')}</h3>
 <div class="form-row"><label>Nome</label><input id="ac_n" value="${escUso(base.nome||'')}"></div>
 <div class="form-row"><label>Email</label><input id="ac_e" type="email" value="${escUso(base.email||'')}" ${u?'readonly style="background:#f7fafc"':''}></div>
+<div class="form-row"><label>Telefone / WhatsApp *</label><input id="ac_tel" type="tel" placeholder="(11) 99999-9999" value="${escUso(base.telefone||'')}"></div>
 <div class="form-row"><label>Empresa</label><input id="ac_emp" value="${escUso(base.empresa||'')}"></div>
 <div class="form-row-inline"><div class="form-row"><label>Tipo</label><select id="ac_t"><option value="externo" ${base.tipo==='externo'?'selected':''}>Externo</option><option value="interno" ${base.tipo==='interno'?'selected':''}>Interno</option></select></div>
 <div class="form-row"><label>Válido até (vazio = sem prazo)</label><input id="ac_v" type="date" value="${base.validade||''}"></div></div>
@@ -794,8 +795,9 @@ function openAcessoModal(id,solId){
 }
 async function saveAcesso(id,solId){
     const email=document.getElementById('ac_e').value.trim().toLowerCase();
-    const body={email,nome:document.getElementById('ac_n').value.trim()||null,empresa:document.getElementById('ac_emp').value.trim()||null,tipo:document.getElementById('ac_t').value,validade:document.getElementById('ac_v').value||null,ativo:true};
+    const body={email,nome:document.getElementById('ac_n').value.trim()||null,telefone:document.getElementById('ac_tel').value.replace(/\D/g,'')||null,empresa:document.getElementById('ac_emp').value.trim()||null,tipo:document.getElementById('ac_t').value,validade:document.getElementById('ac_v').value||null,ativo:true};
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){toast('Informe um email válido.','error');return;}
+    if(!body.telefone||body.telefone.length<10){toast('Informe o telefone com DDD.','error');return;}
     try{
         const existente=ACESSOS_USU.find(x=>x.email.toLowerCase()===email);
         const alvoId=id||(existente&&existente.id);
