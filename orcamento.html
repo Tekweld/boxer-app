@@ -168,6 +168,7 @@ async function iniciar() {
   try { O = await rpc('buscar_orcamento_publico', { p_token: TOKEN }); }
   catch (e) { return estado('Não foi possível abrir o orçamento', 'Tente novamente em instantes. Se persistir, fale com o seu representante Boxer.'); }
   if (!O || !O.encontrado) return estado('Orçamento não encontrado', 'Este link não existe ou foi cancelado. Peça um novo ao seu representante Boxer.');
+  if (O.status === 'cancelado') return estado('Orçamento cancelado', 'Este orçamento foi cancelado pelo seu representante Boxer. Se precisar, peça uma nova proposta.');
   desenhar();
 }
 
