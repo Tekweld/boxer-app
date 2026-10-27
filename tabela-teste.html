@@ -161,6 +161,33 @@ body.locked .header,body.locked .content,body.locked #barProposta,body.locked #t
 .bar-alerta button{margin-left:8px;background:#fff;color:#e30613;border:none;border-radius:5px;padding:2px 8px;font-family:Outfit;font-size:12px;font-weight:700;cursor:pointer}
 .bar-info{background:rgba(255,255,255,.14);color:#fff;border-radius:6px;padding:3px 9px;font-family:Outfit;font-size:12px}
 .bar-info button{margin-left:8px;background:#fff;color:#1d327b;border:none;border-radius:5px;padding:2px 8px;font-family:Outfit;font-size:12px;font-weight:600;cursor:pointer}
+#btnOrc{background:#e30613;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-family:Outfit;font-size:14px;font-weight:600;cursor:pointer;margin-right:8px}
+#btnOrc:hover{background:#c20510}
+#orcOverlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:2700;padding:16px}
+#orcOverlay.show{display:flex}
+#orcOverlay .det-card{max-width:720px}
+.orc-corpo{padding:6px 22px 22px;font-family:Outfit,sans-serif;font-size:14px;color:#1a202c}
+.orc-resumo{background:#eef2fa;border-radius:8px;padding:10px 14px;margin:10px 0 14px;font-size:13.5px;color:#1d327b}
+.orc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+.orc-grid .full{grid-column:1/-1}
+.orc-corpo label{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:#718096;font-weight:500;margin-bottom:4px}
+.orc-corpo input,.orc-corpo textarea{width:100%;font-family:Outfit;font-size:14px;padding:9px 11px;border:1px solid #c3cfe2;border-radius:7px;outline:none}
+.orc-corpo input:focus,.orc-corpo textarea:focus{border-color:#25bbee}
+.orc-av{background:#fff4e5;color:#9a5b00;border-radius:8px;padding:8px 12px;margin:8px 0;font-size:13px}
+.orc-err{background:#fee2e2;color:#991b1b;border-radius:8px;padding:8px 12px;margin:8px 0;font-size:13px;display:none}
+.orc-acoes{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+.orc-btn{font-family:Outfit;font-size:14px;font-weight:600;border-radius:8px;padding:10px 18px;border:1px solid #c3cfe2;background:#fff;color:#1d327b;cursor:pointer;text-decoration:none;display:inline-block}
+.orc-btn.prim{background:#e30613;border-color:#e30613;color:#fff}
+.orc-btn.sm{padding:5px 10px;font-size:12.5px}
+.orc-btn:disabled{opacity:.6;cursor:wait}
+.orc-link{display:flex;gap:8px;margin:10px 0}
+.orc-link input{flex:1;font-size:13px}
+.orc-lista{width:100%;border-collapse:collapse;font-size:13px}
+.orc-lista th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:#718096;padding:6px 8px;border-bottom:2px solid #e2e8f0}
+.orc-lista td{padding:9px 8px;border-bottom:1px solid #edf2f7;vertical-align:top}
+.orc-st{display:inline-block;border-radius:999px;padding:2px 9px;font-size:11.5px;font-weight:600;background:#e2e8f0;color:#4a5568}
+.orc-st.verde{background:#dcfce7;color:#166534}.orc-st.azul{background:#dbeafe;color:#1e40af}.orc-st.laranja{background:#ffedd5;color:#9a3412}.orc-st.verm{background:#fee2e2;color:#991b1b}
+.orc-pass{font-size:12px;color:#718096;margin-top:3px}
 tbody tr.row-ajuste{background:#fff0f0 !important}
 tbody tr.row-ajuste .td-price-final{color:#e30613}
 .det-vazio{color:#a0aec0;text-align:center;padding:28px 0;font-size:14px}
@@ -266,6 +293,13 @@ tbody tr.row-ajuste .td-price-final{color:#e30613}
   </div>
 </div>
 
+<div id="orcOverlay" onclick="if(event.target===this)fecharOrc()">
+  <div class="det-card">
+    <div class="det-head"><div><h3 id="orcTitulo">Orçamento</h3><div class="cod" id="orcSub"></div></div><button class="det-x" onclick="fecharOrc()" aria-label="Fechar">&times;</button></div>
+    <div class="orc-corpo" id="orcCorpo"></div>
+  </div>
+</div>
+
 <div id="detOverlay" onclick="if(event.target===this)fecharDetalhes()">
   <div class="det-card">
     <div class="det-head"><div><h3 id="detTitulo"></h3><div class="cod" id="detCodigo"></div></div><button class="det-x" onclick="fecharDetalhes()" aria-label="Fechar">&times;</button></div>
@@ -274,7 +308,7 @@ tbody tr.row-ajuste .td-price-final{color:#e30613}
 </div>
 
 <div class="header" style="position:relative;"><div class="header-inner">
-<div class="nav-top"><button id="regrasBtn" class="nav-btn sec" onclick="abrirRegras()" title="Regras da política para consulta rápida">📋 Regras</button><a id="navBtn" href="#" class="nav-btn"></a></div>
+<div class="nav-top"><button id="orcBtn" class="nav-btn sec" style="display:none" onclick="abrirMeusOrc()" title="Orçamentos enviados aos clientes">📄 Meus orçamentos</button><button id="regrasBtn" class="nav-btn sec" onclick="abrirRegras()" title="Regras da política para consulta rápida">📋 Regras</button><a id="navBtn" href="#" class="nav-btn"></a></div>
 <div class="logo-row">
 <img src="Estrela-Boxer.svg" width="40" height="40" style="display:block">
 <div><h1 id="pageTitle">Tabela de Preços Boxer</h1><p id="pageSubtitle">Carregando...</p></div></div>
@@ -295,6 +329,7 @@ tbody tr.row-ajuste .td-price-final{color:#e30613}
   <div class="barEsq"><span id="barContador"></span><span id="barTotal"></span><span id="barPag">Pagamento: <select id="selPag" onchange="mudarPagamento(this.value)"><option value="1">Boleto 1x</option><option value="2">Boleto 2x</option><option value="3">Boleto 3x</option><option value="4">Boleto 4x</option><option value="v">À vista (PIX)</option></select></span><span id="barClasse"></span><div id="barAlertas"></div></div>
   <div>
     <button id="btnLimpar" onclick="limparSelecao()">Limpar</button>
+    <button id="btnOrc" style="display:none" onclick="abrirOrcamento()">📄 Gerar orçamento</button>
     <button id="btnGerar" onclick="gerarProposta()">Gerar Proposta →</button>
   </div>
 </div>
@@ -1231,6 +1266,7 @@ function updateBar() {
     if (!n) { bar.classList.remove('visible'); return; }
     bar.classList.add('visible');
     $('btnGerar').style.display = IS_AUTO ? '' : 'none';
+    $('btnOrc').style.display = TID === 1 ? '' : 'none';
     const un = itens.reduce((a, x) => a + x.q, 0);
     $('barContador').innerHTML = '<strong>' + n + '</strong> ' + (n > 1 ? 'itens' : 'item') + ' · ' + un + ' un.';
     $('selPag').value = AVISTA ? 'v' : String(PARC);
@@ -1268,14 +1304,14 @@ function updateBar() {
     document.querySelectorAll('input.qtd-input').forEach(i => { const tr = i.closest('tr'); if (tr) tr.classList.toggle('row-ajuste', ajuste && itens.some(x => x.p.codigo === i.dataset.codigo)); });
 
     if (!r.sem || r.t > 0) {
-        if (cobrado < cd.pedMin) alertas.push('<span class="bar-alerta">Abaixo do pedido mínimo de ' + fmt(cd.pedMin) + '</span>');
+        if (cobrado < cd.pedMin) alertas.push('<span class="bar-alerta">Abaixo do pedido mínimo de ' + fmt(cd.pedMin) + ' — adicione mais <b>' + fmt(cd.pedMin - cobrado) + '</b> em produtos</span>');
         const fr = freteUF();
-        if (fr && fr.tipo === 'CIF' && fr.min && cobrado < fr.min) alertas.push('<span class="bar-alerta">Frete: abaixo do pedido mín. CIF de ' + fmt(fr.min) + ' (' + cState + ') — será cobrado frete de ' + (fr.frete ? fmt(fr.frete) : 'valor fixo') + '</span>');
+        if (fr && fr.tipo === 'CIF' && fr.min && cobrado < fr.min) alertas.push('<span class="bar-alerta">Frete: abaixo do pedido mín. CIF de ' + fmt(fr.min) + ' (' + cState + ') — adicione mais <b>' + fmt(fr.min - cobrado) + '</b> para o frete CIF sair sem custo, ou será cobrado frete de ' + (fr.frete ? fmt(fr.frete) : 'valor fixo') + '</span>');
         else if (fr && fr.tipo === 'FOB') alertas.push('<span class="bar-info">' + cState + ' é FOB: o cliente indica a transportadora</span>');
         if (!AVISTA && PARC > 1 && cobrado / PARC < cd.dupMin) {
             const max = Math.max(1, Math.floor(cobrado / cd.dupMin));
-            alertas.push('<span class="bar-alerta">Parcela de ' + fmt(cobrado / PARC) + ' abaixo do mínimo de ' + fmt(cd.dupMin) + ' por duplicata — no máximo ' + max + 'x neste pedido</span>');
-        } else if (!AVISTA && cobrado < cd.dupMin) alertas.push('<span class="bar-alerta">Pedido abaixo do mínimo de ' + fmt(cd.dupMin) + ' por duplicata</span>');
+            alertas.push('<span class="bar-alerta">Parcela de ' + fmt(cobrado / PARC) + ' abaixo do mínimo de ' + fmt(cd.dupMin) + ' por duplicata — adicione mais <b>' + fmt(cd.dupMin * PARC - cobrado) + '</b> ou reduza para ' + (max > 1 ? 'até ' + max + 'x' : 'boleto 1x') + (max > 1 ? '' : ' / à vista') + '</span>');
+        } else if (!AVISTA && cobrado < cd.dupMin) alertas.push('<span class="bar-alerta">Pedido abaixo do mínimo de ' + fmt(cd.dupMin) + ' por duplicata — adicione mais <b>' + fmt(cd.dupMin - cobrado) + '</b></span>');
     }
     $('barClasse').innerHTML = hint;
     $('barAlertas').innerHTML = alertas.join('');
@@ -1429,6 +1465,169 @@ async function gerarExportacao() {
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharExportacao(); });
 
+// --- orcamento Boxer: gera o link para o cliente, salva no ZEN e acompanha o aceite (so Revendas) ---
+const HUB_ORC = HUB_API + '/api/push-pedido?target=orcamento';
+async function orcApi(corpo) {
+    const { data: { session } } = await sbc.auth.getSession();
+    const tk = session ? session.access_token : TOKEN;
+    const r = await fetch(HUB_ORC, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tk }, body: JSON.stringify(corpo) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || ('Erro ' + r.status));
+    return j;
+}
+function fecharOrc() { $('orcOverlay').classList.remove('show'); }
+function onlyDig(v) { return String(v || '').replace(/\D/g, ''); }
+function mascCnpj(d) { d = onlyDig(d); return d.length === 14 ? d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5') : (d.length === 11 ? d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : d); }
+function lerTelOrc() { try { return localStorage.getItem('orc_tel') || ''; } catch (e) { return ''; } }
+
+function abrirOrcamento() {
+    const itens = itensDoPedido();
+    if (!itens.length) return;
+    if (!cSeg || !cCls) { alert('Escolha o segmento e a classe antes de gerar o orçamento.'); return; }
+    const r = totalNaClasse(itens, cCls);
+    if (r.sem) { alert('Há ' + r.sem + ' item(ns) sem preço nesta configuração. Remova-os para gerar o orçamento.'); return; }
+    const cd = condicoes();
+    const total = r.t * fatorVista();
+    const pg = AVISTA ? 'À vista (−' + String(cd.vista).replace('.', ',') + '%)' : 'Boleto ' + PARC + 'x';
+    $('orcTitulo').textContent = 'Gerar orçamento para o cliente';
+    $('orcSub').textContent = itens.length + (itens.length > 1 ? ' itens' : ' item') + ' · ' + cState + ' · ' + cSeg + ' · classe ' + cCls;
+    $('orcCorpo').innerHTML =
+        '<div class="orc-resumo"><b>' + fmt(total) + '</b> · ' + pg + ' · validade de 7 dias. O orçamento sai com os preços desta tela; o link é rastreável e o cliente pode aceitar por ele.</div>'
+        + '<div class="orc-grid">'
+        + '<div><label>CNPJ / CPF *</label><input id="orcCnpj" inputmode="numeric" placeholder="somente números" onblur="orcBuscaCnpj()"></div>'
+        + '<div><label>Razão social / nome *</label><input id="orcNome"></div>'
+        + '<div><label>Nome fantasia</label><input id="orcFant"></div>'
+        + '<div><label>Inscrição estadual</label><input id="orcIe"></div>'
+        + '<div><label>Contato (aos cuidados de)</label><input id="orcContato"></div>'
+        + '<div><label>E-mail do cliente *</label><input id="orcEmail" type="email"></div>'
+        + '<div><label>Celular do cliente *</label><input id="orcCel" inputmode="tel" placeholder="(11) 99999-9999"></div>'
+        + '<div><label>Telefone fixo</label><input id="orcTelFixo" inputmode="tel"></div>'
+        + '<div><label>Cidade</label><input id="orcCidade"></div>'
+        + '<div><label>Seu telefone / WhatsApp (aparece no orçamento)</label><input id="orcMeuTel" inputmode="tel" value="' + lerTelOrc().replace(/"/g, '') + '"></div>'
+        + '<div class="full"><label>Observações para o cliente</label><textarea id="orcObs" rows="2" maxlength="1500"></textarea></div>'
+        + '</div>'
+        + '<div class="orc-av" id="orcCliInfo" style="display:none"></div>'
+        + '<div class="orc-err" id="orcErr"></div>'
+        + '<div class="orc-acoes"><button class="orc-btn" onclick="fecharOrc()">Cancelar</button><button class="orc-btn prim" id="orcGerarBtn" onclick="enviarOrcamento()">Gerar orçamento e link</button></div>';
+    $('orcOverlay').classList.add('show');
+    logUso('orc_abrir', { tabela: TID, itens: itens.length });
+}
+
+async function orcBuscaCnpj() {
+    const d = onlyDig($('orcCnpj').value);
+    if (d.length !== 14 && d.length !== 11) return;
+    $('orcCnpj').value = mascCnpj(d);
+    const info = $('orcCliInfo');
+    try {
+        const c = await orcApi({ acao: 'cliente', cnpj: d });
+        if (!c.encontrado) { info.style.display = 'block'; info.textContent = 'Cliente não está no cadastro do ZEN. O orçamento será gerado, mas o cadastro precisa ser feito antes de confirmar o pedido.'; return; }
+        if (!$('orcNome').value) $('orcNome').value = c.razao_social || '';
+        if (!$('orcFant').value) $('orcFant').value = c.nome_fantasia || '';
+        if (!$('orcIe').value) $('orcIe').value = c.ie || '';
+        if (!$('orcEmail').value) $('orcEmail').value = c.email || '';
+        if (!$('orcTelFixo').value) $('orcTelFixo').value = c.telefone || '';
+        if (!$('orcCidade').value) $('orcCidade').value = c.cidade || '';
+        info.style.display = c.bloqueado ? 'block' : 'none';
+        if (c.bloqueado) info.textContent = 'Atenção: este cliente consta como bloqueado no ZEN.';
+    } catch (e) { /* preenchimento manual segue valendo */ }
+}
+
+async function enviarOrcamento() {
+    const err = $('orcErr'); err.style.display = 'none';
+    const cliente = { cnpj: onlyDig($('orcCnpj').value), nome: $('orcNome').value.trim(), fantasia: $('orcFant').value.trim(), ie: $('orcIe').value.trim(), contato: $('orcContato').value.trim(), email: $('orcEmail').value.trim(), celular: $('orcCel').value, telefone: $('orcTelFixo').value, cidade: $('orcCidade').value.trim(), uf: cState };
+    const falha = m => { err.textContent = m; err.style.display = 'block'; };
+    if (cliente.cnpj.length !== 14 && cliente.cnpj.length !== 11) return falha('Informe o CNPJ (14 dígitos) ou CPF do cliente.');
+    if (!cliente.nome) return falha('Informe a razão social ou o nome do cliente.');
+    if (!/^\S+@\S+\.\S+$/.test(cliente.email)) return falha('Informe um e-mail válido do cliente.');
+    if (onlyDig(cliente.celular).length < 10) return falha('Informe o celular do cliente com DDD.');
+    const meuTel = onlyDig($('orcMeuTel').value);
+    try { localStorage.setItem('orc_tel', meuTel); } catch (e) {}
+    const btn = $('orcGerarBtn'); btn.disabled = true; btn.textContent = 'Gerando…';
+    try {
+        const j = await orcApi({
+            acao: 'criar', tabela: TID, uf: cState, segmento: cSeg, classe: cCls,
+            itens: itensDoPedido().map(x => ({ codigo: x.p.codigo, qtd: x.q })),
+            pagamento: { tipo: AVISTA ? 'avista' : 'boleto', parcelas: PARC },
+            cliente, observacoes: $('orcObs').value.trim(), vendedor: { telefone: meuTel }
+        });
+        logUso('orc_criar', { tabela: TID, codigo: j.codigo, total: j.total_final });
+        mostrarOrcCriado(j, cliente);
+    } catch (e) {
+        btn.disabled = false; btn.textContent = 'Gerar orçamento e link';
+        falha(e.message || 'Não foi possível gerar o orçamento agora.');
+    }
+}
+
+function mostrarOrcCriado(j, cliente) {
+    $('orcTitulo').textContent = 'Orçamento ' + j.codigo + ' gerado';
+    $('orcSub').textContent = 'Válido até ' + new Date(j.validade_em).toLocaleDateString('pt-BR') + ' · ' + fmt(j.total_final);
+    const msg = 'Olá! Segue o orçamento ' + j.codigo + ' da Boxer Soldas: ' + j.link;
+    const wa = 'https://wa.me/55' + onlyDig(cliente.celular) + '?text=' + encodeURIComponent(msg);
+    const mail = 'mailto:' + encodeURIComponent(cliente.email) + '?subject=' + encodeURIComponent('Orçamento Boxer ' + j.codigo) + '&body=' + encodeURIComponent(msg);
+    const zen = j.zen && j.zen.ok
+        ? '<div class="orc-resumo">✔ Salvo no ZEN como orçamento (venda nº <b>' + j.zen.sale_id + '</b>, ainda fora da fila do time).</div>'
+        : '<div class="orc-av">⚠ ' + esc(j.zen && j.zen.erro || 'Não foi possível salvar no ZEN.') + '</div>';
+    const av = (j.avisos || []).length ? '<div class="orc-av"><b>Pontos de atenção:</b><br>' + j.avisos.map(esc).join('<br>') + '</div>' : '';
+    $('orcCorpo').innerHTML = zen + av
+        + '<label>Link do orçamento (válido por 7 dias)</label>'
+        + '<div class="orc-link"><input id="orcLinkIn" readonly value="' + j.link + '" onclick="this.select()"><button class="orc-btn" onclick="copiarOrc(\'' + j.link + '\', this)">Copiar</button></div>'
+        + '<div class="orc-acoes" style="justify-content:flex-start;flex-wrap:wrap"><a class="orc-btn prim" href="' + wa + '" target="_blank" rel="noopener">Enviar por WhatsApp</a><a class="orc-btn" href="' + mail + '">Enviar por e-mail</a><a class="orc-btn" href="' + j.link + '" target="_blank" rel="noopener">Ver como o cliente</a></div>'
+        + '<div class="orc-pass" style="margin-top:14px">Quando o cliente aceitar, você recebe um e-mail e confirma em <b>Meus orçamentos</b>. Só então o pedido avança no ZEN para WEB Pronta entrega.</div>'
+        + '<div class="orc-acoes"><button class="orc-btn" onclick="abrirMeusOrc()">Meus orçamentos</button><button class="orc-btn" onclick="fecharOrc()">Fechar</button></div>';
+}
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function copiarOrc(txt, btn) {
+    const ok = () => { const t = btn.textContent; btn.textContent = 'Copiado ✓'; setTimeout(() => { btn.textContent = t; }, 1500); };
+    if (navigator.clipboard) navigator.clipboard.writeText(txt).then(ok, () => { const i = $('orcLinkIn'); if (i) { i.select(); document.execCommand('copy'); ok(); } });
+    else { const i = $('orcLinkIn'); if (i) { i.select(); document.execCommand('copy'); ok(); } }
+}
+
+const ORC_ST = { enviado: ['Enviado', ''], visualizado: ['Visto pelo cliente', 'azul'], aceito_cliente: ['Aceito pelo cliente', 'laranja'], aprovado: ['No ZEN', 'verde'], cancelado: ['Cancelado', 'verm'] };
+async function abrirMeusOrc() {
+    $('orcTitulo').textContent = 'Meus orçamentos';
+    $('orcSub').textContent = 'Acompanhe o aceite do cliente e confirme o pedido no ZEN';
+    $('orcCorpo').innerHTML = '<p>Carregando…</p>';
+    $('orcOverlay').classList.add('show');
+    logUso('orc_listar', { tabela: TID });
+    try {
+        const j = await orcApi({ acao: 'listar' });
+        const L = j.orcamentos || [];
+        if (!L.length) { $('orcCorpo').innerHTML = '<p>Você ainda não gerou orçamentos.</p>'; return; }
+        window._ORC = {}; L.forEach(o => { window._ORC[o.id] = o; });
+        $('orcCorpo').innerHTML = '<table class="orc-lista"><thead><tr><th>Orçamento</th><th>Cliente</th><th>Total</th><th>Situação</th><th></th></tr></thead><tbody>' + L.map(o => {
+            const st = o.expirado ? ['Expirado', 'verm'] : (ORC_ST[o.status] || [o.status, '']);
+            const vis = o.visualizacoes ? 'Aberto ' + o.visualizacoes + 'x' + (o.ultima_visualizacao_em ? ' · último ' + new Date(o.ultima_visualizacao_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '') : 'Ainda não aberto';
+            const zen = o.zen_sale_id ? '<div class="orc-pass">ZEN nº ' + o.zen_sale_id + (o.zen_status === 'web_pronta_entrega' ? ' · WEB Pronta entrega' : (o.zen_status === 'preparando' ? ' · orçamento (Preparando)' : '')) + '</div>' : '<div class="orc-pass">' + (o.zen_status === 'sem_cliente_zen' ? 'Cliente sem cadastro no ZEN' : 'Sem venda no ZEN') + '</div>';
+            const err = o.zen_erro && o.status !== 'aprovado' ? '<div class="orc-pass" style="color:#991b1b">' + esc(o.zen_erro) + '</div>' : '';
+            let acoes = '<button class="orc-btn sm" onclick="copiarOrc(\'' + o.link + '\', this)">Copiar link</button> ';
+            if (o.zen_sale_id) acoes += '<button class="orc-btn sm" onclick="abrirNoZen(' + o.zen_sale_id + ')" title="Abre o ZEN e copia o número da venda para você buscar e editar">Ajustar no ZEN</button> ';
+            if (['enviado', 'visualizado', 'aceito_cliente'].includes(o.status) && o.zen_sale_id) acoes += '<button class="orc-btn prim sm" onclick="aprovarOrc(\'' + o.id + '\', this)">' + (o.status === 'aceito_cliente' ? 'Confirmar e enviar ao ZEN' : 'Cliente confirmou por outro canal: enviar ao ZEN') + '</button>';
+            return '<tr><td><b>' + esc(o.codigo) + '</b><div class="orc-pass">' + new Date(o.criado_em).toLocaleDateString('pt-BR') + ' · validade ' + new Date(o.validade_em).toLocaleDateString('pt-BR') + '</div></td><td>' + esc(o.cliente_nome) + '<div class="orc-pass">' + mascCnpj(o.cliente_cnpj) + '</div></td><td>' + fmt(o.total_final) + '</td><td><span class="orc-st ' + st[1] + '">' + st[0] + '</span><div class="orc-pass">' + vis + '</div>' + zen + err + '</td><td style="white-space:normal">' + acoes + '</td></tr>';
+        }).join('') + '</tbody></table>';
+    } catch (e) {
+        $('orcCorpo').innerHTML = '<p>Não foi possível carregar seus orçamentos agora. ' + esc(e.message) + '</p>';
+    }
+}
+function abrirNoZen(id) {
+    try { navigator.clipboard.writeText(String(id)); } catch (e) {}
+    alert('Vou abrir a venda ' + id + ' no ZEN para você ajustar. Depois volte aqui e confirme.');
+    window.open('https://zenerp.app.br/sale/saleItem.html?q=sale.id==' + id, '_blank', 'noopener');
+}
+async function aprovarOrc(id, btn) {
+    const o = (window._ORC || {})[id];
+    if (!o || !confirm('Enviar o orçamento ' + o.codigo + ' ao ZEN como pedido (WEB Pronta entrega)?\n\nDepois disso ele entra na fila do time. Se precisar ajustar algo, faça antes.')) return;
+    btn.disabled = true; btn.textContent = 'Enviando ao ZEN…';
+    try {
+        const j = await orcApi({ acao: 'aprovar', id });
+        logUso('orc_aprovar', { tabela: TID, codigo: o.codigo, zen: j.zen_sale_id });
+        await abrirMeusOrc();
+    } catch (e) {
+        btn.disabled = false; btn.textContent = 'Confirmar e enviar ao ZEN';
+        alert(e.message);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => { if (TID === 1) $('orcBtn').style.display = ''; });
 document.addEventListener('DOMContentLoaded', initAuth);
 </script>
 </body>
