@@ -1201,7 +1201,7 @@ function updateBar() {
     let hint = '';
     if (!IS_AUTO && cSeg === 'Física') {
         const ind = classeIndicada(itens);
-        if (ind && ind !== cCls) hint = 'Pelo total, a classe indicada é a <b>' + ind + '</b> (' + fmt(totalNaClasse(itens, ind).t) + ') <button onclick="aplicarClasse(' + ind + ')">Usar classe ' + ind + '</button>';
+        if (ind && ind !== cCls) hint = 'Pelo total, a classe indicada é a <b>' + ind + '</b> <button onclick="aplicarClasse(' + ind + ')">Usar classe ' + ind + '</button>';
         else if (ind) hint = 'Classe ' + ind + ' conforme o valor do pedido ✓';
     }
     $('barClasse').innerHTML = hint;
