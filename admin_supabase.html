@@ -113,6 +113,7 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 <div class="tab admin-only hidden" onclick="showTab('usuarios',this)">Usuários</div>
 <div class="tab admin-only hidden" onclick="showTab('acessos',this)">Acessos</div>
 <div class="tab admin-only hidden" onclick="showTab('uso',this)">Log de Uso</div>
+<div class="tab admin-only hidden" onclick="showTab('regras',this)">Regras da Tabela</div>
 </div>
 <div class="panel">
 <div class="panel-content" id="tab-produtos">
@@ -160,6 +161,13 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 <div class="panel-header"><div><div class="panel-title">Acessos à Tabela de Preços</div><div class="panel-sub">Quem pode entrar na tela com login por código enviado ao email</div></div>
 <button class="btn btn-primary btn-sm" onclick="openAcessoModal()">+ Adicionar pessoa</button></div>
 <div id="acessosWrap"><div class="loading">Carregando...</div></div>
+</div>
+
+<div class="panel-content hidden" id="tab-regras">
+<div class="panel-header"><div><div class="panel-title">Regras da Tabela (botão "Regras" no topo)</div><div class="panel-sub">Texto de consulta rápida do representante, por tabela. Formato: linha com "- " vira marcador; "## " vira subtítulo; linhas com " | " viram tabela (a primeira linha é o cabeçalho).</div></div>
+<div style="display:flex;gap:8px;align-items:center"><select id="regrasTab" class="select-sm" onchange="loadRegras()"><option value="1">Revendas</option><option value="2">BMAX</option></select>
+<button class="btn btn-primary btn-sm" onclick="addRegra()">+ Nova seção</button></div></div>
+<div id="regrasWrap"><div class="loading">Carregando...</div></div>
 </div>
 
 <div class="panel-content hidden" id="tab-uso">
@@ -397,6 +405,7 @@ function showTab(n,el){
     if(n==='usuarios')loadUsuarios();
     if(n==='acessos')loadAcessos();
     if(n==='uso')loadUsoTabela();
+    if(n==='regras')loadRegras();
 }
 
 // PRODUTOS
@@ -645,7 +654,7 @@ async function applyReajuste(){
 
 
 // USO DA TABELA (log da tela de teste com login)
-const USO_EVENTOS={login:'Login',acesso:'Acesso',acesso_negado:'Acesso negado',logout:'Logout',consulta:'Consulta (filtros)',consulta_disponibilidade:'Consulta de estoque',selecionar_item:'Selecionou item',desselecionar_item:'Removeu item',gerar_proposta:'Gerou proposta',ver_detalhes:'Abriu detalhes do produto',exportar_disponibilidade:'Exportou disponibilidade (Excel)',codigo_enviado:'Código enviado',codigo_negado:'Código negado (email não liberado)',codigo_limite:'Limite de códigos atingido',codigo_erro:'Erro ao enviar código',acesso_auto_dominio:'Acesso automático (domínio Boxer)',solicitacao_acesso:'Solicitou acesso',acesso_aprovado:'Acesso aprovado',acesso_adicionado:'Acesso adicionado',acesso_editado:'Acesso editado',acesso_renovado:'Acesso renovado',acesso_revogado:'Acesso revogado',acesso_reativado:'Acesso reativado',solicitacao_negada:'Solicitação negada'};
+const USO_EVENTOS={login:'Login',acesso:'Acesso',acesso_negado:'Acesso negado',logout:'Logout',consulta:'Consulta (filtros)',consulta_disponibilidade:'Consulta de estoque',selecionar_item:'Selecionou item',desselecionar_item:'Removeu item',gerar_proposta:'Gerou proposta',ver_detalhes:'Abriu detalhes do produto',ver_regras:'Abriu as regras',exportar_disponibilidade:'Exportou disponibilidade (Excel)',codigo_enviado:'Código enviado',codigo_negado:'Código negado (email não liberado)',codigo_limite:'Limite de códigos atingido',codigo_erro:'Erro ao enviar código',acesso_auto_dominio:'Acesso automático (domínio Boxer)',solicitacao_acesso:'Solicitou acesso',acesso_aprovado:'Acesso aprovado',acesso_adicionado:'Acesso adicionado',acesso_editado:'Acesso editado',acesso_renovado:'Acesso renovado',acesso_revogado:'Acesso revogado',acesso_reativado:'Acesso reativado',solicitacao_negada:'Solicitação negada'};
 let USO_ROWS=[];
 function escUso(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function descUso(ev,d){
@@ -732,6 +741,40 @@ async function loadAcessos(){
     }catch(e){
         wrap.innerHTML=`<div style="text-align:center;padding:20px;color:#dc2626">Erro ao carregar acessos: ${escUso(e.message)} <button class="btn btn-outline btn-sm" onclick="loadAcessos()">Tentar novamente</button></div>`;
     }
+}
+// REGRAS DA TABELA
+let REGRAS_ROWS=[];
+async function loadRegras(){
+    const wrap=document.getElementById('regrasWrap');
+    const tid=document.getElementById('regrasTab').value;
+    try{
+        REGRAS_ROWS=await sb('/tabela_regras?tabela_id=eq.'+tid+'&select=*&order=ordem,id');
+        if(!REGRAS_ROWS.length){wrap.innerHTML='<div style="color:#a0aec0;padding:16px">Nenhuma seção. Use "+ Nova seção".</div>';return;}
+        wrap.innerHTML=REGRAS_ROWS.map(r=>`<div style="border:1px solid #d0d8e8;border-radius:8px;padding:12px;margin-bottom:12px">
+<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><input id="rg_o_${r.id}" type="number" value="${r.ordem}" style="width:64px" title="Ordem"><input id="rg_t_${r.id}" value="${escUso(r.titulo)}" style="flex:1;font-weight:600"></div>
+<textarea id="rg_c_${r.id}" rows="10" style="width:100%;font-family:monospace;font-size:12px;padding:8px;border:1px solid #c3cfe2;border-radius:6px">${escUso(r.conteudo)}</textarea>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><span style="font-size:11px;color:#a0aec0">Atualizado em ${new Date(r.atualizado_em).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}${r.atualizado_por?' por '+escUso(r.atualizado_por):''}</span>
+<span><button class="btn btn-danger btn-sm" onclick="delRegra(${r.id})">Excluir</button> <button class="btn btn-primary btn-sm" onclick="saveRegra(${r.id})">Salvar</button></span></div></div>`).join('');
+    }catch(e){
+        wrap.innerHTML=`<div style="text-align:center;padding:20px;color:#dc2626">Erro ao carregar: ${escUso(e.message)} <button class="btn btn-outline btn-sm" onclick="loadRegras()">Tentar novamente</button></div>`;
+    }
+}
+async function saveRegra(id){
+    const body={ordem:parseInt(document.getElementById('rg_o_'+id).value,10)||1,titulo:document.getElementById('rg_t_'+id).value.trim(),conteudo:document.getElementById('rg_c_'+id).value,atualizado_em:new Date().toISOString(),atualizado_por:SESSION.user.email};
+    if(!body.titulo){toast('Informe o título da seção.','error');return;}
+    try{await sb('/tabela_regras?id=eq.'+id,'PATCH',body);toast('Seção salva');logAdmin('regras_editadas',{regra_id:id,titulo:body.titulo});loadRegras();}
+    catch(e){toast('Erro ao salvar: '+e.message,'error');}
+}
+async function addRegra(){
+    const tid=parseInt(document.getElementById('regrasTab').value,10);
+    const ordem=(REGRAS_ROWS.reduce((m,r)=>Math.max(m,r.ordem),0))+1;
+    try{await sb('/tabela_regras','POST',{tabela_id:tid,ordem,titulo:'Nova seção',conteudo:'- ',atualizado_por:SESSION.user.email});toast('Seção criada');loadRegras();}
+    catch(e){toast('Erro ao criar: '+e.message,'error');}
+}
+async function delRegra(id){
+    if(!confirm('Excluir esta seção das regras?'))return;
+    try{await sb('/tabela_regras?id=eq.'+id,'DELETE');toast('Seção excluída');loadRegras();}
+    catch(e){toast('Erro ao excluir: '+e.message,'error');}
 }
 function logAdmin(evento,detalhe){
     sb('/tabela_acessos_log','POST',{user_id:SESSION.user.id,email:SESSION.user.email,evento,detalhe}).catch(()=>{});
