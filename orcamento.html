@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>Orçamento Boxer</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--az:#1d327b;--az2:#162666;--ciano:#25bbee;--verm:#e30613;--bg:#f0f4f8;--tx:#1a202c;--tx2:#718096;--bd:#d0d8e8;--bd2:#e2e8f0;--ok:#16a34a}
+body{font-family:Outfit,sans-serif;background:var(--bg);color:var(--tx);padding-bottom:92px}
+.top{background:linear-gradient(135deg,var(--az),var(--az2));border-bottom:3px solid var(--ciano);color:#fff}
+.top-in{max-width:980px;margin:0 auto;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand img{width:38px;height:38px}
+.brand b{font-size:20px;letter-spacing:.3px}
+.brand span{display:block;font-size:12px;color:#93b4d4;font-weight:400}
+.cod{font-size:13px;color:#c8ddf0;text-align:right}
+.cod b{display:block;font-size:18px;color:#fff}
+.wrap{max-width:980px;margin:0 auto;padding:20px}
+.hero{background:#fff;border:1px solid var(--bd);border-radius:14px;padding:26px 26px 22px;margin-bottom:16px;position:relative;overflow:hidden}
+.hero:before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:linear-gradient(var(--verm),var(--az))}
+.hero small{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--tx2);font-weight:500}
+.hero h1{font-size:26px;line-height:1.2;color:var(--az);margin:6px 0 10px}
+.hero p{font-size:15px;color:#4a5568;line-height:1.5;max-width:640px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.chip{background:#eef2fa;color:var(--az);border-radius:999px;padding:6px 13px;font-size:13px;font-weight:500}
+.chip.val{background:#fff4e5;color:#9a5b00}
+.chip.exp{background:#fee2e2;color:#991b1b}
+.card{background:#fff;border:1px solid var(--bd);border-radius:14px;margin-bottom:16px;overflow:hidden}
+.card h2{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--tx2);font-weight:600;padding:16px 22px 0}
+.item{display:grid;grid-template-columns:92px 1fr auto;gap:16px;padding:18px 22px;border-bottom:1px solid var(--bd2);align-items:center}
+.item:last-child{border-bottom:none}
+.item .foto{width:92px;height:92px;border-radius:10px;background:#f7fafc;border:1px solid var(--bd2);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.item .foto img{max-width:100%;max-height:100%;object-fit:contain}
+.item .foto svg{opacity:.35}
+.item h3{font-size:16px;color:var(--az);font-weight:600;line-height:1.3}
+.item .meta{font-size:12.5px;color:var(--tx2);margin-top:3px}
+.item .desc{font-size:13px;color:#4a5568;margin-top:6px;line-height:1.45}
+.item .val{text-align:right;white-space:nowrap}
+.item .val .q{font-size:12.5px;color:var(--tx2)}
+.item .val .riscado{font-size:12px;color:#a0aec0;text-decoration:line-through}
+.item .val .u{font-size:14px;color:#4a5568}
+.item .val .s{font-size:18px;font-weight:700;color:var(--az)}
+.resumo{padding:8px 22px 20px}
+.lin{display:flex;justify-content:space-between;padding:8px 0;font-size:14.5px;color:#4a5568;border-bottom:1px dashed var(--bd2)}
+.lin.desc b{color:var(--ok)}
+.lin.total{border:none;margin-top:6px;padding-top:12px;font-size:17px;color:var(--tx);font-weight:600;border-top:2px solid var(--az)}
+.lin.total b{font-size:26px;color:var(--az)}
+.nota{font-size:12px;color:var(--tx2);margin-top:8px;line-height:1.5}
+.cond{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:0}
+.cond>div{padding:16px 22px;border-top:1px solid var(--bd2)}
+.cond .t{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--tx2);font-weight:600;margin-bottom:6px}
+.cond .v{font-size:15px;color:var(--tx);line-height:1.45}
+.cond .v small{display:block;font-size:12.5px;color:var(--tx2);margin-top:3px}
+.porque{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;padding:16px 22px 22px}
+.porque div{background:#f7fafc;border:1px solid var(--bd2);border-radius:10px;padding:14px}
+.porque b{display:block;color:var(--az);font-size:14.5px;margin-bottom:4px}
+.porque span{font-size:13px;color:#4a5568;line-height:1.45}
+.dados{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:0}
+.dados>div{padding:14px 22px;border-top:1px solid var(--bd2);font-size:13.5px;line-height:1.55;color:#4a5568}
+.dados b{display:block;color:var(--tx);font-size:14px}
+.rodape{text-align:center;font-size:12px;color:#a0aec0;padding:8px 0 22px;line-height:1.6}
+.cta{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--bd);box-shadow:0 -6px 24px rgba(29,50,123,.12);padding:12px 20px;z-index:50}
+.cta-in{max-width:980px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.cta .tot{font-size:13px;color:var(--tx2)}
+.cta .tot b{display:block;font-size:22px;color:var(--az)}
+.cta .btns{display:flex;gap:10px;flex-wrap:wrap}
+.btn{font-family:Outfit;font-size:15px;font-weight:600;border-radius:10px;padding:13px 24px;border:1px solid;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.btn.prim{background:var(--verm);border-color:var(--verm);color:#fff}
+.btn.prim:hover{background:#c20510}
+.btn.sec{background:#fff;border-color:var(--bd);color:var(--az)}
+.btn.sec:hover{border-color:var(--ciano)}
+.btn:disabled{opacity:.6;cursor:wait}
+.aceito{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;border-radius:14px;padding:18px 22px;margin-bottom:16px;font-size:15px;line-height:1.5}
+.aceito b{font-size:17px;display:block;margin-bottom:2px}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:100;padding:16px}
+.ov.show{display:flex}
+.modal{background:#fff;border-radius:14px;padding:24px;width:100%;max-width:460px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.modal h3{font-size:19px;color:var(--az);margin-bottom:6px}
+.modal p{font-size:14px;color:#4a5568;line-height:1.5;margin-bottom:14px}
+.modal label{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--tx2);font-weight:500;margin-bottom:5px}
+.modal input[type=text]{width:100%;font-family:Outfit;font-size:15px;padding:11px 12px;border:1px solid #c3cfe2;border-radius:8px;outline:none;margin-bottom:14px}
+.modal input[type=text]:focus{border-color:var(--ciano)}
+.modal .ck{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;color:#4a5568;line-height:1.45;margin-bottom:16px}
+.modal .ck input{margin-top:3px}
+.modal .acoes{display:flex;gap:10px;justify-content:flex-end}
+.estado{max-width:520px;margin:12vh auto;background:#fff;border:1px solid var(--bd);border-radius:14px;padding:34px;text-align:center}
+.estado h1{font-size:21px;color:var(--az);margin-bottom:8px}
+.estado p{font-size:14.5px;color:#4a5568;line-height:1.5}
+.err{color:#991b1b;background:#fee2e2;border-radius:8px;padding:9px 12px;font-size:13px;margin-bottom:12px;display:none}
+@media(max-width:640px){
+  .item{grid-template-columns:72px 1fr;gap:12px;padding:16px}
+  .item .foto{width:72px;height:72px}
+  .item .val{grid-column:1/-1;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 10px;text-align:left;border-top:1px dashed var(--bd2);padding-top:10px;white-space:normal}
+  .item .val .s{font-size:17px}
+  .hero{padding:22px 18px 18px}.hero h1{font-size:22px}
+  body{padding-bottom:84px}
+  .cta{padding:10px 14px}.cta-in{flex-wrap:nowrap;gap:10px}
+  .cta .tot b{font-size:18px}
+  .cta .btns{gap:8px}.cta .btn{padding:11px 14px;font-size:14px}
+  .cta .btn.noprint{display:none}
+}
+@media print{
+  body{background:#fff;padding:0}.cta,.noprint{display:none!important}
+  .wrap{padding:0}.card,.hero{break-inside:avoid;border-color:#cbd5e0}
+  .top{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<div id="app"><div class="estado"><p>Carregando orçamento…</p></div></div>
+
+<div class="ov" id="ovAceite" onclick="if(event.target===this)fecharAceite()">
+  <div class="modal">
+    <h3>Aceitar este orçamento</h3>
+    <p>Ao aceitar, o seu representante é avisado na hora e confirma o pedido com a Boxer. Nenhuma cobrança é feita agora.</p>
+    <div class="err" id="aceiteErr"></div>
+    <label for="aceNome">Seu nome</label>
+    <input type="text" id="aceNome" placeholder="Quem está aceitando" autocomplete="name">
+    <label class="ck"><input type="checkbox" id="aceCk"><span>Li e concordo com os produtos, valores e condições deste orçamento.</span></label>
+    <div class="acoes"><button class="btn sec" onclick="fecharAceite()">Voltar</button><button class="btn prim" id="aceBtn" onclick="confirmarAceite()">Aceitar orçamento</button></div>
+  </div>
+</div>
+
+<script>
+const SB_URL = 'https://bmepxcnrsofofoswubuu.supabase.co';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtZXB4Y25yc29mb2Zvc3d1YnV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MTczNzMsImV4cCI6MjA5NTI5MzM3M30.S55ouFczRYlUYNFf5PotYKXBPT5idypTSmbzR-x2Pk0';
+const HUB = 'https://hub.boxersoldas.com.br/api/push-pedido?target=orcamento';
+const TOKEN = new URLSearchParams(location.search).get('t') || '';
+// dados da Boxer (mesmos do pedido de venda do ZEN)
+const BOXER = { nome: 'Tekweld Indústria e Comércio Ltda (Boxer Soldas)', cnpj: '13.881.630/0001-64', end: 'Rua Alvino Cristo, 36 · Parque Industrial Experts · Nova Odessa/SP · CEP 13387-793', email: 'admin@boxersoldas.com.br', tel: '(19) 3469-1876' };
+let O = null;
+
+const $ = id => document.getElementById(id);
+const brl = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const dt = iso => new Date(iso).toLocaleDateString('pt-BR');
+function fmtCnpj(d) { d = String(d || '').replace(/\D/g, ''); return d.length === 14 ? d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5') : (d.length === 11 ? d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : d); }
+function fmtTel(d) { d = String(d || '').replace(/\D/g, ''); if (d.length === 11) return d.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3'); if (d.length === 10) return d.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3'); return d; }
+
+async function rpc(nome, args) {
+  const r = await fetch(SB_URL + '/rest/v1/rpc/' + nome, {
+    method: 'POST',
+    headers: { apikey: SB_ANON, Authorization: 'Bearer ' + SB_ANON, 'Content-Type': 'application/json', 'Content-Profile': 'comercial' },
+    body: JSON.stringify(args)
+  });
+  if (!r.ok) throw new Error('rpc ' + r.status);
+  return r.json();
+}
+
+function estado(titulo, texto) { $('app').innerHTML = '<div class="estado"><h1>' + titulo + '</h1><p>' + texto + '</p></div>'; }
+
+async function iniciar() {
+  if (!/^[0-9a-f-]{36}$/i.test(TOKEN)) return estado('Link inválido', 'Confira o link recebido ou peça um novo ao seu representante Boxer.');
+  try { O = await rpc('buscar_orcamento_publico', { p_token: TOKEN }); }
+  catch (e) { return estado('Não foi possível abrir o orçamento', 'Tente novamente em instantes. Se persistir, fale com o seu representante Boxer.'); }
+  if (!O || !O.encontrado) return estado('Orçamento não encontrado', 'Este link não existe ou foi cancelado. Peça um novo ao seu representante Boxer.');
+  desenhar();
+}
+
+function contatoWhats() {
+  const n = String(O.vendedor_telefone || '').replace(/\D/g, '');
+  if (n.length < 10) return '';
+  const msg = 'Olá! Estou vendo o orçamento ' + O.codigo + ' da Boxer e gostaria de conversar.';
+  return 'https://wa.me/55' + n + '?text=' + encodeURIComponent(msg);
+}
+
+function condPagamento() {
+  const tot = O.total_final - 0;
+  if (O.pagamento_tipo === 'avista') return { v: 'À vista (PIX)', s: 'Inclui ' + String(O.desconto_vista_pct).replace('.', ',') + '% de desconto à vista já aplicado nos preços.' };
+  const n = O.parcelas, parc = (O.total_final) / n;
+  if (n === 1) return { v: 'Boleto em 28 dias', s: 'Valor total de ' + brl(O.total_final) + '.' };
+  const dias = Array.from({ length: n }, (_, i) => (i + 1) * 28).join('/');
+  return { v: 'Boleto em ' + n + 'x (' + dias + ' dias)', s: n + ' parcelas de ' + brl(parc) + '.' };
+}
+function condFrete() {
+  if (O.frete_tipo === 'CIF') {
+    if (O.frete_valor > 0) return { v: 'Frete CIF: ' + brl(O.frete_valor), s: 'Entrega por conta da Boxer para ' + esc(O.uf) + ', com frete fixo somado ao total por ficar abaixo do pedido mínimo CIF.' };
+    return { v: 'Frete CIF incluso', s: 'Entrega por conta da Boxer para ' + esc(O.uf) + '.' };
+  }
+  if (O.frete_tipo === 'FOB') return { v: 'Frete FOB', s: 'O transporte é por conta do cliente, que indica a transportadora.' };
+  return { v: 'Frete a combinar', s: 'Seu representante confirma a condição de entrega.' };
+}
+
+function desenhar() {
+  const aceito = O.status === 'aceito_cliente' || O.status === 'aprovado';
+  const exp = O.expirado;
+  const dias = Math.ceil((new Date(O.validade_em) - Date.now()) / 86400000);
+  const valChip = exp
+    ? '<span class="chip exp">Orçamento expirado em ' + dt(O.validade_em) + '</span>'
+    : '<span class="chip val">Válido até ' + dt(O.validade_em) + (dias > 0 ? ' · ' + (dias === 1 ? 'último dia' : dias + ' dias') : '') + '</span>';
+  const wa = contatoWhats();
+  const itensHtml = O.itens.map(it => {
+    const desc = it.unit < it.unit_tabela;
+    return '<div class="item"><div class="foto">' + (it.imagem_url ? '<img src="' + esc(it.imagem_url) + '" alt="" loading="lazy" onerror="this.replaceWith(semFoto())">' : semFotoHtml()) + '</div>'
+      + '<div><h3>' + esc(it.modelo) + '</h3><div class="meta">Código ' + esc(it.codigo) + (it.categoria ? ' · ' + esc(it.categoria) : '') + (it.ncm ? ' · NCM ' + esc(it.ncm) : '') + '</div>'
+      + (it.descricao ? '<div class="desc">' + esc(it.descricao) + '</div>' : '') + '</div>'
+      + '<div class="val"><div class="q">' + it.qtd + ' un.</div>' + (desc ? '<div class="riscado">' + brl(it.unit_tabela) + '</div>' : '') + '<div class="u">' + brl(it.unit) + ' cada</div><div class="s">' + brl(it.subtotal) + '</div></div></div>';
+  }).join('');
+
+  const bruto = O.itens.reduce((a, i) => a + i.unit_tabela * i.qtd, 0);
+  const liquido = O.itens.reduce((a, i) => a + i.subtotal, 0);
+  const descVista = bruto - liquido;
+  const pg = condPagamento(), fr = condFrete();
+
+  $('app').innerHTML =
+    '<div class="top"><div class="top-in"><div class="brand"><img src="Estrela-Boxer.svg" alt="Boxer"><div><b>Boxer Soldas</b><span>Equipamentos de solda e corte</span></div></div><div class="cod">Orçamento<b>' + esc(O.codigo) + '</b></div></div></div>'
+    + '<div class="wrap">'
+    + (aceito ? '<div class="aceito"><b>✔ Orçamento aceito' + (O.aceito_em ? ' em ' + dt(O.aceito_em) : '') + '</b>' + (O.status === 'aprovado' ? 'Seu pedido foi confirmado pela Boxer.' : 'Seu representante foi avisado e vai confirmar o pedido com você.') + '</div>' : '')
+    + '<div class="hero"><small>Proposta comercial</small><h1>Orçamento para ' + esc(O.cliente_fantasia || O.cliente_nome) + '</h1>'
+    + '<p>Preparamos esta proposta com os equipamentos e as condições combinadas. ' + (O.vendedor_nome ? 'Quem cuida do seu atendimento é <b>' + esc(O.vendedor_nome) + '</b>.' : '') + '</p>'
+    + '<div class="chips">' + valChip + '<span class="chip">Emitido em ' + dt(O.criado_em) + '</span>' + (O.itens.length ? '<span class="chip">' + O.itens.length + (O.itens.length > 1 ? ' produtos' : ' produto') + '</span>' : '') + '</div></div>'
+    + '<div class="card"><h2>Produtos</h2>' + itensHtml + '</div>'
+    + '<div class="card"><h2>Resumo dos valores</h2><div class="resumo">'
+    + '<div class="lin"><span>Produtos</span><span>' + brl(bruto) + '</span></div>'
+    + (descVista > 0.004 ? '<div class="lin desc"><span>Desconto à vista (' + String(O.desconto_vista_pct).replace('.', ',') + '%)</span><b>− ' + brl(descVista) + '</b></div>' : '')
+    + (O.frete_valor > 0 ? '<div class="lin"><span>Frete</span><span>' + brl(O.frete_valor) + '</span></div>' : '')
+    + '<div class="lin total"><span>Total do orçamento</span><b>' + brl(O.total_final) + '</b></div>'
+    + '<div class="nota">Preços com todos os impostos inclusos.</div>'
+    + '</div></div>'
+    + '<div class="card"><h2>Condições</h2><div class="cond">'
+    + '<div><div class="t">Pagamento</div><div class="v">' + pg.v + '<small>' + pg.s + '</small></div></div>'
+    + '<div><div class="t">Frete</div><div class="v">' + fr.v + '<small>' + fr.s + '</small></div></div>'
+    + '<div><div class="t">Validade</div><div class="v">' + dt(O.validade_em) + '<small>Os preços e condições valem até esta data.</small></div></div>'
+    + '<div><div class="t">Entrega</div><div class="v">Sujeita à disponibilidade<small>O prazo é confirmado por ' + (O.vendedor_nome ? esc(O.vendedor_nome) : 'seu representante') + ' ao aprovar o pedido.</small></div></div>'
+    + '</div>' + (O.observacoes ? '<div class="resumo" style="padding-top:0"><div class="t" style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#718096;font-weight:600;margin:6px 0">Observações</div><div style="font-size:14px;color:#4a5568;white-space:pre-line;line-height:1.5">' + esc(O.observacoes) + '</div></div>' : '') + '</div>'
+    + '<div class="card"><h2>Por que a Boxer</h2><div class="porque">'
+    + '<div><b>Fabricante nacional</b><span>Equipamentos de solda e corte desenvolvidos e fabricados no Brasil.</span></div>'
+    + '<div><b>Preço e condições claras</b><span>Valor, pagamento e frete definidos aqui, sem surpresa na hora de fechar.</span></div>'
+    + '<div><b>Atendimento direto</b><span>Seu representante acompanha o pedido até a entrega.</span></div>'
+    + '</div></div>'
+    + '<div class="card"><h2>Dados</h2><div class="dados">'
+    + '<div><b>Cliente</b>' + esc(O.cliente_nome) + '<br>' + fmtCnpj(O.cliente_cnpj) + (O.cliente_contato ? '<br>A/C ' + esc(O.cliente_contato) : '') + (O.cliente_cidade ? '<br>' + esc(O.cliente_cidade) + '/' + esc(O.cliente_uf || '') : '') + '</div>'
+    + '<div><b>Seu representante</b>' + esc(O.vendedor_nome || '') + (O.vendedor_telefone ? '<br>' + fmtTel(O.vendedor_telefone) : '') + (O.vendedor_email ? '<br>' + esc(O.vendedor_email) : '') + '</div>'
+    + '<div><b>Boxer</b>' + BOXER.nome + '<br>CNPJ ' + BOXER.cnpj + '<br>' + BOXER.end + '<br>' + BOXER.email + ' · ' + BOXER.tel + '</div>'
+    + '</div></div>'
+    + '<div class="rodape">Orçamento ' + esc(O.codigo) + ' · gerado em ' + dt(O.criado_em) + ' · sujeito a disponibilidade de estoque e análise de crédito.</div>'
+    + '</div>'
+    + '<div class="cta"><div class="cta-in"><div class="tot">Total<b>' + brl(O.total_final) + '</b></div><div class="btns">'
+    + '<button class="btn sec noprint" onclick="window.print()">Imprimir / PDF</button>'
+    + (wa ? '<a class="btn sec" href="' + wa + '" target="_blank" rel="noopener">Falar com ' + (O.vendedor_nome ? esc(O.vendedor_nome.split(' ')[0]) : 'o representante') + '</a>' : '')
+    + (aceito ? '' : (exp ? '' : '<button class="btn prim" onclick="abrirAceite()">Aceitar orçamento</button>'))
+    + '</div></div></div>';
+}
+function semFotoHtml() { return '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#718096" stroke-width="1.5"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 16l-5-5-8 8"/></svg>'; }
+function semFoto() { const d = document.createElement('span'); d.innerHTML = semFotoHtml(); return d; }
+
+function abrirAceite() { $('aceiteErr').style.display = 'none'; $('ovAceite').classList.add('show'); setTimeout(() => $('aceNome').focus(), 50); }
+function fecharAceite() { $('ovAceite').classList.remove('show'); }
+async function confirmarAceite() {
+  const nome = $('aceNome').value.trim();
+  const erro = m => { $('aceiteErr').textContent = m; $('aceiteErr').style.display = 'block'; };
+  if (!nome) return erro('Informe o seu nome.');
+  if (!$('aceCk').checked) return erro('Marque a confirmação para continuar.');
+  $('aceBtn').disabled = true; $('aceBtn').textContent = 'Enviando…';
+  try {
+    const r = await rpc('aceitar_orcamento_publico', { p_token: TOKEN, p_nome: nome });
+    if (!r.ok) {
+      $('aceBtn').disabled = false; $('aceBtn').textContent = 'Aceitar orçamento';
+      return erro(r.motivo === 'expirado' ? 'Este orçamento expirou. Peça um novo ao seu representante.' : 'Não foi possível registrar o aceite. Fale com o seu representante.');
+    }
+    fetch(HUB, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ acao: 'avisar', token: TOKEN }) }).catch(() => {});
+    fecharAceite();
+    O = await rpc('buscar_orcamento_publico', { p_token: TOKEN });
+    desenhar();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch (e) {
+    $('aceBtn').disabled = false; $('aceBtn').textContent = 'Aceitar orçamento';
+    erro('Falha de conexão. Tente novamente.');
+  }
+}
+iniciar();
+</script>
+</body>
+</html>
