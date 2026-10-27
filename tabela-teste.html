@@ -119,6 +119,10 @@ body.locked .header,body.locked .content,body.locked #barProposta,body.locked #t
 .det-sec p{font-size:14px;color:#1a202c;line-height:1.55;margin:0}
 .det-lista{list-style:none;margin:0;padding:0;font-size:13.5px;color:#1a202c}
 .det-lista li{padding:5px 0;border-bottom:1px solid #f0f4f8}
+.det-tab{width:100%;border-collapse:collapse;font-size:13.5px}
+.det-tab td{padding:6px 0;border-bottom:1px solid #f0f4f8;vertical-align:top}
+.det-tab td:first-child{color:#718096;width:42%;padding-right:10px}
+.det-nota{font-size:12px;color:#718096;margin-top:6px}
 .det-vazio{color:#a0aec0;text-align:center;padding:28px 0;font-size:14px}
 .btn-export{padding:9px 16px;border-radius:8px;border:1px solid #1d327b;background:#fff;color:#1d327b;font-family:Outfit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
 .btn-export:hover{background:#1d327b;color:#fff}
@@ -594,8 +598,8 @@ async function abrirDetalhes(codigo, nome) {
     logUso('ver_detalhes', { tabela: TID, codigo });
     try {
         if (!_detCache[codigo]) {
-            const rows = await sbFetch('/produtos?codigo=eq.' + encodeURIComponent(codigo) + '&status=eq.ativo&select=tabela_id,descricao_completa,caracteristicas,imagem_url,imagem_secundaria_url,equipamentos_inclusos,acessorios_padrao');
-            const temConteudo = r => r.descricao_completa || r.imagem_url || (Array.isArray(r.caracteristicas) && r.caracteristicas.length);
+            const rows = await sbFetch('/produtos?codigo=eq.' + encodeURIComponent(codigo) + '&status=eq.ativo&select=tabela_id,descricao_completa,caracteristicas,imagem_url,imagem_secundaria_url,equipamentos_inclusos,acessorios_padrao,info_pdm');
+            const temConteudo = r => r.descricao_completa || r.imagem_url || r.info_pdm || (Array.isArray(r.caracteristicas) && r.caracteristicas.length);
             _detCache[codigo] = rows.find(r => r.tabela_id === TID && temConteudo(r)) || rows.find(temConteudo) || null;
         }
         const d = _detCache[codigo];
@@ -603,7 +607,30 @@ async function abrirDetalhes(codigo, nome) {
         let h = '';
         const imgs = [d.imagem_url, d.imagem_secundaria_url].map(urlImagemSegura).filter(Boolean);
         if (imgs.length) h += '<div class="det-imgs">' + imgs.map(u => '<img src="' + u + '" alt="" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'">').join('') + '</div>';
-        if (d.descricao_completa) h += '<div class="det-sec"><h4>Descrição</h4><p>' + escDet(d.descricao_completa).replace(/\n/g, '<br>') + '</p></div>';
+        const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+        const info = d.info_pdm || {};
+        // descricao identica ao nome do produto nao acrescenta nada
+        if (d.descricao_completa && norm(d.descricao_completa) !== norm(nome)) h += '<div class="det-sec"><h4>Descrição</h4><p>' + escDet(d.descricao_completa).replace(/\n/g, '<br>') + '</p></div>';
+        if (Array.isArray(info.specs) && info.specs.length) h += '<div class="det-sec"><h4>Especificações</h4><table class="det-tab">' + info.specs.map(s => '<tr><td>' + escDet(s.label) + '</td><td>' + escDet(s.valor) + '</td></tr>').join('') + '</table></div>';
+        const fn = v => (v == null ? '' : String(v).replace('.', ','));
+        const dimTxt = o => o ? [o.c, o.l, o.a].map(fn).join(' × ') + ' cm' : '';
+        const di = info.dimensoes;
+        if (di) {
+            const lin = [];
+            if (di.maquina) lin.push(['Dimensões da máquina (C × L × A)', dimTxt(di.maquina)]);
+            if (di.embalagem) lin.push(['Dimensões da embalagem (C × L × A)', dimTxt(di.embalagem)]);
+            if (di.peso_liquido) lin.push(['Peso líquido', fn(di.peso_liquido) + ' kg']);
+            if (di.peso_bruto) lin.push(['Peso bruto', fn(di.peso_bruto) + ' kg']);
+            if (lin.length) {
+                h += '<div class="det-sec"><h4>Dimensões e peso</h4><table class="det-tab">' + lin.map(x => '<tr><td>' + escDet(x[0]) + '</td><td>' + escDet(x[1]) + '</td></tr>').join('') + '</table>';
+                const ob = [di.obs_maquina, di.obs_embalagem].filter(Boolean).join(' · ');
+                if (ob) h += '<div class="det-nota">' + escDet(ob) + '</div>';
+                h += '</div>';
+            }
+        }
+        const acomp = (Array.isArray(info.acompanha) ? info.acompanha : []).concat((Array.isArray(d.equipamentos_inclusos) ? d.equipamentos_inclusos : []).map(i => typeof i === 'string' ? i : (i.label || i.nome || '')).filter(Boolean));
+        const acompUn = acomp.filter((x, i) => acomp.findIndex(y => norm(y) === norm(x)) === i);
+        if (acompUn.length) h += '<div class="det-sec"><h4>Acompanha</h4><ul class="det-lista">' + acompUn.map(i => '<li>' + escDet(i) + '</li>').join('') + '</ul></div>';
         const car = Array.isArray(d.caracteristicas) ? d.caracteristicas : [];
         if (car.length) {
             h += '<div class="det-sec"><h4>Características</h4><ul class="det-lista">' + car.map(c => {
@@ -611,8 +638,12 @@ async function abrirDetalhes(codigo, nome) {
                 return '<li>' + (val && val !== '✓' ? '<strong>' + lab + ':</strong> ' + escDet(val) : '✓ ' + lab) + '</li>';
             }).join('') + '</ul></div>';
         }
-        const inc = Array.isArray(d.equipamentos_inclusos) ? d.equipamentos_inclusos : [];
-        if (inc.length) h += '<div class="det-sec"><h4>Acompanha</h4><ul class="det-lista">' + inc.map(i => '<li>' + escDet(typeof i === 'string' ? i : (i.label || i.nome || JSON.stringify(i))) + '</li>').join('') + '</ul></div>';
+        if (Array.isArray(info.compativeis) && info.compativeis.length) {
+            const maq = info.compativeis.filter(c => c.tipo === 'maquina'), toc = info.compativeis.filter(c => c.tipo === 'tocha');
+            const lst = a => '<ul class="det-lista">' + a.map(c => '<li>' + escDet((c.codigo ? c.codigo + ' — ' : '') + (c.nome || '')) + '</li>').join('') + '</ul>';
+            if (maq.length) h += '<div class="det-sec"><h4>Compatível com as máquinas</h4>' + lst(maq) + '</div>';
+            if (toc.length) h += '<div class="det-sec"><h4>Tochas compatíveis</h4>' + lst(toc) + '</div>';
+        }
         $('detCorpo').innerHTML = h || '<div class="det-vazio">Sem detalhes cadastrados.</div>';
     } catch (e) {
         $('detCorpo').innerHTML = '<div class="det-vazio">Não foi possível carregar os detalhes agora.</div>';
