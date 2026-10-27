@@ -165,7 +165,8 @@ body.locked .header,body.locked .content,body.locked #barProposta,body.locked #t
 #btnOrc:hover{background:#c20510}
 #orcOverlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:2700;padding:16px}
 #orcOverlay.show{display:flex}
-#orcOverlay .det-card{max-width:720px}
+#orcOverlay .det-card{max-width:760px}
+#orcOverlay.larga .det-card{max-width:1040px;width:100%}
 .orc-corpo{padding:6px 22px 22px;font-family:Outfit,sans-serif;font-size:14px;color:#1a202c}
 .orc-resumo{background:#eef2fa;border-radius:8px;padding:10px 14px;margin:10px 0 14px;font-size:13.5px;color:#1d327b}
 .orc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
@@ -190,6 +191,21 @@ body.locked .header,body.locked .content,body.locked #barProposta,body.locked #t
 .orc-st{display:inline-block;border-radius:999px;padding:2px 9px;font-size:11.5px;font-weight:600;background:#e2e8f0;color:#4a5568}
 .orc-st.verde{background:#dcfce7;color:#166534}.orc-st.azul{background:#dbeafe;color:#1e40af}.orc-st.laranja{background:#ffedd5;color:#9a3412}.orc-st.verm{background:#fee2e2;color:#991b1b}
 .orc-pass{font-size:12px;color:#718096;margin-top:3px}
+.orc-cards{display:flex;flex-direction:column;gap:16px}
+.orc-card{border:1px solid #d0d8e8;border-radius:12px;padding:18px 20px;display:grid;grid-template-columns:minmax(150px,1fr) minmax(190px,1.3fr) minmax(240px,1.8fr);gap:8px 28px;align-items:start;background:#fff}
+.orc-card .c-tit{font-size:16px;font-weight:700;color:#1d327b}
+.orc-card .c-tot{font-size:18px;font-weight:700;margin-top:8px}
+.orc-card .c-cli{font-size:14.5px;font-weight:600}
+.orc-card .orc-pass{font-size:13px;margin-top:6px;line-height:1.45}
+.orc-card .orc-st{font-size:13px;padding:4px 12px}
+.orc-zenlink{display:inline-block;margin-top:8px;font-size:14px;font-weight:700;color:#1d327b;background:#eef3ff;border:1px solid #c3d3f5;border-radius:8px;padding:7px 12px;text-decoration:none;cursor:pointer}
+.orc-zenlink:hover{background:#dde8ff}
+.orc-acoes-col{display:flex;flex-direction:column;gap:10px;align-items:stretch}
+.orc-acoes-col .orc-btn{text-align:center;padding:10px 14px;font-size:13.5px}
+.orc-acoes-lin{display:flex;gap:10px}.orc-acoes-lin .orc-btn{flex:1}
+.orc-canc{background:none;border:none;color:#718096;font-family:Outfit;font-size:12px;text-decoration:underline;cursor:pointer;padding:4px;align-self:flex-end}
+.orc-canc:hover{color:#991b1b}
+@media(max-width:760px){.orc-card{grid-template-columns:1fr}}
 tbody tr.row-ajuste{background:#fff0f0 !important}
 tbody tr.row-ajuste .td-price-final{color:#e30613}
 .det-vazio{color:#a0aec0;text-align:center;padding:28px 0;font-size:14px}
@@ -660,7 +676,8 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) chec
 const _qtdTimers = {};
 function aoDigitarQtd(input) {
     const codigo = input.dataset.codigo;
-    const v = parseInt(input.value, 10);
+    let v = parseInt(input.value, 10);
+    if (v < 0) { v = 0; input.value = 0; }
     QTD[codigo] = v > 0 ? v : 0;
     updateBar();
     if (selecionados.has(codigo)) selecionados.get(codigo).quantidade = QTD[codigo] > 0 ? QTD[codigo] : 1;
@@ -1198,7 +1215,7 @@ function render() {
                 let pc = scm!==undefined ? `<td class="td-price-final">${fmt(tb*scm*fatorVista())}</td>` : `<td style="text-align:right;color:#a0aec0;font-style:italic;font-size:12px">N/D</td>`;
                 const ic = cState==='SP' ? p.icms : 4;
                 const jaSel = selecionados.has(p.codigo);
-                const celFim = `<td class="ac"><input type="number" class="qtd-input" min="1" placeholder="qtd" data-codigo="${p.codigo}" value="${QTD[p.codigo]||''}" style="width:56px;text-align:center"></td><td class="ac disp-cell" data-codigo="${p.codigo}">${dispHtml(p.codigo)}</td>`;
+                const celFim = `<td class="ac"><input type="number" class="qtd-input" min="0" step="1" placeholder="0" data-codigo="${p.codigo}" value="${QTD[p.codigo]||''}" style="width:56px;text-align:center"></td><td class="ac disp-cell" data-codigo="${p.codigo}">${dispHtml(p.codigo)}</td>`;
                 if (IS_AUTO) {
                     const podeSelecionar = ['Laser', 'Robô', 'Máquinas'].includes(p.catGroup);
                     const celSel = podeSelecionar
@@ -1483,7 +1500,7 @@ async function orcApi(corpo) {
     if (!r.ok) throw new Error(j.error || ('Erro ' + r.status));
     return j;
 }
-function fecharOrc() { $('orcOverlay').classList.remove('show'); }
+function fecharOrc() { $('orcOverlay').classList.remove('show', 'larga'); }
 function onlyDig(v) { return String(v || '').replace(/\D/g, ''); }
 function mascCnpj(d) { d = onlyDig(d); return d.length === 14 ? d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5') : (d.length === 11 ? d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : d); }
 function orcCnpjInput() { const d = onlyDig($('orcCnpj').value); if (d.length === 14) orcBuscaCnpj(); }
@@ -1650,30 +1667,53 @@ async function abrirMeusOrc() {
     $('orcSub').textContent = 'Acompanhe o aceite do cliente e confirme o pedido no ZEN';
     $('orcCorpo').innerHTML = '<p>Carregando…</p>';
     $('orcOverlay').classList.add('show');
+    $('orcOverlay').classList.remove('larga');
     logUso('orc_listar', { tabela: TID });
     try {
         const j = await orcApi({ acao: 'listar' });
         const L = j.orcamentos || [];
         if (!L.length) { $('orcCorpo').innerHTML = '<p>Você ainda não gerou orçamentos.</p>'; return; }
         window._ORC = {}; L.forEach(o => { window._ORC[o.id] = o; });
-        $('orcCorpo').innerHTML = '<table class="orc-lista"><thead><tr><th>Orçamento</th><th>Cliente</th><th>Total</th><th>Situação</th><th></th></tr></thead><tbody>' + L.map(o => {
+        $('orcOverlay').classList.add('larga');
+        $('orcCorpo').innerHTML = '<div class="orc-cards">' + L.map(o => {
             const st = o.expirado ? ['Expirado', 'verm'] : (ORC_ST[o.status] || [o.status, '']);
-            const vis = o.visualizacoes ? 'Aberto ' + o.visualizacoes + 'x' + (o.ultima_visualizacao_em ? ' · último ' + new Date(o.ultima_visualizacao_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '') : 'Ainda não aberto';
-            const zen = o.zen_sale_id ? '<div class="orc-pass">ZEN nº ' + o.zen_sale_id + (o.zen_status === 'web_pronta_entrega' ? ' · WEB Pronta entrega' : (o.zen_status === 'preparando' ? ' · orçamento (Preparando)' : '')) + '</div>' : '<div class="orc-pass">' + (o.zen_status === 'sem_cliente_zen' ? 'Cliente sem cadastro no ZEN' : 'Sem venda no ZEN') + '</div>';
+            const fdh = d => new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+            const vis = o.visualizacoes ? 'Aberto ' + o.visualizacoes + 'x pelo cliente' + (o.ultima_visualizacao_em ? ' · último acesso ' + fdh(o.ultima_visualizacao_em) : '') : 'Cliente ainda não abriu o link';
+            const aceite = o.aceito_em ? 'Aceito pelo cliente em ' + fdh(o.aceito_em) : '';
+            const aberto = ['enviado', 'visualizado', 'aceito_cliente'].includes(o.status);
+            let zen;
+            if (o.status === 'aprovado' && o.zen_sale_id) zen = '<div class="orc-pass">Pedido criado no ZEN, etapa WEB Pronta entrega</div><a class="orc-zenlink" href="' + ZEN_URL_VENDA + o.zen_sale_id + '" target="_blank" rel="noopener">Pedido ZEN nº ' + o.zen_sale_id + ' ↗</a>';
+            else if (o.zen_sale_id && o.status !== 'cancelado') zen = '<div class="orc-pass">Salvo no ZEN como orçamento (Preparando)</div><a class="orc-zenlink" href="' + ZEN_URL_VENDA + o.zen_sale_id + '" target="_blank" rel="noopener">Venda ZEN nº ' + o.zen_sale_id + ' ↗</a>';
+            else zen = '<div class="orc-pass">' + (o.zen_status === 'sem_cliente_zen' ? 'Cliente sem cadastro no ZEN' : (o.zen_sale_id ? 'Venda ' + o.zen_sale_id + ' no ZEN: ' + (o.zen_status || '') : 'Sem venda no ZEN')) + '</div>';
             const err = o.zen_erro && o.status !== 'aprovado' ? '<div class="orc-pass" style="color:#991b1b">' + esc(o.zen_erro) + '</div>' : '';
-            let acoes = '<button class="orc-btn sm" onclick="copiarOrc(\'' + o.link + '\', this)">Copiar link</button> ';
-            if (o.zen_sale_id) acoes += '<button class="orc-btn sm" onclick="abrirNoZen(' + o.zen_sale_id + ')" title="Abre o ZEN e copia o número da venda para você buscar e editar">Ajustar no ZEN</button> ';
-            if (['enviado', 'visualizado', 'aceito_cliente'].includes(o.status) && o.zen_sale_id) acoes += '<button class="orc-btn prim sm" onclick="aprovarOrc(\'' + o.id + '\', this)">' + (o.status === 'aceito_cliente' ? 'Confirmar e enviar ao ZEN' : 'Cliente confirmou por outro canal: enviar ao ZEN') + '</button>';
-            return '<tr><td><b>' + esc(o.codigo) + '</b><div class="orc-pass">' + new Date(o.criado_em).toLocaleDateString('pt-BR') + ' · validade ' + new Date(o.validade_em).toLocaleDateString('pt-BR') + '</div></td><td>' + esc(o.cliente_nome) + '<div class="orc-pass">' + mascCnpj(o.cliente_cnpj) + '</div></td><td>' + fmt(o.total_final) + '</td><td><span class="orc-st ' + st[1] + '">' + st[0] + '</span><div class="orc-pass">' + vis + '</div>' + zen + err + '</td><td style="white-space:normal">' + acoes + '</td></tr>';
-        }).join('') + '</tbody></table>';
+            let acoes = '<div class="orc-acoes-lin"><button class="orc-btn" onclick="copiarOrc(\'' + o.link + '\', this)">Copiar link</button><a class="orc-btn" href="' + o.link + '" target="_blank" rel="noopener">Ver como cliente</a></div>';
+            if (o.zen_sale_id && aberto) acoes += '<button class="orc-btn" onclick="abrirNoZen(' + o.zen_sale_id + ')" title="Abre o ZEN para você editar a venda">Ajustar no ZEN</button>';
+            if (aberto && o.zen_sale_id) acoes += '<button class="orc-btn prim" onclick="aprovarOrc(\'' + o.id + '\', this)">' + (o.status === 'aceito_cliente' ? 'Confirmar e enviar ao ZEN' : 'Cliente confirmou por outro canal: enviar ao ZEN') + '</button>';
+            if (aberto) acoes += '<button class="orc-canc" onclick="cancelarOrc(\'' + o.id + '\', this)">Cancelar orçamento</button>';
+            return '<div class="orc-card"><div><div class="c-tit">' + esc(o.codigo) + '</div><div class="orc-pass">Criado em ' + new Date(o.criado_em).toLocaleDateString('pt-BR') + '<br>Validade ' + new Date(o.validade_em).toLocaleDateString('pt-BR') + '</div><div class="c-tot">' + fmt(o.total_final) + '</div></div>'
+                + '<div><div class="c-cli">' + esc(o.cliente_nome) + '</div><div class="orc-pass">' + mascCnpj(o.cliente_cnpj) + '</div><div style="margin-top:10px"><span class="orc-st ' + st[1] + '">' + st[0] + '</span></div><div class="orc-pass">' + vis + '</div>' + (aceite ? '<div class="orc-pass">' + aceite + '</div>' : '') + zen + err + '</div>'
+                + '<div class="orc-acoes-col">' + acoes + '</div></div>';
+        }).join('') + '</div>';
     } catch (e) {
         $('orcCorpo').innerHTML = '<p>Não foi possível carregar seus orçamentos agora. ' + esc(e.message) + '</p>';
     }
 }
+const ZEN_URL_VENDA = 'https://zenerp.app.br/sale/saleItem.html?q=sale.id==';
+async function cancelarOrc(id, btn) {
+    const o = (window._ORC || {})[id];
+    if (!o || !confirm('Cancelar o orçamento ' + o.codigo + '?\n\nO link do cliente deixa de funcionar' + (o.zen_sale_id ? ' e a venda ' + o.zen_sale_id + ' é cancelada no ZEN' : '') + '.')) return;
+    btn.disabled = true; btn.textContent = 'Cancelando…';
+    try {
+        const j = await orcApi({ acao: 'cancelar', id });
+        logUso('orc_cancelar', { tabela: TID, codigo: o.codigo });
+        if (j.aviso_zen) alert('Orçamento cancelado. Atenção: ' + j.aviso_zen);
+        await abrirMeusOrc();
+    } catch (e) { btn.disabled = false; btn.textContent = 'Cancelar orçamento'; alert(e.message); }
+}
 function abrirNoZen(id) {
     try { navigator.clipboard.writeText(String(id)); } catch (e) {}
     alert('Vou abrir a venda ' + id + ' no ZEN para você ajustar. Depois volte aqui e confirme.');
-    window.open('https://zenerp.app.br/sale/saleItem.html?q=sale.id==' + id, '_blank', 'noopener');
+    window.open(ZEN_URL_VENDA + id, '_blank', 'noopener');
 }
 async function aprovarOrc(id, btn) {
     const o = (window._ORC || {})[id];
