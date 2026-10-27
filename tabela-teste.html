@@ -153,7 +153,16 @@ body.locked .header,body.locked .content,body.locked #barProposta,body.locked #t
 #barClasse{font-family:Outfit;font-size:12.5px;color:#c8ddf0;margin-left:18px}
 #barClasse b{color:#fff}
 #barClasse button{margin-left:8px;background:#fff;color:#1d327b;border:none;border-radius:6px;padding:5px 10px;font-family:Outfit;font-size:12px;font-weight:600;cursor:pointer}
-.barEsq{display:flex;align-items:center;flex-wrap:wrap;row-gap:4px}
+.barEsq{display:flex;align-items:center;flex-wrap:wrap;row-gap:6px}
+#barPag{margin-left:18px;font-family:Outfit;font-size:12.5px;color:#c8ddf0}
+#barPag select{font-family:Outfit;font-size:12.5px;padding:3px 6px;border-radius:6px;border:none;margin-left:4px}
+#barAlertas{flex-basis:100%;display:flex;flex-wrap:wrap;gap:6px}
+.bar-alerta{background:#e30613;color:#fff;border-radius:6px;padding:3px 9px;font-family:Outfit;font-size:12px;font-weight:600}
+.bar-alerta button{margin-left:8px;background:#fff;color:#e30613;border:none;border-radius:5px;padding:2px 8px;font-family:Outfit;font-size:12px;font-weight:700;cursor:pointer}
+.bar-info{background:rgba(255,255,255,.14);color:#fff;border-radius:6px;padding:3px 9px;font-family:Outfit;font-size:12px}
+.bar-info button{margin-left:8px;background:#fff;color:#1d327b;border:none;border-radius:5px;padding:2px 8px;font-family:Outfit;font-size:12px;font-weight:600;cursor:pointer}
+tbody tr.row-ajuste{background:#fff0f0 !important}
+tbody tr.row-ajuste .td-price-final{color:#e30613}
 .det-vazio{color:#a0aec0;text-align:center;padding:28px 0;font-size:14px}
 .btn-export{padding:9px 16px;border-radius:8px;border:1px solid #1d327b;background:#fff;color:#1d327b;font-family:Outfit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
 .btn-export:hover{background:#1d327b;color:#fff}
@@ -283,7 +292,7 @@ body.locked .header,body.locked .content,body.locked #barProposta,body.locked #t
 </div>
 
 <div id="barProposta">
-  <div class="barEsq"><span id="barContador"></span><span id="barTotal"></span><span id="barClasse"></span></div>
+  <div class="barEsq"><span id="barContador"></span><span id="barTotal"></span><span id="barPag">Pagamento: <select id="selPag" onchange="mudarPagamento(this.value)"><option value="1">Boleto 1x</option><option value="2">Boleto 2x</option><option value="3">Boleto 3x</option><option value="4">Boleto 4x</option><option value="v">À vista (PIX)</option></select></span><span id="barClasse"></span><div id="barAlertas"></div></div>
   <div>
     <button id="btnLimpar" onclick="limparSelecao()">Limpar</button>
     <button id="btnGerar" onclick="gerarProposta()">Gerar Proposta →</button>
@@ -1145,7 +1154,7 @@ function render() {
                 const dim = IS_AUTO ? grupoPreco(p.catGroup) : p.porte;
                 const k = cSeg+cCls+dim;
                 const scm = M[k];
-                let pc = scm!==undefined ? `<td class="td-price-final">${fmt(tb*scm)}</td>` : `<td style="text-align:right;color:#a0aec0;font-style:italic;font-size:12px">N/D</td>`;
+                let pc = scm!==undefined ? `<td class="td-price-final">${fmt(tb*scm*fatorVista())}</td>` : `<td style="text-align:right;color:#a0aec0;font-style:italic;font-size:12px">N/D</td>`;
                 const ic = cState==='SP' ? p.icms : 4;
                 const jaSel = selecionados.has(p.codigo);
                 const celFim = `<td class="ac"><input type="number" class="qtd-input" min="1" placeholder="qtd" data-codigo="${p.codigo}" value="${QTD[p.codigo]||''}" style="width:56px;text-align:center"></td><td class="ac disp-cell" data-codigo="${p.codigo}">${dispHtml(p.codigo)}</td>`;
@@ -1164,7 +1173,7 @@ function render() {
             const propHeader = IS_AUTO ? '<th class="ac" style="width:110px">Proposta</th>' : '';
             const qtdHeader = IS_TEST ? '<th class="ac" style="width:70px">QTD</th>' : '';
             const extraHeader = '<th class="ac" style="width:70px">QTD</th><th class="ac" style="width:170px">Disponibilidade</th>';
-            d.innerHTML += `<div class="tbl-wrap"><table><thead><tr>${propHeader}${qtdHeader}<th class="al">Código</th><th class="al">Descrição</th><th class="ac">Porte</th><th class="ar">Tabela</th><th class="ar">c/ Desconto</th><th class="ar">ICMS</th><th class="ar">IPI</th><th class="al">NCM</th>${extraHeader}</tr></thead><tbody>${r}</tbody></table></div>`;
+            d.innerHTML += `<div class="tbl-wrap"><table><thead><tr>${propHeader}${qtdHeader}<th class="al">Código</th><th class="al">Descrição</th><th class="ac">Porte</th><th class="ar">Tabela</th><th class="ar">c/ Desconto${AVISTA ? ' + à vista' : ''}</th><th class="ar">ICMS</th><th class="ar">IPI</th><th class="al">NCM</th>${extraHeader}</tr></thead><tbody>${r}</tbody></table></div>`;
             a.appendChild(d);
         });
     }
@@ -1186,6 +1195,35 @@ function updateBarAntigo() {
     }
 }
 
+// --- pagamento: a vista (desconto item a item e no total), parcela minima e frete ---
+let AVISTA = false, PARC = 1, _regrasBarCarregando = false;
+const COND_PADRAO = { 1: { pedMin: 3000, dupMin: 800, vista: 3 }, 2: { pedMin: 6500, dupMin: 650, vista: 3 } };
+function numBR(s) { return parseFloat(String(s).replace(/[^\d,]/g, '').replace(',', '.')); }
+// valores vindos do texto das regras (editaveis no admin); se nao achar, usa o padrao da politica
+function condicoes() {
+    const c = Object.assign({}, COND_PADRAO[TID] || COND_PADRAO[1]);
+    const txt = (REGRAS || []).map(r => r.conteudo || '').join('\n');
+    let m;
+    if ((m = txt.match(/Pedido (?:normal|m[ií]nimo):\s*R\$\s*([\d.]+)/i))) c.pedMin = numBR(m[1]);
+    if ((m = txt.match(/duplicata:\s*R\$\s*([\d.]+)/i))) c.dupMin = numBR(m[1]);
+    if ((m = txt.match(/(\d+(?:,\d+)?)% de desconto à vista/i)) || (m = txt.match(/à vista:\s*(\d+(?:,\d+)?)% de desconto/i))) c.vista = numBR(m[1]);
+    return c;
+}
+function freteUF() {
+    for (const r of (REGRAS || [])) {
+        for (const l of String(r.conteudo || '').split(/\r?\n/)) {
+            const c = l.split(' | ').map(s => s.trim());
+            if (c.length >= 3 && c[0].split(',').map(s => s.trim()).includes(cState)) {
+                if (/FOB/i.test(c[1])) return { tipo: 'FOB' };
+                return { tipo: 'CIF', min: numBR(c[2]), frete: numBR(c[3] || '') };
+            }
+        }
+    }
+    return null;
+}
+function fatorVista() { return AVISTA ? 1 - condicoes().vista / 100 : 1; }
+function mudarPagamento(v) { AVISTA = v === 'v'; if (!AVISTA) PARC = parseInt(v) || 1; render(); }
+
 function updateBar() {
     const bar = $('barProposta');
     const itens = itensDoPedido();
@@ -1195,16 +1233,52 @@ function updateBar() {
     $('btnGerar').style.display = IS_AUTO ? '' : 'none';
     const un = itens.reduce((a, x) => a + x.q, 0);
     $('barContador').innerHTML = '<strong>' + n + '</strong> ' + (n > 1 ? 'itens' : 'item') + ' · ' + un + ' un.';
-    if (!cSeg || !cCls) { $('barTotal').innerHTML = ''; $('barClasse').innerHTML = ''; return; }
+    $('selPag').value = AVISTA ? 'v' : String(PARC);
+    if (!cSeg || !cCls) { $('barTotal').innerHTML = ''; $('barClasse').innerHTML = ''; $('barAlertas').innerHTML = ''; return; }
+    if (!REGRAS && !_regrasBarCarregando) {
+        _regrasBarCarregando = true;
+        sbFetch('/tabela_regras?tabela_id=eq.' + TID + '&select=ordem,titulo,conteudo&order=ordem,id').then(r => { REGRAS = r; }).catch(() => {}).then(() => { _regrasBarCarregando = false; if (REGRAS) updateBar(); });
+    }
+    const cd = condicoes();
     const r = totalNaClasse(itens, cCls);
-    $('barTotal').innerHTML = 'Total: <strong>' + fmt(r.t) + '</strong>' + (r.sem ? ' <small>(' + r.sem + ' sem preço)</small>' : '');
-    let hint = '';
+    const cobrado = r.t * fatorVista();
+    $('barTotal').innerHTML = AVISTA
+        ? 'Total: <strong>' + fmt(r.t) + '</strong> · À vista (−' + String(cd.vista).replace('.', ',') + '%): <strong>' + fmt(cobrado) + '</strong>' + (r.sem ? ' <small>(' + r.sem + ' sem preço)</small>' : '')
+        : 'Total: <strong>' + fmt(r.t) + '</strong>' + (r.sem ? ' <small>(' + r.sem + ' sem preço)</small>' : '');
+
+    let hint = '', ajuste = false;
+    const alertas = [];
     if (!IS_AUTO && cSeg === 'Física') {
         const ind = classeIndicada(itens);
-        if (ind && ind !== cCls) hint = 'Pelo total, a classe indicada é a <b>' + ind + '</b> <button onclick="aplicarClasse(' + ind + ')">Usar classe ' + ind + '</button>';
-        else if (ind) hint = 'Classe ' + ind + ' conforme o valor do pedido ✓';
+        if (ind && ind > cCls) {
+            ajuste = true;
+            alertas.push('<span class="bar-alerta">⚠ Preço na classe ' + cCls + ' dá desconto maior que o permitido: pelo total, a classe correta é a ' + ind + ' <button onclick="aplicarClasse(' + ind + ')">Corrigir para classe ' + ind + '</button></span>');
+        } else if (ind && ind < cCls) {
+            ajuste = true;
+            alertas.push('<span class="bar-alerta">⚠ Pelo total, o cliente tem direito à classe ' + ind + ' (preço menor) <button onclick="aplicarClasse(' + ind + ')">Usar classe ' + ind + '</button></span>');
+        } else if (ind) hint = 'Classe ' + ind + ' conforme o valor do pedido ✓';
+        if (ind && ind > 1) {
+            const melhor = ind - 1, lim = (CLASSES_VALOR_FISICA.find(x => x[0] === melhor) || [])[1];
+            if (lim) {
+                const falta = lim + 0.01 - totalNaClasse(itens, melhor).t;
+                if (falta > 0) alertas.push('<span class="bar-info">Faltam <b>' + fmt(falta) + '</b> (a preço da classe ' + melhor + ') para chegar à classe ' + melhor + '</span>');
+            }
+        }
+    }
+    document.querySelectorAll('input.qtd-input').forEach(i => { const tr = i.closest('tr'); if (tr) tr.classList.toggle('row-ajuste', ajuste && itens.some(x => x.p.codigo === i.dataset.codigo)); });
+
+    if (!r.sem || r.t > 0) {
+        if (cobrado < cd.pedMin) alertas.push('<span class="bar-alerta">Abaixo do pedido mínimo de ' + fmt(cd.pedMin) + '</span>');
+        const fr = freteUF();
+        if (fr && fr.tipo === 'CIF' && fr.min && cobrado < fr.min) alertas.push('<span class="bar-alerta">Frete: abaixo do pedido mín. CIF de ' + fmt(fr.min) + ' (' + cState + ') — será cobrado frete de ' + (fr.frete ? fmt(fr.frete) : 'valor fixo') + '</span>');
+        else if (fr && fr.tipo === 'FOB') alertas.push('<span class="bar-info">' + cState + ' é FOB: o cliente indica a transportadora</span>');
+        if (!AVISTA && PARC > 1 && cobrado / PARC < cd.dupMin) {
+            const max = Math.max(1, Math.floor(cobrado / cd.dupMin));
+            alertas.push('<span class="bar-alerta">Parcela de ' + fmt(cobrado / PARC) + ' abaixo do mínimo de ' + fmt(cd.dupMin) + ' por duplicata — no máximo ' + max + 'x neste pedido</span>');
+        } else if (!AVISTA && cobrado < cd.dupMin) alertas.push('<span class="bar-alerta">Pedido abaixo do mínimo de ' + fmt(cd.dupMin) + ' por duplicata</span>');
     }
     $('barClasse').innerHTML = hint;
+    $('barAlertas').innerHTML = alertas.join('');
 }
 
 function toggleSel(btn) {
