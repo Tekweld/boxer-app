@@ -173,6 +173,8 @@ body.locked .header,body.locked .content,body.locked #barProposta,body.locked #t
 .orc-corpo label{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:#718096;font-weight:500;margin-bottom:4px}
 .orc-corpo input,.orc-corpo textarea{width:100%;font-family:Outfit;font-size:14px;padding:9px 11px;border:1px solid #c3cfe2;border-radius:7px;outline:none}
 .orc-corpo input:focus,.orc-corpo textarea:focus{border-color:#25bbee}
+.orc-sec{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#1d327b;margin:14px 0 8px;font-weight:600}
+.orc-corpo input[readonly]{background:#f7fafc;color:#4a5568}
 .orc-av{background:#fff4e5;color:#9a5b00;border-radius:8px;padding:8px 12px;margin:8px 0;font-size:13px}
 .orc-err{background:#fee2e2;color:#991b1b;border-radius:8px;padding:8px 12px;margin:8px 0;font-size:13px;display:none}
 .orc-acoes{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
@@ -513,6 +515,7 @@ async function onSession(session, novoLogin) {
         showDenied();
         return;
     }
+    window.ACESSO_NOME = acesso.nome || '';
     $('loginOverlay').classList.remove('show');
     document.body.classList.remove('locked');
     const ate = acesso.sessao_expira_em ? new Date(acesso.sessao_expira_em).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '';
@@ -1478,6 +1481,7 @@ async function orcApi(corpo) {
 function fecharOrc() { $('orcOverlay').classList.remove('show'); }
 function onlyDig(v) { return String(v || '').replace(/\D/g, ''); }
 function mascCnpj(d) { d = onlyDig(d); return d.length === 14 ? d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5') : (d.length === 11 ? d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : d); }
+function orcCnpjInput() { const d = onlyDig($('orcCnpj').value); if (d.length === 14) orcBuscaCnpj(); }
 function lerTelOrc() { try { return localStorage.getItem('orc_tel') || ''; } catch (e) { return ''; } }
 
 function abrirOrcamento() {
@@ -1493,21 +1497,20 @@ function abrirOrcamento() {
     $('orcSub').textContent = itens.length + (itens.length > 1 ? ' itens' : ' item') + ' · ' + cState + ' · ' + cSeg + ' · classe ' + cCls;
     $('orcCorpo').innerHTML =
         '<div class="orc-resumo"><b>' + fmt(total) + '</b> · ' + pg + ' · validade de 7 dias. O orçamento sai com os preços desta tela; o link é rastreável e o cliente pode aceitar por ele.</div>'
-        + '<div class="orc-grid">'
-        + '<div><label>CNPJ / CPF *</label><input id="orcCnpj" inputmode="numeric" placeholder="somente números" onblur="orcBuscaCnpj()"></div>'
-        + '<div><label>Razão social / nome *</label><input id="orcNome"></div>'
-        + '<div><label>Nome fantasia</label><input id="orcFant"></div>'
-        + '<div><label>Inscrição estadual</label><input id="orcIe"></div>'
+        + '<h4 class="orc-sec">Cliente</h4><div class="orc-grid">'
+        + '<div><label>CNPJ / CPF *</label><input id="orcCnpj" inputmode="numeric" placeholder="digite o CNPJ para buscar a loja" oninput="orcCnpjInput()" onblur="orcBuscaCnpj()"></div>'
+        + '<div><label>Razão social / nome *</label><input id="orcNome" placeholder="preenche sozinho se já for cliente"></div>'
         + '<div><label>Contato (aos cuidados de)</label><input id="orcContato"></div>'
         + '<div><label>E-mail do cliente *</label><input id="orcEmail" type="email"></div>'
         + '<div><label>Celular do cliente *</label><input id="orcCel" inputmode="tel" placeholder="(11) 99999-9999"></div>'
-        + '<div><label>Telefone fixo</label><input id="orcTelFixo" inputmode="tel"></div>'
-        + '<div><label>Cidade</label><input id="orcCidade"></div>'
-        + '<div><label>Seu telefone / WhatsApp (aparece no orçamento)</label><input id="orcMeuTel" inputmode="tel" value="' + lerTelOrc().replace(/"/g, '') + '"></div>'
         + '<div class="full"><label>Observações para o cliente</label><textarea id="orcObs" rows="2" maxlength="1500"></textarea></div>'
         + '</div>'
         + '<div class="orc-av" id="orcCliInfo" style="display:none"></div>'
-        + '<div class="orc-err" id="orcErr"></div>'
+        + '<h4 class="orc-sec">Seus dados (aparecem no orçamento)</h4><div class="orc-grid">'
+        + '<div><label>Nome</label><input id="orcMeuNome" readonly value="' + esc(window.ACESSO_NOME || (USER && USER.email) || '') + '"></div>'
+        + '<div><label>E-mail</label><input id="orcMeuEmail" readonly value="' + esc(USER ? USER.email : '') + '"></div>'
+        + '<div><label>Telefone / WhatsApp *</label><input id="orcMeuTel" inputmode="tel" placeholder="(11) 99999-9999" value="' + esc(lerTelOrc()) + '"></div>'
+        + '</div>'        + '<div class="orc-err" id="orcErr"></div>'
         + '<div class="orc-acoes"><button class="orc-btn" onclick="fecharOrc()">Cancelar</button><button class="orc-btn prim" id="orcGerarBtn" onclick="enviarOrcamento()">Gerar orçamento e link</button></div>';
     $('orcOverlay').classList.add('show');
     logUso('orc_abrir', { tabela: TID, itens: itens.length });
@@ -1522,11 +1525,8 @@ async function orcBuscaCnpj() {
         const c = await orcApi({ acao: 'cliente', cnpj: d });
         if (!c.encontrado) { info.style.display = 'block'; info.textContent = 'Cliente não está no cadastro do ZEN. O orçamento será gerado, mas o cadastro precisa ser feito antes de confirmar o pedido.'; return; }
         if (!$('orcNome').value) $('orcNome').value = c.razao_social || '';
-        if (!$('orcFant').value) $('orcFant').value = c.nome_fantasia || '';
-        if (!$('orcIe').value) $('orcIe').value = c.ie || '';
-        if (!$('orcEmail').value) $('orcEmail').value = c.email || '';
-        if (!$('orcTelFixo').value) $('orcTelFixo').value = c.telefone || '';
-        if (!$('orcCidade').value) $('orcCidade').value = c.cidade || '';
+                if (!$('orcEmail').value) $('orcEmail').value = c.email || '';
+        window._orcCidade = c.cidade || '';
         info.style.display = c.bloqueado ? 'block' : 'none';
         if (c.bloqueado) info.textContent = 'Atenção: este cliente consta como bloqueado no ZEN.';
     } catch (e) { /* preenchimento manual segue valendo */ }
@@ -1534,13 +1534,14 @@ async function orcBuscaCnpj() {
 
 async function enviarOrcamento() {
     const err = $('orcErr'); err.style.display = 'none';
-    const cliente = { cnpj: onlyDig($('orcCnpj').value), nome: $('orcNome').value.trim(), fantasia: $('orcFant').value.trim(), ie: $('orcIe').value.trim(), contato: $('orcContato').value.trim(), email: $('orcEmail').value.trim(), celular: $('orcCel').value, telefone: $('orcTelFixo').value, cidade: $('orcCidade').value.trim(), uf: cState };
+    const cliente = { cnpj: onlyDig($('orcCnpj').value), nome: $('orcNome').value.trim(), contato: $('orcContato').value.trim(), email: $('orcEmail').value.trim(), celular: $('orcCel').value, uf: cState, cidade: window._orcCidade || '' };
     const falha = m => { err.textContent = m; err.style.display = 'block'; };
     if (cliente.cnpj.length !== 14 && cliente.cnpj.length !== 11) return falha('Informe o CNPJ (14 dígitos) ou CPF do cliente.');
     if (!cliente.nome) return falha('Informe a razão social ou o nome do cliente.');
     if (!/^\S+@\S+\.\S+$/.test(cliente.email)) return falha('Informe um e-mail válido do cliente.');
     if (onlyDig(cliente.celular).length < 10) return falha('Informe o celular do cliente com DDD.');
     const meuTel = onlyDig($('orcMeuTel').value);
+    if (meuTel.length < 10) return falha('Informe o seu telefone/WhatsApp com DDD: ele aparece no orçamento para o cliente falar com você.');
     try { localStorage.setItem('orc_tel', meuTel); } catch (e) {}
     const btn = $('orcGerarBtn'); btn.disabled = true; btn.textContent = 'Gerando…';
     try {
