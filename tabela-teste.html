@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tabela de Preços Boxer - TESTE</title>
 <meta name="robots" content="noindex,nofollow">
+<link rel="manifest" href="manifest-tabela.json">
+<meta name="theme-color" content="#1d327b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tabela Boxer">
+<link rel="apple-touch-icon" href="tabela-icon-192.png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -231,6 +237,23 @@ tbody tr.row-ajuste .td-price-final{color:#e30613}
 .exp-acoes button{padding:9px 18px;border-radius:8px;font-family:Outfit;font-size:13px;font-weight:600;cursor:pointer;border:1px solid #c3cfe2;background:#fff;color:#4a5568}
 .exp-acoes button.p{background:#1d327b;border-color:#1d327b;color:#fff}
 .exp-acoes button:disabled{opacity:.6;cursor:default}
+#offBar,#verBar{padding:8px 16px;font-size:13px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+#offBar.off{background:#fff4e5;color:#7c2d12;border-bottom:1px solid #fdba74}
+#offBar.ok{background:#e8f1ff;color:#1d327b;border-bottom:1px solid #b6d0f7}
+#verBar{background:#1d327b;color:#fff}
+#prelimView{position:fixed;top:0;left:0;right:0;bottom:0;background:#f0f4f8;z-index:3000;overflow:auto;display:none;padding:12px}
+.pl-bar{max-width:820px;margin:0 auto 10px;display:flex;gap:8px;justify-content:flex-end}
+.pl-pg{max-width:820px;margin:0 auto;background:#fff;border:1px solid #d0d8e8;border-radius:10px;padding:24px;font-family:Outfit,sans-serif;color:#1a202c}
+.pl-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border-bottom:3px solid #e30613;padding-bottom:10px;margin-bottom:12px}
+.pl-tag{background:#fff4e5;color:#9a3412;border:1px solid #fdba74;border-radius:8px;padding:6px 10px;font-weight:700;font-size:13px;text-align:right}.pl-tag span{font-weight:400;font-size:11px}
+.pl-pg h2{font-size:18px;color:#1d327b;margin-bottom:2px}
+.pl-s{font-size:12px;color:#718096}
+.pl-t{width:100%;border-collapse:collapse;font-size:13px}.pl-t th{background:#f7fafc;text-align:left;padding:8px;font-size:11px;text-transform:uppercase;color:#718096;border-bottom:2px solid #e2e8f0}.pl-t td{padding:8px;border-bottom:1px solid #e2e8f0;vertical-align:top}.pl-t .r{text-align:right;white-space:nowrap}.pl-tot td{background:#f0f4f8;font-size:14px}
+.pl-cond{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px;font-size:13px}.pl-cond span{display:block;font-size:11px;text-transform:uppercase;color:#718096}
+.pl-obs{margin-top:12px;font-size:13px}
+.pl-av{margin-top:14px;padding:8px 10px;background:#fff4e5;border:1px solid #fdba74;border-radius:8px;font-size:12px;color:#7c2d12}
+@media(max-width:640px){.pl-cond{grid-template-columns:1fr}}
+@media print{body.prelim-open>*:not(#prelimView){display:none!important}#prelimView{position:static;overflow:visible;background:#fff;padding:0}.pl-no{display:none!important}.pl-pg{border:none;padding:0}}
 </style>
 </head>
 <body class="locked">
@@ -332,7 +355,7 @@ tbody tr.row-ajuste .td-price-final{color:#e30613}
 </div>
 
 <div class="header" style="position:relative;"><div class="header-inner">
-<div class="nav-top"><button id="orcBtn" class="nav-btn sec" style="display:none" onclick="abrirMeusOrc()" title="Orçamentos enviados aos clientes">📄 Meus orçamentos</button><button id="regrasBtn" class="nav-btn sec" onclick="abrirRegras()" title="Regras da política para consulta rápida">📋 Regras</button><a id="navBtn" href="#" class="nav-btn"></a></div>
+<div class="nav-top"><button id="instBtn" class="nav-btn sec" style="display:none" onclick="instalarApp()" title="Instalar a tabela como aplicativo no aparelho">📲 Instalar app</button><button id="orcBtn" class="nav-btn sec" style="display:none" onclick="abrirMeusOrc()" title="Orçamentos enviados aos clientes">📄 Meus orçamentos</button><button id="regrasBtn" class="nav-btn sec" onclick="abrirRegras()" title="Regras da política para consulta rápida">📋 Regras</button><a id="navBtn" href="#" class="nav-btn"></a></div>
 <div class="logo-row">
 <img src="Estrela-Boxer.svg" width="40" height="40" style="display:block">
 <div><h1 id="pageTitle">Tabela de Preços Boxer</h1><p id="pageSubtitle">Carregando...</p></div></div>
@@ -508,10 +531,13 @@ async function enviarSolicitacao() {
 }
 
 async function doLogout() {
+    const fila = (await rascunhosLer()).filter(r => r.estado !== 'enviado').length;
+    if (fila && !confirm('Há ' + fila + ' orçamento(s) guardado(s) neste aparelho aguardando envio. Se sair agora, eles serão apagados. Sair mesmo assim?')) return;
     logUso('logout');
     await new Promise(r => setTimeout(r, 150));
     USER = null; TOKEN = null; QTD = {};
     await sbc.auth.signOut({ scope: 'local' });
+    await kvLimparTudo();
     location.reload();
 }
 
@@ -522,12 +548,15 @@ async function onSession(session, novoLogin) {
         const { data, error } = await sbc.rpc('tabela_acesso');
         if (error) throw error;
         acesso = data;
+        if (acesso && acesso.permitido) kvSet('acesso', { user: { id: USER.id, email: USER.email }, acesso, ts: Date.now() });
     } catch (e) {
         console.error('Falha ao checar acesso', e);
-        showLogin('Não foi possível validar seu acesso. Tente novamente.');
-        return;
+        const ac = await acessoOffline();
+        if (ac && ac.user.id === USER.id) { acesso = ac.acesso; window.OFFLINE_SESSAO = true; }
+        else { showLogin('Não foi possível validar seu acesso. Tente novamente.'); return; }
     }
     if (!acesso || !acesso.permitido) {
+        kvDel('acesso');
         const motivo = acesso && acesso.motivo;
         if (motivo === 'sem_codigo' || motivo === 'sessao_expirada' || motivo === 'sem_login') {
             await sbc.auth.signOut({ scope: 'local' });
@@ -546,6 +575,8 @@ async function onSession(session, novoLogin) {
     $('userInfo').textContent = (acesso.nome || USER.email) + ' · ' + USER.email + (ate ? ' · conectado até ' + ate : '');
     logUso(novoLogin ? 'login' : 'acesso', { origem: acesso.origem, role: acesso.role, tabela: TID, via: 'codigo' });
     if (!DADOS_CARREGADOS) { DADOS_CARREGADOS = true; await load(); }
+    atualizarBarras();
+    if (!window.OFFLINE_SESSAO) sincronizarRascunhos();
 }
 
 async function initAuth() {
@@ -553,8 +584,18 @@ async function initAuth() {
         if (s) TOKEN = s.access_token;
         if (ev === 'SIGNED_OUT' && DADOS_CARREGADOS) location.reload();
     });
-    const { data: { session } } = await sbc.auth.getSession();
-    if (session) await onSession(session, false); else showLogin();
+    let session = null, semRede = !navigator.onLine;
+    if (!semRede) {
+        try {
+            const res = await Promise.race([sbc.auth.getSession(), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 6000))]);
+            session = res.data.session;
+            if (!session && res.error) semRede = true;
+        } catch (e) { semRede = true; }
+    }
+    if (session) { await onSession(session, false); return; }
+    const ac = semRede ? await acessoOffline() : null;
+    if (ac) await entrarOffline(ac);
+    else showLogin(semRede ? 'Sem sinal: é preciso entrar com internet pelo menos uma vez a cada 7 dias.' : undefined);
 }
 
 // --- log de uso (fire-and-forget; nunca trava a tela) ---
@@ -601,6 +642,7 @@ async function flushDisp() {
     const keys = [..._dispPend];
     _dispPend.clear();
     if (!keys.length) return;
+    if (!DISP_SALVO) DISP_SALVO = (await kvGet('disp')) || {};
     try {
         const itens = keys.map(k => k.replace('|', ':')).join(',');
         const r = await fetch(HUB_API + '/api/disponibilidade?target=tabela&itens=' + encodeURIComponent(itens), { headers: { 'Authorization': 'Bearer ' + TOKEN } });
@@ -608,13 +650,14 @@ async function flushDisp() {
         const j = await r.json();
         keys.forEach(k => {
             DISP[k] = Object.assign({}, (j.resultados && j.resultados[k]) || { tipo: 'sem_info' }, { em: j.consultado_em, t: Date.now() });
+            dispPersistir(k, DISP[k]);
             if (j.fup_em) FUP_EM = j.fup_em;
             const [codigo, qtd] = k.split('|');
             logUso('consulta_disponibilidade', { tabela: TID, codigo, qtd: Number(qtd), resultado: DISP[k].tipo, previsao: DISP[k].iso || null });
         });
     } catch (e) {
         console.error('Falha ao consultar disponibilidade', e);
-        keys.forEach(k => { DISP[k] = { tipo: 'erro' }; });
+        keys.forEach(k => { const c = dispOffline(k); DISP[k] = c ? Object.assign({}, c, { t: Date.now(), offline: true }) : (navigator.onLine ? { tipo: 'erro' } : { tipo: 'sem_info', t: Date.now() }); });
     }
     atualizarTodasDisponibilidades();
 }
@@ -807,23 +850,24 @@ async function sbFetchRaw(path, extraHeaders) {
 }
 
 async function sbFetch(path) {
-    const r = await sbFetchRaw(path);
-    return r.json();
+    return comCache('sb:' + path, async () => (await sbFetchRaw(path)).json());
 }
 
 // A API do Supabase limita cada resposta a 1000 linhas por padrão - para
 // tabelas maiores (ex: estoque_zenerp, com milhares de produtos) é preciso
 // buscar em várias páginas até esgotar os registros.
 async function sbFetchAll(path) {
-    const PAGE = 1000;
-    let offset = 0, all = [], pagina;
-    do {
-        const r = await sbFetchRaw(path, {'Range': offset+'-'+(offset+PAGE-1)});
-        pagina = await r.json();
-        all = all.concat(pagina);
-        offset += PAGE;
-    } while (pagina.length === PAGE);
-    return all;
+    return comCache('sb:' + path, async () => {
+        const PAGE = 1000;
+        let offset = 0, all = [], pagina;
+        do {
+            const r = await sbFetchRaw(path, {'Range': offset+'-'+(offset+PAGE-1)});
+            pagina = await r.json();
+            all = all.concat(pagina);
+            offset += PAGE;
+        } while (pagina.length === PAGE);
+        return all;
+    });
 }
 
 async function load() {
@@ -1496,20 +1540,308 @@ async function gerarExportacao() {
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharExportacao(); });
 
+// ---------- modo offline (app instalavel) ----------
+// Tabela, estoque consultado, clientes e orcamentos feitos sem sinal ficam no aparelho (IndexedDB) por ate 7 dias.
+const OFF_MS = 7 * 864e5;
+const APP_BUILD = '1793220031';
+let _idbP = null, DADOS_OFF_TS = null, _sync = false;
+function idbAbrir() {
+    if (!_idbP) _idbP = new Promise((res, rej) => {
+        const r = indexedDB.open('boxer-tabela', 1);
+        r.onupgradeneeded = () => r.result.createObjectStore('kv');
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => rej(r.error);
+    });
+    return _idbP;
+}
+async function kvGet(k) {
+    try { const db = await idbAbrir(); return await new Promise((res, rej) => { const q = db.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); } catch (e) { return undefined; }
+}
+async function kvSet(k, v) {
+    try { const db = await idbAbrir(); await new Promise((res, rej) => { const t = db.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, k); t.oncomplete = res; t.onerror = () => rej(t.error); }); } catch (e) { /* sem armazenamento: segue sem cache */ }
+}
+async function kvDel(k) {
+    try { const db = await idbAbrir(); await new Promise((res, rej) => { const t = db.transaction('kv', 'readwrite'); t.objectStore('kv').delete(k); t.oncomplete = res; t.onerror = () => rej(t.error); }); } catch (e) {}
+}
+async function kvLimparTudo() {
+    try { if (_idbP) { (await _idbP).close(); _idbP = null; } await new Promise(r => { const q = indexedDB.deleteDatabase('boxer-tabela'); q.onsuccess = q.onerror = q.onblocked = r; }); } catch (e) {}
+}
+async function cacheValido(k) { const c = await kvGet(k); return c && Date.now() - c.ts <= OFF_MS ? c : null; }
+function fmtDH(ts) { return new Date(ts).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(',', ''); }
+function novoId() { return (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10); }
+function erroRede(abort) { const e = new Error(abort ? 'A conexão está lenta demais neste momento.' : 'Sem conexão com a internet neste momento.'); e.rede = true; return e; }
+
+// dados do Supabase: tenta a rede e guarda; sem rede, usa o que foi guardado
+async function comCache(chave, buscar) {
+    if (!navigator.onLine) { const c = await cacheValido(chave); if (c) { marcarDadosSalvos(c.ts); return c.v; } }
+    try { const v = await buscar(); kvSet(chave, { v, ts: Date.now() }); return v; }
+    catch (e) { const c = await cacheValido(chave); if (c) { marcarDadosSalvos(c.ts); return c.v; } throw e; }
+}
+function marcarDadosSalvos(ts) { DADOS_OFF_TS = DADOS_OFF_TS ? Math.min(DADOS_OFF_TS, ts) : ts; atualizarBarras(); }
+
+// acesso: guarda a ultima validacao feita com internet
+async function acessoOffline() { const c = await cacheValido('acesso'); return c && c.user ? c : null; }
+async function entrarOffline(ac) {
+    USER = ac.user; TOKEN = null; window.OFFLINE_SESSAO = true;
+    const a = ac.acesso || {};
+    window.ACESSO_NOME = a.nome || ''; window.ACESSO_TEL = a.telefone || ''; window.ACESSO_ORIGEM = a.origem || '';
+    $('loginOverlay').classList.remove('show');
+    document.body.classList.remove('locked');
+    $('userInfo').textContent = (a.nome || USER.email) + ' · ' + USER.email + ' · modo offline';
+    if (!DADOS_CARREGADOS) { DADOS_CARREGADOS = true; await load(); }
+    atualizarBarras();
+}
+
+// estoque: guarda a ultima consulta de cada item
+let DISP_SALVO = null;
+function dispPersistir(k, r) {
+    if (!DISP_SALVO || !['ok', 'prev', 'sem_prev'].includes(r.tipo)) return;
+    DISP_SALVO[k] = { tipo: r.tipo, iso: r.iso || null, em: r.em || null, ts: Date.now() };
+    clearTimeout(dispPersistir._t);
+    dispPersistir._t = setTimeout(() => kvSet('disp', DISP_SALVO), 800);
+}
+function dispOffline(k) {
+    if (!DISP_SALVO) return null;
+    const ok = x => x && Date.now() - x.ts <= OFF_MS;
+    if (ok(DISP_SALVO[k])) return DISP_SALVO[k];
+    const [cod, q] = k.split('|');
+    for (const kk of Object.keys(DISP_SALVO)) {
+        const [c2, q2] = kk.split('|');
+        if (c2 === cod && Number(q2) >= Number(q) && DISP_SALVO[kk].tipo === 'ok' && ok(DISP_SALVO[kk])) return DISP_SALVO[kk];
+    }
+    return null;
+}
+
+// clientes consultados ou usados nos ultimos 7 dias
+async function clienteGuardar(cnpj, c, form) {
+    const ant = (await kvGet('cli:' + cnpj)) || {};
+    await kvSet('cli:' + cnpj, { c: Object.assign({}, ant.c || {}, c || {}), form: Object.assign({}, ant.form || {}, form || {}), ts: Date.now() });
+}
+
+// ---------- fila de orcamentos feitos sem sinal ----------
+async function rascunhosLer() { return USER ? ((await kvGet('rasc:' + USER.id)) || []) : []; }
+async function rascunhosSalvar(a) { if (USER) await kvSet('rasc:' + USER.id, a); atualizarBarras(); }
+
+async function salvarRascunho(corpo, view) {
+    const rs = await rascunhosLer();
+    const agora = new Date().toISOString();
+    const r = { id: corpo.req_id, criado_em: agora, corpo: Object.assign({}, corpo, { offline: { criado_em: agora, tabela_em: TABELA_ATUALIZADA_EM || null } }), view, estado: 'pendente', erro: null };
+    rs.push(r);
+    await rascunhosSalvar(rs);
+    return r;
+}
+function mostrarRascunhoSalvo(r, aviso) {
+    $('orcOverlay').classList.remove('larga');
+    $('orcTitulo').textContent = 'Orçamento guardado no aparelho';
+    $('orcSub').textContent = r.view.cliente.nome + ' · ' + fmt(r.view.total);
+    $('orcCorpo').innerHTML = '<div class="orc-resumo">📴 ' + esc(aviso || 'Sem conexão com o servidor agora.') + ' O orçamento está salvo neste aparelho e será enviado <b>automaticamente</b> quando o sinal voltar: o sistema cria o número oficial, o link e a venda no ZEN.</div>'
+        + '<div class="orc-pass" style="margin:10px 0">Para o cliente não ficar sem nada em mãos, abra a <b>proposta preliminar</b>: itens, preços e condições combinadas, para mostrar na tela ou salvar em PDF.</div>'
+        + '<div class="orc-acoes" style="justify-content:flex-start;flex-wrap:wrap"><button class="orc-btn prim" onclick="propostaPreliminar(\'' + r.id + '\')">Ver proposta preliminar (PDF)</button><button class="orc-btn" onclick="abrirFila()">Fila de envio</button><button class="orc-btn" onclick="fecharOrc()">Fechar</button></div>';
+}
+
+async function sincronizarRascunhos() {
+    if (_sync || !USER || !navigator.onLine) return;
+    let rs = await rascunhosLer();
+    if (!rs.some(r => r.estado !== 'enviado')) { atualizarBarras(); return; }
+    let session = null;
+    try { session = (await sbc.auth.getSession()).data.session; } catch (e) {}
+    if (!session) { showLogin('Entre com o código enviado ao seu e-mail para enviar os orçamentos guardados neste aparelho.'); return; }
+    USER = session.user; TOKEN = session.access_token; window.OFFLINE_SESSAO = false;
+    _sync = true; atualizarBarras();
+    try {
+        for (const r of rs) {
+            if (r.estado === 'enviado') continue;
+            try {
+                r.resultado = await orcApi(r.corpo);
+                r.estado = 'enviado'; r.erro = null;
+                logUso('orc_criar_offline', { tabela: TID, codigo: r.resultado.codigo, total: r.resultado.total_final });
+            } catch (e) {
+                if (e.rede || e.status === 401 || e.status === 403) break;
+                r.erro = e.message || 'Erro ao enviar';
+            }
+            await rascunhosSalvar(rs);
+        }
+    } finally { _sync = false; await rascunhosSalvar(rs); }
+}
+
+function filaLinks(r) {
+    const j = r.resultado, c = r.view.cliente;
+    const msg = 'Olá! Segue o orçamento ' + j.codigo + ' da Boxer Soldas: ' + j.link;
+    const wa = 'https://wa.me/55' + onlyDig(c.celular) + '?text=' + encodeURIComponent(msg);
+    const mail = 'mailto:' + encodeURIComponent(c.email) + '?subject=' + encodeURIComponent('Orçamento Boxer ' + j.codigo) + '&body=' + encodeURIComponent(msg);
+    return '<div class="orc-link"><input readonly value="' + esc(j.link) + '" onclick="this.select()"><button class="orc-btn sm" onclick="copiarOrc(\'' + j.link + '\', this)">Copiar</button></div>'
+        + '<div class="orc-acoes" style="justify-content:flex-start;flex-wrap:wrap;margin-top:6px"><a class="orc-btn sm prim" href="' + wa + '" target="_blank" rel="noopener">Enviar por WhatsApp</a><a class="orc-btn sm" href="' + mail + '">Enviar por e-mail</a></div>';
+}
+async function abrirFila() {
+    const rs = await rascunhosLer();
+    $('orcTitulo').textContent = 'Fila de envio';
+    $('orcSub').textContent = 'Orçamentos feitos sem sinal neste aparelho';
+    $('orcOverlay').classList.add('show'); $('orcOverlay').classList.remove('larga');
+    if (!rs.length) { $('orcCorpo').innerHTML = '<p>Nenhum orçamento na fila.</p><div class="orc-acoes"><button class="orc-btn" onclick="fecharOrc()">Fechar</button></div>'; return; }
+    const cards = rs.map(r => {
+        const v = r.view;
+        let est, acoes = '';
+        if (r.estado === 'enviado') {
+            const j = r.resultado;
+            est = '<div class="orc-resumo">✔ Enviado: <b>' + esc(j.codigo) + '</b>' + (j.zen && j.zen.ok ? ' · venda ' + j.zen.sale_id + ' no ZEN' : (j.zen && j.zen.erro ? '<br>' + esc(j.zen.erro) : '')) + '</div>'
+                + ((j.avisos || []).length ? '<div class="orc-av">' + j.avisos.map(esc).join('<br>') + '</div>' : '') + filaLinks(r);
+        } else {
+            est = r.erro ? '<div class="orc-err" style="display:block">' + esc(r.erro) + ' Descarte e gere de novo corrigindo o dado.</div>' : '<div class="orc-pass">' + (_sync ? 'Enviando…' : (navigator.onLine ? 'Aguardando envio' : 'Aguardando sinal')) + '</div>';
+            acoes = '<div class="orc-acoes" style="justify-content:flex-start;flex-wrap:wrap;margin-top:6px"><button class="orc-btn sm" onclick="propostaPreliminar(\'' + r.id + '\')">Proposta preliminar</button><button class="orc-btn sm" onclick="descartarRascunho(\'' + r.id + '\')">Descartar</button></div>';
+        }
+        return '<div class="orc-card" style="margin-bottom:10px"><div><b>' + esc(v.cliente.nome) + '</b> · ' + fmt(v.total) + '<div class="orc-pass">' + v.itens.length + (v.itens.length > 1 ? ' itens' : ' item') + ' · feito em ' + fmtDH(r.criado_em) + '</div></div>' + est + acoes + '</div>';
+    }).join('');
+    const pend = rs.some(r => r.estado !== 'enviado'), env = rs.some(r => r.estado === 'enviado');
+    $('orcCorpo').innerHTML = cards
+        + '<div class="orc-acoes">' + (pend && navigator.onLine ? '<button class="orc-btn prim" onclick="sincronizarRascunhos().then(abrirFila)">Enviar agora</button>' : '') + (env ? '<button class="orc-btn" onclick="limparEnviados()">Concluir (limpar enviados)</button>' : '') + '<button class="orc-btn" onclick="fecharOrc()">Fechar</button></div>';
+}
+async function descartarRascunho(id) {
+    if (!confirm('Descartar este orçamento guardado no aparelho? Ele não será enviado.')) return;
+    await rascunhosSalvar((await rascunhosLer()).filter(r => r.id !== id));
+    abrirFila();
+}
+async function limparEnviados() { await rascunhosSalvar((await rascunhosLer()).filter(r => r.estado !== 'enviado')); abrirFila(); }
+
+// ---------- proposta preliminar (gerada no aparelho, sem internet) ----------
+async function propostaPreliminar(id) {
+    const r = (await rascunhosLer()).find(x => x.id === id);
+    if (!r) return;
+    const v = r.view, c = v.cliente;
+    const disp = i => i.sit === 'ok' ? 'Disponível' : i.sit === 'prev' ? 'Previsão ' + fmtData(i.iso) : 'Prazo a confirmar';
+    const linhas = v.itens.map(i => '<tr><td><b>' + esc(i.modelo) + '</b><br><span class="pl-s">Cód. ' + esc(i.codigo) + '</span></td><td>' + disp(i) + '</td><td class="r">' + i.qtd + '</td><td class="r">' + fmt(i.u) + '</td><td class="r">' + fmt(i.sub) + '</td></tr>').join('');
+    let el = $('prelimView');
+    if (!el) { el = document.createElement('div'); el.id = 'prelimView'; document.body.appendChild(el); }
+    el.innerHTML = '<div class="pl-bar pl-no"><button class="orc-btn prim" onclick="window.print()">Imprimir / Salvar em PDF</button><button class="orc-btn" onclick="fecharPrelim()">Fechar</button></div>'
+        + '<div class="pl-pg">'
+        + '<div class="pl-top"><div><b style="font-size:20px;color:#1d327b">Boxer Soldas</b><div class="pl-s">Tekweld Indústria e Comércio Ltda</div></div><div class="pl-tag">PROPOSTA PRELIMINAR<br><span>emitida em ' + fmtDH(r.criado_em) + '</span></div></div>'
+        + '<h2>Proposta para ' + esc(c.nome) + '</h2>'
+        + '<div class="pl-s" style="margin-bottom:12px">' + (c.cnpj ? mascCnpj(c.cnpj) : '') + (c.contato ? ' · A/C ' + esc(c.contato) : '') + (c.cidade ? ' · ' + esc(c.cidade) : '') + '</div>'
+        + '<table class="pl-t"><thead><tr><th>Produto</th><th>Estoque</th><th class="r">Qtd</th><th class="r">Valor unitário</th><th class="r">Valor total</th></tr></thead><tbody>' + linhas
+        + '<tr class="pl-tot"><td colspan="4" class="r"><b>Total</b></td><td class="r"><b>' + fmt(v.total) + '</b></td></tr></tbody></table>'
+        + '<div class="pl-cond"><div><span>Pagamento</span>' + esc(v.pagamento) + '</div><div><span>Frete</span>Conforme condições comerciais vigentes</div><div><span>Validade</span>7 dias a partir de ' + new Date(r.criado_em).toLocaleDateString('pt-BR') + '</div></div>'
+        + (v.obs ? '<div class="pl-obs"><b>Observações:</b> ' + esc(v.obs) + '</div>' : '')
+        + '<div class="pl-s" style="margin-top:12px">Representante: <b>' + esc(v.vendedor.nome) + '</b>' + (v.vendedor.tel ? ' · ' + esc(maskTelStr(v.vendedor.tel)) : '') + (v.vendedor.email ? ' · ' + esc(v.vendedor.email) : '') + '</div>'
+        + '<div class="pl-av">Documento preliminar, emitido sem conexão com o sistema. Preços, estoque e prazo ficam sujeitos à confirmação no orçamento oficial, que será enviado por link com número próprio.</div>'
+        + '</div>';
+    el.style.display = 'block';
+    document.body.classList.add('prelim-open');
+}
+function fecharPrelim() { const el = $('prelimView'); if (el) el.style.display = 'none'; document.body.classList.remove('prelim-open'); }
+
+// ---------- barras de aviso (sem sinal / fila / nova versao) ----------
+async function atualizarBarras() {
+    let b = $('offBar');
+    const rs = await rascunhosLer();
+    const pend = rs.filter(r => r.estado !== 'enviado').length, env = rs.length - pend;
+    const off = !navigator.onLine;
+    const p = [];
+    if (off) p.push('📴 <b>Sem sinal.</b> ' + (DADOS_OFF_TS ? 'Usando a tabela salva em ' + fmtDH(DADOS_OFF_TS) + '. ' : '') + 'Os preços valem; o estoque mostra a última consulta. Orçamentos gerados ficam no aparelho e saem sozinhos quando o sinal voltar.');
+    if (pend) p.push('📤 ' + pend + (pend > 1 ? ' orçamentos aguardando envio' : ' orçamento aguardando envio') + (_sync ? ' · enviando…' : ''));
+    if (env) p.push('✔ ' + env + (env > 1 ? ' orçamentos enviados' : ' orçamento enviado'));
+    if (!p.length) { if (b) b.remove(); return; }
+    if (!b) { b = document.createElement('div'); b.id = 'offBar'; document.body.insertBefore(b, document.body.firstChild); }
+    b.className = off ? 'off' : 'ok';
+    b.innerHTML = '<span>' + p.join(' &nbsp;·&nbsp; ') + '</span>' + ((pend || env) ? '<button class="orc-btn sm" onclick="abrirFila()">Ver fila</button>' : '');
+}
+function mostrarAvisoVersao() {
+    if ($('verBar')) return;
+    const b = document.createElement('div'); b.id = 'verBar';
+    b.innerHTML = '<span>🔄 Há uma nova versão da tabela.</span><button class="orc-btn sm prim" onclick="location.reload()">Atualizar agora</button>';
+    document.body.insertBefore(b, document.body.firstChild);
+}
+async function verificarVersao() {
+    if (APP_BUILD.indexOf('__') === 0 || !navigator.onLine) return;
+    try {
+        const t = await (await fetch('tabela-teste.html?v=' + Date.now(), { cache: 'no-store' })).text();
+        const m = /const APP_BUILD = '(\d+)'/.exec(t);
+        if (m && m[1] !== APP_BUILD) mostrarAvisoVersao();
+    } catch (e) {}
+}
+async function retomarOnline() {
+    DADOS_OFF_TS = null;
+    if (window.OFFLINE_SESSAO) {
+        try { const s = (await sbc.auth.getSession()).data.session; if (s) { USER = s.user; TOKEN = s.access_token; window.OFFLINE_SESSAO = false; } } catch (e) {}
+    }
+    atualizarBarras();
+    await sincronizarRascunhos();
+    checarAtualizacaoTabela();
+    verificarVersao();
+}
+window.addEventListener('online', retomarOnline);
+window.addEventListener('offline', atualizarBarras);
+setInterval(verificarVersao, 600000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) verificarVersao(); });
+setTimeout(verificarVersao, 5000);
+
+// ---------- instalar como app ----------
+let _instEv = null;
+function appInstalado() { return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true; }
+function mostrarBotaoInstalar() { const b = $('instBtn'); if (b && !appInstalado()) b.style.display = ''; }
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); _instEv = e; mostrarBotaoInstalar(); });
+window.addEventListener('appinstalled', () => { const b = $('instBtn'); if (b) b.style.display = 'none'; });
+function instalarApp() {
+    if (_instEv) { _instEv.prompt(); _instEv = null; $('instBtn').style.display = 'none'; return; }
+    alert('iPhone: toque em Compartilhar (quadrado com seta) e depois em "Adicionar à Tela de Início".\nAndroid: menu ⋮ do navegador e "Instalar app".');
+}
+document.addEventListener('DOMContentLoaded', () => { if (/iphone|ipad|ipod/i.test(navigator.userAgent)) mostrarBotaoInstalar(); });
+if ('serviceWorker' in navigator) window.addEventListener('load', () => { navigator.serviceWorker.register('sw-tabela.js', { scope: './tabela-teste.html' }).catch(() => {}); });
+
+function montarViewRascunho(linhas, cliente, meuTel) {
+    const total = Math.round(linhas.reduce((a, l) => a + l.sub, 0) * 100) / 100;
+    const cd = condicoes();
+    return {
+        itens: linhas.map(l => ({ codigo: l.p.codigo, modelo: l.p.modelo, qtd: l.q, u: l.u, sub: l.sub, sit: l.sit.k, iso: l.sit.iso || null })),
+        total, pagamento: AVISTA ? 'À vista (−' + String(cd.vista).replace('.', ',') + '%)' : 'Boleto em ' + PARC + 'x', uf: cState,
+        cliente: { nome: cliente.nome, cnpj: cliente.cnpj, contato: cliente.contato, email: cliente.email, celular: cliente.celular, cidade: cliente.cidade },
+        vendedor: { nome: window.ACESSO_NOME || (USER && USER.email) || '', tel: meuTel, email: USER ? USER.email : '' },
+        obs: $('orcObs').value.trim()
+    };
+}
+function preencherDoCache(g) {
+    if (!g) return;
+    const c = g.c || {}, f = g.form || {};
+    if (!$('orcNome').value && c.razao_social) $('orcNome').value = c.razao_social;
+    if (!$('orcEmail').value && c.email) $('orcEmail').value = c.email;
+    if (!$('orcContato').value && f.contato) $('orcContato').value = f.contato;
+    if (!$('orcCel').value && f.celular) $('orcCel').value = maskTelStr(f.celular);
+    if (c.cidade) window._orcCidade = c.cidade;
+}
+
 // --- orcamento Boxer: gera o link para o cliente, salva no ZEN e acompanha o aceite (so Revendas) ---
 const HUB_ORC = HUB_API + '/api/push-pedido?target=orcamento';
 async function orcApi(corpo) {
-    const { data: { session } } = await sbc.auth.getSession();
-    const tk = session ? session.access_token : TOKEN;
-    const r = await fetch(HUB_ORC, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tk }, body: JSON.stringify(corpo) });
+    if (!navigator.onLine) throw erroRede();
+    let tk = TOKEN;
+    try { const { data: { session } } = await sbc.auth.getSession(); if (session) tk = session.access_token; } catch (e) {}
+    const ctrl = new AbortController(), tm = setTimeout(() => ctrl.abort(), 45000);
+    let r;
+    try { r = await fetch(HUB_ORC, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tk }, body: JSON.stringify(corpo), signal: ctrl.signal }); }
+    catch (e) { throw erroRede(e && e.name === 'AbortError'); }
+    finally { clearTimeout(tm); }
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.error || ('Erro ' + r.status));
+    if (!r.ok) { const er = new Error(j.error || ('Erro ' + r.status)); er.status = r.status; throw er; }
     return j;
 }
 function fecharOrc() { $('orcOverlay').classList.remove('show', 'larga'); }
 function onlyDig(v) { return String(v || '').replace(/\D/g, ''); }
 function mascCnpj(d) { d = onlyDig(d); return d.length === 14 ? d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5') : (d.length === 11 ? d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : d); }
-function orcCnpjInput() { const d = onlyDig($('orcCnpj').value); if (d.length === 14) orcBuscaCnpj(); }
+function docValido(v) {
+    const d = onlyDig(v);
+    if (/^(\d)\1+$/.test(d)) return false;
+    const dv = (base, pesos) => { const r = base.split('').reduce((a, n, i) => a + Number(n) * pesos[i], 0) % 11; return r < 2 ? 0 : 11 - r; };
+    if (d.length === 11) return dv(d.slice(0, 9), [10, 9, 8, 7, 6, 5, 4, 3, 2]) === Number(d[9]) && dv(d.slice(0, 10), [11, 10, 9, 8, 7, 6, 5, 4, 3, 2]) === Number(d[10]);
+    if (d.length === 14) return dv(d.slice(0, 12), [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]) === Number(d[12]) && dv(d.slice(0, 13), [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]) === Number(d[13]);
+    return false;
+}
+function orcCnpjInput() {
+    const el = $('orcCnpj'); let d = onlyDig(el.value).slice(0, 14);
+    // ate 11 digitos formata como CPF; a partir do 12o, como CNPJ
+    el.value = d.length <= 11 ? d.replace(/(\d{3})(\d{1,3})?(\d{1,3})?(\d{1,2})?/, (m, a, b, c2, e) => a + (b ? '.' + b : '') + (c2 ? '.' + c2 : '') + (e ? '-' + e : ''))
+        : d.replace(/(\d{2})(\d{3})?(\d{3})?(\d{4})?(\d{1,2})?/, (m, a, b, c2, e, f) => a + (b ? '.' + b : '') + (c2 ? '.' + c2 : '') + (e ? '/' + e : '') + (f ? '-' + f : ''));
+    const info = $('orcDocMsg');
+    if (info) { info.textContent = (d.length === 14 || d.length === 11) && !docValido(d) ? 'CNPJ/CPF inválido: confira os números.' : ''; }
+    if (d.length === 14 && docValido(d)) orcBuscaCnpj();
+}
 function lerTelOrc() { try { return localStorage.getItem('orc_tel') || ''; } catch (e) { return ''; } }
 
 function abrirOrcamento() {
@@ -1528,7 +1860,7 @@ function abrirOrcamento() {
         '<div class="orc-resumo"><b>' + fmt(total) + '</b> · ' + pg + ' · validade de 7 dias. O orçamento sai com os preços desta tela; o link é rastreável e o cliente pode aceitar por ele.</div>'
         + '<h4 class="orc-sec">Itens e estoque</h4><div id="orcItens"></div>'
         + '<h4 class="orc-sec">Cliente</h4><div class="orc-grid">'
-        + '<div><label>CNPJ / CPF *</label><input id="orcCnpj" inputmode="numeric" placeholder="digite o CNPJ para buscar a loja" oninput="orcCnpjInput()" onblur="orcBuscaCnpj()"></div>'
+        + '<div><label>CNPJ / CPF *</label><input id="orcCnpj" inputmode="numeric" placeholder="00.000.000/0000-00" maxlength="18" oninput="orcCnpjInput()" onblur="orcBuscaCnpj()"><div id="orcDocMsg" class="orc-pass" style="color:#991b1b"></div></div>'
         + '<div><label>Razão social / nome *</label><input id="orcNome" placeholder="preenche sozinho se já for cliente"></div>'
         + '<div><label>Contato (aos cuidados de)</label><input id="orcContato"></div>'
         + '<div><label>E-mail do cliente *</label><input id="orcEmail" type="email"></div>'
@@ -1629,7 +1961,7 @@ function orcRenderItens() {
 }
 async function orcBuscaCnpj() {
     const d = onlyDig($('orcCnpj').value);
-    if (d.length !== 14 && d.length !== 11) return;
+    if (!docValido(d)) return;
     $('orcCnpj').value = mascCnpj(d);
     const info = $('orcCliInfo');
     try {
@@ -1638,16 +1970,24 @@ async function orcBuscaCnpj() {
         if (!$('orcNome').value) $('orcNome').value = c.razao_social || '';
                 if (!$('orcEmail').value) $('orcEmail').value = c.email || '';
         window._orcCidade = c.cidade || '';
+        await clienteGuardar(d, c);
+        preencherDoCache(await kvGet('cli:' + d));
         info.style.display = c.bloqueado ? 'block' : 'none';
         if (c.bloqueado) info.textContent = 'Atenção: este cliente consta como bloqueado no ZEN.';
-    } catch (e) { /* preenchimento manual segue valendo */ }
+    } catch (e) {
+        const g = await cacheValido('cli:' + d);
+        info.style.display = 'block';
+        if (g) { preencherDoCache(g); info.textContent = 'Sem sinal: dados do último cadastro consultado por você (' + fmtDH(g.ts) + '). Confira se estão certos.'; }
+        else if (e.rede) info.textContent = 'Sem sinal: preencha os dados do cliente à mão. Quando o orçamento for enviado, o sistema procura o cadastro no ZEN sozinho.';
+        else info.style.display = 'none';
+    }
 }
 
 async function enviarOrcamento() {
     const err = $('orcErr'); err.style.display = 'none';
     const cliente = { cnpj: onlyDig($('orcCnpj').value), nome: $('orcNome').value.trim(), contato: $('orcContato').value.trim(), email: $('orcEmail').value.trim(), celular: $('orcCel').value, uf: cState, cidade: window._orcCidade || '' };
     const falha = m => { err.textContent = m; err.style.display = 'block'; };
-    if (cliente.cnpj.length !== 14 && cliente.cnpj.length !== 11) return falha('Informe o CNPJ (14 dígitos) ou CPF do cliente.');
+    if (!docValido(cliente.cnpj)) return falha('CNPJ/CPF do cliente inválido. Confira os números: ele é usado para cadastrar o cliente no ZEN.');
     if (!cliente.nome) return falha('Informe a razão social ou o nome do cliente.');
     if (!/^\S+@\S+\.\S+$/.test(cliente.email)) return falha('Informe um e-mail válido do cliente.');
     if (!telValido(cliente.celular)) return falha('Celular do cliente inválido. Use DDD + número, por exemplo (19) 99999-9999.');
@@ -1657,16 +1997,25 @@ async function enviarOrcamento() {
     try { localStorage.setItem('orc_tel', meuTel); } catch (e) {}
     if (meuTel !== onlyDig(window.ACESSO_TEL) && window.ACESSO_ORIGEM === 'tabela_usuarios') { sbc.rpc('tabela_salvar_telefone', { p_tel: meuTel }).then(() => { window.ACESSO_TEL = meuTel; }); }
     const btn = $('orcGerarBtn'); btn.disabled = true; btn.textContent = 'Gerando…';
+    const linhasSel = orcLinhas().filter(l => !ORC_EXCL.has(l.p.codigo));
+    const corpo = {
+        acao: 'criar', req_id: novoId(), tabela: TID, uf: cState, segmento: cSeg, classe: cCls,
+        itens: linhasSel.map(l => ({ codigo: l.p.codigo, qtd: l.q, disp: l.sit.k === 'carregando' ? 'sem_info' : l.sit.k, previsao: l.sit.iso || null, preco: l.u, manual: !!l.man })),
+        pagamento: { tipo: AVISTA ? 'avista' : 'boleto', parcelas: PARC },
+        cliente, observacoes: $('orcObs').value.trim(), vendedor: { telefone: meuTel }
+    };
+    const guardarCli = () => clienteGuardar(cliente.cnpj, { razao_social: cliente.nome, email: cliente.email, cidade: cliente.cidade }, { contato: cliente.contato, celular: cliente.celular });
     try {
-        const j = await orcApi({
-            acao: 'criar', tabela: TID, uf: cState, segmento: cSeg, classe: cCls,
-            itens: orcLinhas().filter(l => !ORC_EXCL.has(l.p.codigo)).map(l => Object.assign({ codigo: l.p.codigo, qtd: l.q, disp: l.sit.k === 'carregando' ? 'sem_info' : l.sit.k, previsao: l.sit.iso || null }, l.man ? { preco: l.u } : {})),
-            pagamento: { tipo: AVISTA ? 'avista' : 'boleto', parcelas: PARC },
-            cliente, observacoes: $('orcObs').value.trim(), vendedor: { telefone: meuTel }
-        });
+        const j = await orcApi(corpo);
         logUso('orc_criar', { tabela: TID, codigo: j.codigo, total: j.total_final });
+        guardarCli();
         mostrarOrcCriado(j, cliente);
     } catch (e) {
+        if (e.rede) {
+            guardarCli();
+            mostrarRascunhoSalvo(await salvarRascunho(corpo, montarViewRascunho(linhasSel, cliente, meuTel)), e.message);
+            return;
+        }
         btn.disabled = false; btn.textContent = 'Gerar orçamento e link';
         falha(e.message || 'Não foi possível gerar o orçamento agora.');
     }
@@ -1805,14 +2154,22 @@ async function abrirMeusOrc() {
     $('orcOverlay').classList.remove('larga');
     logUso('orc_listar', { tabela: TID });
     try {
-        const j = await orcApi({ acao: 'listar' });
+        let j;
+        try { j = await orcApi({ acao: 'listar' }); kvSet('orcl:' + USER.id, { v: j, ts: Date.now() }); }
+        catch (e) {
+            const c = e.rede ? await cacheValido('orcl:' + USER.id) : null;
+            if (!c) throw e;
+            j = Object.assign({}, c.v, { aviso_sync: 'Sem sinal: esta é a lista de ' + fmtDH(c.ts) + '. Editar, aprovar e cancelar precisam de internet.' });
+        }
         const L = j.orcamentos || [];
         window._ORC = {}; L.forEach(o => { window._ORC[o.id] = o; });
         window._ORCL = L;
-        if (!L.length) { $('orcCorpo').innerHTML = '<p>Você ainda não gerou orçamentos.</p>'; return; }
+        const nFila = (await rascunhosLer()).filter(r => r.estado !== 'enviado').length;
+        const filaHtml = nFila ? '<div class="orc-av" style="margin-bottom:10px">📤 ' + nFila + (nFila > 1 ? ' orçamentos feitos sem sinal aguardam' : ' orçamento feito sem sinal aguarda') + ' envio. <button class="orc-btn sm" onclick="abrirFila()">Ver fila</button></div>' : '';
+        if (!L.length) { $('orcCorpo').innerHTML = filaHtml + '<p>Você ainda não gerou orçamentos.</p>'; return; }
         $('orcOverlay').classList.add('larga');
         const clientes = [...new Set(L.map(o => o.cliente_nome))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
-        $('orcCorpo').innerHTML = (j.aviso_sync ? '<div class="orc-pass" style="color:#9a3412;margin-bottom:8px">' + esc(j.aviso_sync) + '</div>' : '')
+        $('orcCorpo').innerHTML = filaHtml + (j.aviso_sync ? '<div class="orc-pass" style="color:#9a3412;margin-bottom:8px">' + esc(j.aviso_sync) + '</div>' : '')
             + '<div class="orc-filtros">'
             + '<input id="orcFQ" type="search" placeholder="Buscar por nº do orçamento, nº do pedido ZEN, cliente ou produto" oninput="orcFiltrar()" value="' + esc(ORC_FILTRO.q) + '">'
             + '<select id="orcFSt" onchange="orcFiltrar()">'
@@ -1849,7 +2206,7 @@ function orcCard(o) {
     const vis = o.visualizacoes ? 'Aberto ' + o.visualizacoes + 'x pelo cliente' + (o.ultima_visualizacao_em ? ' · último acesso ' + fdh(o.ultima_visualizacao_em) : '') : 'Cliente ainda não abriu o link';
     const aceite = o.aceito_em ? 'Aceito pelo cliente em ' + fdh(o.aceito_em) + (o.aceito_nome ? ' (' + esc(o.aceito_nome) + ')' : '') : '';
     const zenLink = o.zen_sale_id && o.status !== 'cancelado' ? '<a class="orc-zenlink" href="' + ZEN_URL_VENDA + o.zen_sale_id + '" target="_blank" rel="noopener" title="Abrir no ZEN">' + (o.status === 'aprovado' ? 'Pedido' : 'Venda') + ' ZEN nº ' + o.zen_sale_id + ' ↗</a>' : '';
-    const zenTxt = o.zen_etapa ? '<div class="orc-pass">No ZEN: ' + esc(o.zen_etapa) + '</div>' : (o.zen_status === 'sem_cliente_zen' ? '<div class="orc-pass">Cliente sem cadastro no ZEN</div>' : (!o.zen_sale_id ? '<div class="orc-pass">Sem venda no ZEN</div>' : ''));
+    const zenTxt = o.zen_etapa ? '<div class="orc-pass">No ZEN: ' + esc(o.zen_etapa) + '</div>' : (o.zen_status === 'sem_cliente_zen' ? '<div class="orc-pass">Aguardando cadastro do cliente no ZEN (a venda é criada sozinha)</div>' : (!o.zen_sale_id ? '<div class="orc-pass">Sem venda no ZEN</div>' : ''));
     const err = o.zen_erro && o.status !== 'aprovado' ? '<div class="orc-pass" style="color:#991b1b">' + esc(o.zen_erro) + '</div>' : '';
     let acoes = '<div class="orc-acoes-lin"><button class="orc-btn" onclick="copiarOrc(\'' + o.link + '\', this)">Copiar link</button><a class="orc-btn" href="' + o.link + '" target="_blank" rel="noopener">Ver como cliente</a></div>';
     if (aberto) acoes += '<button class="orc-btn" onclick="editarOrcNaTabela(\'' + o.id + '\')" title="Carrega este orçamento na tabela para você trocar itens, quantidades, classe ou pagamento">Editar na tabela</button>';
