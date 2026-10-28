@@ -115,6 +115,7 @@ body{font-family:Outfit,sans-serif;background:var(--bg);color:var(--tx);padding-
   .cta .tot b{font-size:18px}
   .cta .btns{gap:8px}.cta .btn{padding:11px 14px;font-size:14px}
   .cta .btn.noprint{display:none}
+  body.prelim .cta .btn.noprint{display:inline-block}
 }
 @media print{
   @page{size:A4;margin:10mm}
@@ -152,6 +153,7 @@ const SB_URL = 'https://bmepxcnrsofofoswubuu.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtZXB4Y25yc29mb2Zvc3d1YnV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MTczNzMsImV4cCI6MjA5NTI5MzM3M30.S55ouFczRYlUYNFf5PotYKXBPT5idypTSmbzR-x2Pk0';
 const HUB = 'https://hub.boxersoldas.com.br/api/push-pedido?target=orcamento';
 const TOKEN = new URLSearchParams(location.search).get('t') || '';
+const PRELIM = new URLSearchParams(location.search).get('preliminar') === '1';
 // dados da Boxer (mesmos do pedido de venda do ZEN)
 const BOXER = { nome: 'Tekweld Indústria e Comércio Ltda', cnpj: '13.881.630/0001-64', end: 'Rua Alvino Cristo, 36 · Parque Industrial Experts · Nova Odessa/SP · CEP 13387-793', email: 'admin@boxersoldas.com.br', tel: '(19) 3469-1876' };
 let O = null;
@@ -176,6 +178,12 @@ async function rpc(nome, args) {
 function estado(titulo, texto) { $('app').innerHTML = '<div class="estado"><h1>' + titulo + '</h1><p>' + texto + '</p></div>'; }
 
 async function iniciar() {
+  if (PRELIM) {
+    document.body.classList.add('prelim');
+    try { O = JSON.parse(localStorage.getItem('orc_prelim') || 'null'); } catch (e) { O = null; }
+    if (!O) return estado('Proposta preliminar indisponível', 'Volte à tabela e abra a proposta de novo.');
+    return desenhar();
+  }
   if (!/^[0-9a-f-]{36}$/i.test(TOKEN)) return estado('Link inválido', 'Confira o link recebido ou peça um novo ao seu representante Boxer.');
   try { O = await rpc('buscar_orcamento_publico', { p_token: TOKEN }); }
   catch (e) { return estado('Não foi possível abrir o orçamento', 'Tente novamente em instantes. Se persistir, fale com o seu representante Boxer.'); }
@@ -220,7 +228,7 @@ function desenhar() {
     : it.estoque === 'prev' ? '<span class="est prev">Previsão ' + (it.previsao ? dt(it.previsao + 'T12:00:00') : 'a confirmar') + '</span>'
     : '<span class="est sem">Sem previsão</span>';
   const itensHtml = O.itens.map(it => {
-    const desc = it.unit < it.unit_tabela;
+    const desc = O.pagamento_tipo === 'avista' && O.desconto_vista_pct > 0 && Math.abs(it.unit - Math.round(it.unit_tabela * (1 - O.desconto_vista_pct / 100) * 100) / 100) < 0.02;
     return '<tr><td><div class="prod"><div class="foto">' + (it.imagem_url ? '<img src="' + esc(it.imagem_url) + '" alt="" loading="lazy" onerror="this.replaceWith(semFoto())">' : semFotoHtml()) + '</div><div><div class="nm">' + esc(it.modelo) + '</div><div class="cd">Código ' + esc(it.codigo) + '</div></div></div></td>'
       + '<td data-l="Estoque">' + estRot(it) + '</td>'
       + '<td class="r" data-l="Qtd">' + it.qtd + '</td>'
@@ -240,7 +248,8 @@ function desenhar() {
   const pg = condPagamento(), fr = condFrete();
 
   $('app').innerHTML =
-    '<div class="top"><div class="top-in"><div class="brand"><img src="Estrela-Boxer.svg" alt="Boxer"><div><b>Boxer Soldas</b></div></div><div class="cod">Orçamento <b>' + esc(O.codigo) + '</b></div></div></div>'
+    '<div class="top"><div class="top-in"><div class="brand"><img src="Estrela-Boxer.svg" alt="Boxer"><div><b>Boxer Soldas</b></div></div><div class="cod">' + (PRELIM ? '<b>PROPOSTA PRELIMINAR</b>' : 'Orçamento <b>' + esc(O.codigo) + '</b>') + '</div></div></div>'
+    + (PRELIM ? '<div class="wrap" style="padding-bottom:0"><div class="aceito" style="background:#fff4e5;border-color:#fdba74;color:#7c2d12"><b>Proposta preliminar</b>Emitida sem conexão com o sistema, sujeita à confirmação de preços, estoque e prazo. O orçamento oficial, com número e link, será enviado em seguida.</div></div>' : '')
     + '<div class="wrap">'
     + (aceito ? '<div class="aceito"><b>✔ Orçamento aceito' + (O.aceito_em ? ' em ' + dt(O.aceito_em) : '') + '</b>' + (O.status === 'aprovado' ? 'Seu pedido foi confirmado pela Boxer.' : 'Seu representante foi avisado e vai confirmar o pedido com você.') + '</div>' : '')
     + '<div class="hero"><h1>Orçamento para ' + esc(O.cliente_fantasia || O.cliente_nome) + '</h1>'
@@ -258,13 +267,13 @@ function desenhar() {
     + '<div><b>Seu representante</b>' + esc(O.vendedor_nome || '') + (O.vendedor_empresa ? '<br>' + esc(O.vendedor_empresa) : '') + (O.vendedor_telefone ? '<br>' + fmtTel(O.vendedor_telefone) : '') + (O.vendedor_email ? '<br>' + esc(O.vendedor_email) : '') + '</div>'
     + '<div><b>Boxer Soldas</b>' + BOXER.nome + '</div>'
     + '</div></div>'
-    + (aceito || exp ? '' : '<div class="recusar"><button onclick="recusar()">Não tenho interesse neste orçamento</button></div>')
+    + (PRELIM || aceito || exp ? '' : '<div class="recusar"><button onclick="recusar()">Não tenho interesse neste orçamento</button></div>')
     + '<div class="rodape">Orçamento ' + esc(O.codigo) + ' · gerado em ' + dt(O.criado_em) + ' · sujeito a disponibilidade de estoque e análise de crédito.</div>'
     + '</div>'
     + '<div class="cta"><div class="cta-in"><div class="tot">Total<b>' + brl(O.total_final) + '</b></div><div class="btns">'
     + '<button class="btn sec noprint" onclick="window.print()">Imprimir / PDF</button>'
-    + (wa ? '<a class="btn sec" href="' + wa + '" target="_blank" rel="noopener">Falar com ' + (O.vendedor_nome ? esc(O.vendedor_nome.split(' ')[0]) : 'o representante') + '</a>' : '')
-    + (aceito ? '' : (exp ? '' : '<button class="btn prim" onclick="abrirAceite()">Aceitar orçamento</button>'))
+    + (wa && !PRELIM ? '<a class="btn sec" href="' + wa + '" target="_blank" rel="noopener">Falar com ' + (O.vendedor_nome ? esc(O.vendedor_nome.split(' ')[0]) : 'o representante') + '</a>' : '')
+    + (PRELIM || aceito ? '' : (exp ? '' : '<button class="btn prim" onclick="abrirAceite()">Aceitar orçamento</button>'))
     + '</div></div></div>';
 }
 function semFotoHtml() { return '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#718096" stroke-width="1.5"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 16l-5-5-8 8"/></svg>'; }
