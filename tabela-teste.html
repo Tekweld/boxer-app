@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Tabela de Preços Boxer - TESTE</title>
 <meta name="robots" content="noindex,nofollow">
 <link rel="manifest" href="manifest-tabela.json">
@@ -241,19 +241,86 @@ tbody tr.row-ajuste .td-price-final{color:#e30613}
 #offBar.off{background:#fff4e5;color:#7c2d12;border-bottom:1px solid #fdba74}
 #offBar.ok{background:#e8f1ff;color:#1d327b;border-bottom:1px solid #b6d0f7}
 #verBar{background:#1d327b;color:#fff}
-#prelimView{position:fixed;top:0;left:0;right:0;bottom:0;background:#f0f4f8;z-index:3000;overflow:auto;display:none;padding:12px}
-.pl-bar{max-width:820px;margin:0 auto 10px;display:flex;gap:8px;justify-content:flex-end}
-.pl-pg{max-width:820px;margin:0 auto;background:#fff;border:1px solid #d0d8e8;border-radius:10px;padding:24px;font-family:Outfit,sans-serif;color:#1a202c}
-.pl-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border-bottom:3px solid #e30613;padding-bottom:10px;margin-bottom:12px}
-.pl-tag{background:#fff4e5;color:#9a3412;border:1px solid #fdba74;border-radius:8px;padding:6px 10px;font-weight:700;font-size:13px;text-align:right}.pl-tag span{font-weight:400;font-size:11px}
-.pl-pg h2{font-size:18px;color:#1d327b;margin-bottom:2px}
-.pl-s{font-size:12px;color:#718096}
-.pl-t{width:100%;border-collapse:collapse;font-size:13px}.pl-t th{background:#f7fafc;text-align:left;padding:8px;font-size:11px;text-transform:uppercase;color:#718096;border-bottom:2px solid #e2e8f0}.pl-t td{padding:8px;border-bottom:1px solid #e2e8f0;vertical-align:top}.pl-t .r{text-align:right;white-space:nowrap}.pl-tot td{background:#f0f4f8;font-size:14px}
-.pl-cond{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px;font-size:13px}.pl-cond span{display:block;font-size:11px;text-transform:uppercase;color:#718096}
-.pl-obs{margin-top:12px;font-size:13px}
-.pl-av{margin-top:14px;padding:8px 10px;background:#fff4e5;border:1px solid #fdba74;border-radius:8px;font-size:12px;color:#7c2d12}
-@media(max-width:640px){.pl-cond{grid-template-columns:1fr}}
-@media print{body.prelim-open>*:not(#prelimView){display:none!important}#prelimView{position:static;overflow:visible;background:#fff;padding:0}.pl-no{display:none!important}.pl-pg{border:none;padding:0}}
+#prelimView{position:fixed;top:0;left:0;right:0;bottom:0;background:#f0f4f8;z-index:3000;display:none;flex-direction:column}
+.pl-bar{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 12px;background:#1d327b;color:#fff;font-size:13px}
+#prelimFrame{flex:1;width:100%;border:0;background:#fff}
+/* === RESPONSIVO: tablet e celular === */
+#barToggle{display:none}
+@media(max-width:1100px){
+  .header{padding:14px 16px}.content{padding:14px 16px;padding-bottom:110px}
+  body.t1 table th:nth-child(6),body.t1 table th:nth-child(7),body.t1 table th:nth-child(8),body.t1 td.td-pct,body.t1 td.td-ncm{display:none}
+}
+@media(max-width:820px){
+  body{-webkit-text-size-adjust:100%}
+  .header{padding:10px 14px 14px}
+  .nav-top{position:static!important;display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+  .nav-top .nav-btn{padding:8px 12px;font-size:12.5px;min-height:42px;flex:1 1 auto;justify-content:center}
+  .logo-row{margin-bottom:12px}.logo-row h1{font-size:19px}.logo-row p{font-size:11.5px}
+  .filters-row{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;align-items:start}
+  .filters-row>div:nth-child(1){order:1}.filters-row>div:nth-child(4){order:2}
+  .filters-row>div:nth-child(2){order:3;grid-column:1/-1}.filters-row>div:nth-child(3){order:4;grid-column:1/-1}.filters-row>div:nth-child(5){order:5;grid-column:1/-1}
+  .btn-group{flex-wrap:wrap}
+  .fb{padding:7px 14px;min-height:40px;font-size:14px}
+  .state-select{height:40px;width:92px;font-size:15px}
+  .comissao-box{margin-left:0;width:100%}
+  .content{padding:12px 12px;padding-bottom:170px}
+  .search-row{gap:8px}
+  .search-input{flex:1 1 100%;min-height:46px;font-size:16px}
+  .cat-select{min-width:0;flex:1 1 100%;min-height:46px;font-size:15px}
+  .chip{min-height:42px;flex:1 1 auto}
+  #testBanner{padding:6px 12px}
+  /* tabela vira cartoes */
+  .tbl-wrap{overflow:visible;border:none;border-radius:0}
+  .tbl-wrap table,.tbl-wrap tbody{display:block;width:100%}
+  .tbl-wrap thead{display:none}
+  .tbl-wrap tbody tr{display:grid;grid-template-columns:auto auto 1fr;grid-template-areas:"sel sel sel" "name name name" "code porte base" "price price qty" "disp disp disp";gap:6px 10px;padding:12px;margin-bottom:10px;background:#fff!important;border:1px solid #d0d8e8;border-radius:12px}
+  .tbl-wrap tbody tr.row-sel{background:#e8f0fe!important}
+  .tbl-wrap td{display:none;padding:0;border:0}
+  .tbl-wrap td.td-name{display:block;grid-area:name;white-space:normal;max-width:none;font-weight:600;font-size:15px;line-height:1.4}
+  .tbl-wrap td.td-code{display:block;grid-area:code;align-self:center}
+  .tbl-wrap td:has(.size-badge){display:block;grid-area:porte;align-self:center}
+  .tbl-wrap td.td-price-base{display:block;grid-area:base;text-align:right;align-self:center;font-size:11.5px}
+  .tbl-wrap td.td-price-base::before{content:'tabela '}
+  .tbl-wrap td.td-price-final{display:block;grid-area:price;text-align:left;font-size:21px;align-self:center}
+  .tbl-wrap td:has(.qtd-input){display:block;grid-area:qty;justify-self:end}
+  .tbl-wrap td.disp-cell{display:block;grid-area:disp;text-align:left;padding-top:8px;border-top:1px dashed #e2e8f0}
+  .tbl-wrap td:has(.btn-sel){display:block;grid-area:sel}
+  .qtd-input{width:104px!important;height:46px;font-size:20px!important;text-align:center;border-radius:8px}
+  .info-i{display:inline-block;padding:4px 8px;margin:-4px 2px -4px -8px}
+  /* barra inferior compacta: resumo + botoes; avisos recolhidos */
+  #barProposta{flex-direction:column;align-items:stretch;gap:6px;padding:8px 12px calc(8px + env(safe-area-inset-bottom));max-height:60vh;overflow:auto}
+  .barEsq{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center}
+  #barContador{grid-column:1;font-size:13px}#barContador strong{font-size:16px}
+  #barTotal{grid-column:2;margin:0;font-size:13px}#barTotal strong{font-size:17px}
+  #barPag{grid-column:1/-1;margin:0;display:flex;align-items:center;gap:8px}
+  #barPag select{min-height:36px;font-size:14px;flex:1;max-width:220px}
+  #barClasse,#barAlertas{grid-column:1/-1;margin:0;display:none}
+  #barProposta.open #barClasse{display:block}
+  #barProposta.open #barAlertas{display:flex}
+  #barToggle{grid-column:1/-1;display:none;background:rgba(255,255,255,.14);color:#fff;border:none;border-radius:8px;padding:8px 10px;font-family:Outfit;font-size:13px;text-align:left}
+  #barToggle.tem{display:block}
+  #barProposta>div:last-child{display:flex;gap:8px}
+  #barProposta>div:last-child button{flex:1;min-height:46px;margin:0;font-size:14px;padding:8px 10px}
+  #btnLimpar{flex:0 0 auto!important}
+  /* janelas viram folhas de tela cheia */
+  #orcOverlay,#detOverlay,#regrasOverlay,#expOverlay{padding:0;align-items:flex-end}
+  .det-card,#orcOverlay .det-card,#orcOverlay.larga .det-card{max-width:100%;max-height:94vh;border-radius:16px 16px 0 0}
+  .det-head{padding:14px 16px}
+  .orc-corpo{padding:6px 14px 20px}
+  .orc-grid{grid-template-columns:1fr}
+  .orc-acoes{flex-wrap:wrap}.orc-acoes .orc-btn{flex:1 1 140px;text-align:center}
+  .orc-corpo input,.orc-corpo textarea,.orc-filtros input,.orc-filtros select,.login-card .field input{font-size:16px}
+  .orc-lista thead{display:none}
+  .orc-lista,.orc-lista tbody{display:block;width:100%}
+  .orc-lista tr{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;padding:10px 2px;border-bottom:1px solid #edf2f7}
+  .orc-lista td{display:block;border:0;padding:0}
+  .orc-lista tr.lin td:nth-child(1){flex:1 1 100%}
+  .orc-lista tr.lin td:nth-child(3)::before{content:'Qtd ';color:#718096}
+  .orc-lista tr.lin td:nth-child(4)::before{content:'Unit. ';color:#718096}
+  .orc-lista tr.lin td:nth-child(5){margin-left:auto;font-weight:700}
+  .orc-lista tr:not(.lin) td:first-child{flex:1;text-align:right}
+  .login-card{padding:24px 18px}
+}
 </style>
 </head>
 <body class="locked">
@@ -373,7 +440,7 @@ tbody tr.row-ajuste .td-price-final{color:#e30613}
 </div>
 
 <div id="barProposta">
-  <div class="barEsq"><span id="barContador"></span><span id="barTotal"></span><span id="barPag">Pagamento: <select id="selPag" onchange="mudarPagamento(this.value)"><option value="1">Boleto 1x</option><option value="2">Boleto 2x</option><option value="3">Boleto 3x</option><option value="4">Boleto 4x</option><option value="v">À vista (PIX)</option></select></span><span id="barClasse"></span><div id="barAlertas"></div></div>
+  <div class="barEsq"><span id="barContador"></span><span id="barTotal"></span><span id="barPag">Pagamento: <select id="selPag" onchange="mudarPagamento(this.value)"><option value="1">Boleto 1x</option><option value="2">Boleto 2x</option><option value="3">Boleto 3x</option><option value="4">Boleto 4x</option><option value="v">À vista (PIX)</option></select></span><span id="barClasse"></span><button id="barToggle" type="button" onclick="document.getElementById('barProposta').classList.toggle('open')"></button><div id="barAlertas"></div></div>
   <div>
     <button id="btnLimpar" onclick="limparSelecao()">Limpar</button>
     <button id="btnOrc" style="display:none" onclick="abrirOrcamento()">📄 Gerar orçamento</button>
@@ -1261,7 +1328,7 @@ function render() {
                 const dim = IS_AUTO ? grupoPreco(p.catGroup) : p.porte;
                 const k = cSeg+cCls+dim;
                 const scm = M[k];
-                let pc = scm!==undefined ? `<td class="td-price-final">${fmt(tb*scm*fatorVista())}</td>` : `<td style="text-align:right;color:#a0aec0;font-style:italic;font-size:12px">N/D</td>`;
+                let pc = scm!==undefined ? `<td class="td-price-final">${fmt(tb*scm*fatorVista())}</td>` : `<td class="td-price-final" style="text-align:right;color:#a0aec0;font-style:italic;font-size:12px">N/D</td>`;
                 const ic = cState==='SP' ? p.icms : 4;
                 const jaSel = selecionados.has(p.codigo);
                 const celFim = `<td class="ac"><input type="number" class="qtd-input" min="0" step="1" placeholder="0" data-codigo="${p.codigo}" value="${QTD[p.codigo]||''}" style="width:56px;text-align:center"></td><td class="ac disp-cell" data-codigo="${p.codigo}">${dispHtml(p.codigo)}</td>`;
@@ -1540,10 +1607,25 @@ async function gerarExportacao() {
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharExportacao(); });
 
+document.body.classList.add('t' + TID);
+(function () {
+    const al = document.getElementById('barAlertas'), tg = document.getElementById('barToggle'), bar = document.getElementById('barProposta');
+    if (!al || !tg) return;
+    const atualiza = () => {
+        const n = al.children.length, cl = document.getElementById('barClasse');
+        const extra = cl && cl.textContent.trim() ? 1 : 0;
+        tg.classList.toggle('tem', n + extra > 0);
+        tg.innerHTML = (n ? '⚠ ' + n + (n > 1 ? ' avisos' : ' aviso') : 'ℹ Classe do pedido') + (bar.classList.contains('open') ? ' ▴' : ' ▾');
+    };
+    new MutationObserver(atualiza).observe(al, { childList: true });
+    new MutationObserver(atualiza).observe(document.getElementById('barClasse'), { childList: true, characterData: true, subtree: true });
+    new MutationObserver(atualiza).observe(bar, { attributes: true, attributeFilter: ['class'] });
+    atualiza();
+})();
 // ---------- modo offline (app instalavel) ----------
 // Tabela, estoque consultado, clientes e orcamentos feitos sem sinal ficam no aparelho (IndexedDB) por ate 7 dias.
 const OFF_MS = 7 * 864e5;
-const APP_BUILD = '1793220031';
+const APP_BUILD = '1793221409';
 let _idbP = null, DADOS_OFF_TS = null, _sync = false;
 function idbAbrir() {
     if (!_idbP) _idbP = new Promise((res, rej) => {
@@ -1703,30 +1785,29 @@ async function descartarRascunho(id) {
 async function limparEnviados() { await rascunhosSalvar((await rascunhosLer()).filter(r => r.estado !== 'enviado')); abrirFila(); }
 
 // ---------- proposta preliminar (gerada no aparelho, sem internet) ----------
+function orcDoRascunho(r) {
+    const v = r.view, c = v.cliente;
+    return {
+        encontrado: true, preliminar: true, codigo: 'PRELIMINAR', status: 'enviado', expirado: false, criado_em: r.criado_em,
+        validade_em: new Date(new Date(r.criado_em).getTime() + 7 * 864e5).toISOString(), uf: v.uf,
+        cliente_nome: c.nome, cliente_fantasia: null, cliente_cnpj: c.cnpj, cliente_contato: c.contato, cliente_cidade: c.cidade, cliente_uf: v.uf, cliente_endereco: null,
+        vendedor_nome: v.vendedor.nome, vendedor_empresa: null, vendedor_telefone: v.vendedor.tel, vendedor_email: v.vendedor.email,
+        pagamento_tipo: v.avista ? 'avista' : 'boleto', parcelas: v.parcelas || 1, desconto_vista_pct: v.avista ? (v.descVista || 0) : 0,
+        frete_tipo: null, frete_valor: 0, observacoes: v.obs, total_itens: v.total, total_final: v.total,
+        itens: v.itens.map(i => ({ codigo: i.codigo, modelo: i.modelo, categoria: i.categoria || '', qtd: i.qtd, unit: i.u, unit_tabela: i.ut || i.u, subtotal: i.sub, imagem_url: '', estoque: i.sit === 'ok' ? 'ok' : (i.sit === 'prev' ? 'prev' : 'sem'), previsao: i.iso || null }))
+    };
+}
 async function propostaPreliminar(id) {
     const r = (await rascunhosLer()).find(x => x.id === id);
     if (!r) return;
-    const v = r.view, c = v.cliente;
-    const disp = i => i.sit === 'ok' ? 'Disponível' : i.sit === 'prev' ? 'Previsão ' + fmtData(i.iso) : 'Prazo a confirmar';
-    const linhas = v.itens.map(i => '<tr><td><b>' + esc(i.modelo) + '</b><br><span class="pl-s">Cód. ' + esc(i.codigo) + '</span></td><td>' + disp(i) + '</td><td class="r">' + i.qtd + '</td><td class="r">' + fmt(i.u) + '</td><td class="r">' + fmt(i.sub) + '</td></tr>').join('');
+    try { localStorage.setItem('orc_prelim', JSON.stringify(orcDoRascunho(r))); } catch (e) { alert('Não foi possível abrir a proposta neste aparelho.'); return; }
     let el = $('prelimView');
     if (!el) { el = document.createElement('div'); el.id = 'prelimView'; document.body.appendChild(el); }
-    el.innerHTML = '<div class="pl-bar pl-no"><button class="orc-btn prim" onclick="window.print()">Imprimir / Salvar em PDF</button><button class="orc-btn" onclick="fecharPrelim()">Fechar</button></div>'
-        + '<div class="pl-pg">'
-        + '<div class="pl-top"><div><b style="font-size:20px;color:#1d327b">Boxer Soldas</b><div class="pl-s">Tekweld Indústria e Comércio Ltda</div></div><div class="pl-tag">PROPOSTA PRELIMINAR<br><span>emitida em ' + fmtDH(r.criado_em) + '</span></div></div>'
-        + '<h2>Proposta para ' + esc(c.nome) + '</h2>'
-        + '<div class="pl-s" style="margin-bottom:12px">' + (c.cnpj ? mascCnpj(c.cnpj) : '') + (c.contato ? ' · A/C ' + esc(c.contato) : '') + (c.cidade ? ' · ' + esc(c.cidade) : '') + '</div>'
-        + '<table class="pl-t"><thead><tr><th>Produto</th><th>Estoque</th><th class="r">Qtd</th><th class="r">Valor unitário</th><th class="r">Valor total</th></tr></thead><tbody>' + linhas
-        + '<tr class="pl-tot"><td colspan="4" class="r"><b>Total</b></td><td class="r"><b>' + fmt(v.total) + '</b></td></tr></tbody></table>'
-        + '<div class="pl-cond"><div><span>Pagamento</span>' + esc(v.pagamento) + '</div><div><span>Frete</span>Conforme condições comerciais vigentes</div><div><span>Validade</span>7 dias a partir de ' + new Date(r.criado_em).toLocaleDateString('pt-BR') + '</div></div>'
-        + (v.obs ? '<div class="pl-obs"><b>Observações:</b> ' + esc(v.obs) + '</div>' : '')
-        + '<div class="pl-s" style="margin-top:12px">Representante: <b>' + esc(v.vendedor.nome) + '</b>' + (v.vendedor.tel ? ' · ' + esc(maskTelStr(v.vendedor.tel)) : '') + (v.vendedor.email ? ' · ' + esc(v.vendedor.email) : '') + '</div>'
-        + '<div class="pl-av">Documento preliminar, emitido sem conexão com o sistema. Preços, estoque e prazo ficam sujeitos à confirmação no orçamento oficial, que será enviado por link com número próprio.</div>'
-        + '</div>';
-    el.style.display = 'block';
+    el.innerHTML = '<div class="pl-bar"><span>Proposta preliminar (mesmo modelo do orçamento oficial)</span><button class="orc-btn sm" onclick="fecharPrelim()">Fechar</button></div><iframe id="prelimFrame" title="Proposta preliminar" src="orcamento.html?preliminar=1"></iframe>';
+    el.style.display = 'flex';
     document.body.classList.add('prelim-open');
 }
-function fecharPrelim() { const el = $('prelimView'); if (el) el.style.display = 'none'; document.body.classList.remove('prelim-open'); }
+function fecharPrelim() { const el = $('prelimView'); if (el) { el.style.display = 'none'; el.innerHTML = ''; } document.body.classList.remove('prelim-open'); try { localStorage.removeItem('orc_prelim'); } catch (e) {} }
 
 // ---------- barras de aviso (sem sinal / fila / nova versao) ----------
 async function atualizarBarras() {
@@ -1784,13 +1865,14 @@ function instalarApp() {
     alert('iPhone: toque em Compartilhar (quadrado com seta) e depois em "Adicionar à Tela de Início".\nAndroid: menu ⋮ do navegador e "Instalar app".');
 }
 document.addEventListener('DOMContentLoaded', () => { if (/iphone|ipad|ipod/i.test(navigator.userAgent)) mostrarBotaoInstalar(); });
-if ('serviceWorker' in navigator) window.addEventListener('load', () => { navigator.serviceWorker.register('sw-tabela.js', { scope: './tabela-teste.html' }).catch(() => {}); });
+if ('serviceWorker' in navigator) window.addEventListener('load', () => { navigator.serviceWorker.register('sw-tabela.js').catch(() => {}); });
 
 function montarViewRascunho(linhas, cliente, meuTel) {
     const total = Math.round(linhas.reduce((a, l) => a + l.sub, 0) * 100) / 100;
     const cd = condicoes();
     return {
-        itens: linhas.map(l => ({ codigo: l.p.codigo, modelo: l.p.modelo, qtd: l.q, u: l.u, sub: l.sub, sit: l.sit.k, iso: l.sit.iso || null })),
+        itens: linhas.map(l => ({ codigo: l.p.codigo, modelo: l.p.modelo, categoria: l.p.cat || '', qtd: l.q, u: l.u, ut: l.ut, sub: l.sub, sit: l.sit.k, iso: l.sit.iso || null })),
+        avista: AVISTA, parcelas: PARC, descVista: condicoes().vista,
         total, pagamento: AVISTA ? 'À vista (−' + String(cd.vista).replace('.', ',') + '%)' : 'Boleto em ' + PARC + 'x', uf: cState,
         cliente: { nome: cliente.nome, cnpj: cliente.cnpj, contato: cliente.contato, email: cliente.email, celular: cliente.celular, cidade: cliente.cidade },
         vendedor: { nome: window.ACESSO_NOME || (USER && USER.email) || '', tel: meuTel, email: USER ? USER.email : '' },
@@ -1950,7 +2032,7 @@ function orcRenderItens() {
             : k === 'sem_info' ? '<span class="disp muted">Estoque não consultado</span>' : '<span class="disp muted">Consultando…</span>';
         if (inc) { const g = k === 'ok' ? 'ok' : (k === 'prev' ? 'prev' : 'sem'); tot[g] += l.sub; un += l.q; if (g === 'sem') semAlgum = true; }
         const alerta = (k === 'sem' || k === 'sem_info') ? '<div class="orc-pass" style="color:#9a3412">' + (k === 'sem' ? 'Sem previsão de chegada: o prazo fica a confirmar. ' : '') + 'Marque se quer incluir este item mesmo assim.</div>' : '';
-        return '<tr' + (inc ? '' : ' style="opacity:.45"') + '><td><label style="display:flex;gap:8px;align-items:flex-start;text-transform:none;letter-spacing:0;font-size:13px;color:#1a202c;margin:0"><input type="checkbox" style="width:auto;margin-top:3px" ' + (inc ? 'checked' : '') + ' onchange="orcAlternarItem(\'' + l.p.codigo + '\', this.checked)"><span><b>' + esc(l.p.modelo) + '</b><br><span class="orc-pass">Cód. ' + esc(l.p.codigo) + '</span></span></label>' + alerta + '</td><td>' + rotulo + '</td><td style="text-align:right">' + l.q + '</td><td id="orcPr_' + l.p.codigo + '" style="text-align:right;white-space:nowrap"><span onclick="orcEditarPreco(\'' + l.p.codigo + '\')" title="Clique para ajustar o preço deste item" style="cursor:pointer;border-bottom:1px dotted #a0aec0">' + fmt(l.u) + '</span>' + (l.man ? '<br><span class="orc-pass" style="font-size:11px">tabela ' + fmt(l.uBase) + ' · <a href="javascript:void(0)" onclick="orcRestaurarPreco(\'' + l.p.codigo + '\')" style="color:#718096">restaurar</a></span>' : '') + '</td><td style="text-align:right;white-space:nowrap">' + fmt(l.sub) + '</td></tr>';
+        return '<tr class="lin"' + (inc ? '' : ' style="opacity:.45"') + '><td><label style="display:flex;gap:8px;align-items:flex-start;text-transform:none;letter-spacing:0;font-size:13px;color:#1a202c;margin:0"><input type="checkbox" style="width:auto;margin-top:3px" ' + (inc ? 'checked' : '') + ' onchange="orcAlternarItem(\'' + l.p.codigo + '\', this.checked)"><span><b>' + esc(l.p.modelo) + '</b><br><span class="orc-pass">Cód. ' + esc(l.p.codigo) + '</span></span></label>' + alerta + '</td><td>' + rotulo + '</td><td style="text-align:right">' + l.q + '</td><td id="orcPr_' + l.p.codigo + '" style="text-align:right;white-space:nowrap"><span onclick="orcEditarPreco(\'' + l.p.codigo + '\')" title="Clique para ajustar o preço deste item" style="cursor:pointer;border-bottom:1px dotted #a0aec0">' + fmt(l.u) + '</span>' + (l.man ? '<br><span class="orc-pass" style="font-size:11px">tabela ' + fmt(l.uBase) + ' · <a href="javascript:void(0)" onclick="orcRestaurarPreco(\'' + l.p.codigo + '\')" style="color:#718096">restaurar</a></span>' : '') + '</td><td style="text-align:right;white-space:nowrap">' + fmt(l.sub) + '</td></tr>';
     }).join('');
     const geral = tot.ok + tot.prev + tot.sem;
     const linha = (rot, v, forte) => (v > 0 || forte) ? '<tr><td colspan="4" style="text-align:right;' + (forte ? 'font-weight:700;' : '') + '">' + rot + '</td><td style="text-align:right;white-space:nowrap;' + (forte ? 'font-weight:700;color:#1d327b' : '') + '">' + fmt(v) + '</td></tr>' : '';
