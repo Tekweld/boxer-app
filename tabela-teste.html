@@ -1375,6 +1375,7 @@ function toggleSel(btn) {
 }
 
 function limparSelecao() {
+    ORC_PRECO = {};
     selecionados.clear();
     QTD = {};
     document.querySelectorAll('.qtd-input').forEach(i => { i.value = ''; });
@@ -1543,12 +1544,37 @@ function abrirOrcamento() {
         + '<div class="orc-acoes"><button class="orc-btn" onclick="fecharOrc()">Cancelar</button><button class="orc-btn prim" id="orcGerarBtn" onclick="enviarOrcamento()">Gerar orçamento e link</button></div>';
     $('orcOverlay').classList.add('show');
     ORC_EXCL = new Set();
+    if (!ORC_EDIT) ORC_PRECO = {};
     orcIniciarItens();
     logUso('orc_abrir', { tabela: TID, itens: itens.length });
 }
 
 // itens do orcamento: estoque de cada item (disponivel / previsao / sem previsao) e totais por situacao
 let ORC_EXCL = new Set(), _orcPoll = null;
+var ORC_PRECO = {};
+function orcParsePreco(t) {
+    t = String(t || '').replace(/[^\d.,]/g, '');
+    if (!t) return null;
+    if (t.indexOf(',') >= 0) t = t.replace(/\./g, '').replace(',', '.');
+    else if (!/^\d+\.\d{1,2}$/.test(t)) t = t.replace(/\./g, '');
+    const n = Math.round(parseFloat(t) * 100) / 100;
+    return n > 0 && n < 10000000 ? n : null;
+}
+function orcEditarPreco(cod) {
+    const l = orcLinhas().find(x => x.p.codigo === cod); if (!l) return;
+    const td = $('orcPr_' + cod); if (!td) return;
+    td.innerHTML = '<input class="orc-preco-in" inputmode="decimal" value="' + String(l.u.toFixed(2)).replace('.', ',') + '" style="width:100px;text-align:right;padding:4px 6px;font-size:13px" onkeydown="if(event.key===\'Enter\')this.blur();if(event.key===\'Escape\'){this.dataset.x=1;this.blur();}" onblur="orcConfirmarPreco(\'' + cod + '\', this)">';
+    const i = td.querySelector('input'); i.focus(); i.select();
+}
+function orcConfirmarPreco(cod, el) {
+    if (!el.dataset.x) {
+        const n = orcParsePreco(el.value);
+        const l = orcLinhas().find(x => x.p.codigo === cod);
+        if (n === null || (l && Math.abs(n - l.uBase) < 0.005)) delete ORC_PRECO[cod]; else ORC_PRECO[cod] = n;
+    }
+    orcRenderItens();
+}
+function orcRestaurarPreco(cod) { delete ORC_PRECO[cod]; orcRenderItens(); }
 function orcSituacao(codigo, q) {
     const r = DISP[dispKey(codigo, q)];
     if (!r || r.tipo === 'carregando') return { k: 'carregando' };
@@ -1561,8 +1587,10 @@ function orcLinhas() {
     const f = fatorVista();
     return itensDoPedido().map(({ p, q }) => {
         const ut = Math.round((precoUnitCls(p, cCls) || 0) * 100) / 100;
-        const u = Math.round(ut * f * 100) / 100;
-        return { p, q, ut, u, sub: Math.round(u * q * 100) / 100, sit: orcSituacao(p.codigo, q) };
+        const uBase = Math.round(ut * f * 100) / 100;
+        const man = ORC_PRECO[p.codigo] > 0;
+        const u = man ? ORC_PRECO[p.codigo] : uBase;
+        return { p, q, ut, u, uBase, man, sub: Math.round(u * q * 100) / 100, sit: orcSituacao(p.codigo, q) };
     });
 }
 function orcIniciarItens() {
@@ -1578,6 +1606,7 @@ function orcIniciarItens() {
 function orcAlternarItem(cod, marcado) { if (marcado) ORC_EXCL.delete(cod); else ORC_EXCL.add(cod); orcRenderItens(); }
 function orcRenderItens() {
     const el = $('orcItens'); if (!el) return;
+    if (document.activeElement && document.activeElement.classList && document.activeElement.classList.contains('orc-preco-in')) return;
     const L = orcLinhas();
     const tot = { ok: 0, prev: 0, sem: 0 }; let un = 0, semAlgum = false;
     const rows = L.map(l => {
@@ -1589,7 +1618,7 @@ function orcRenderItens() {
             : k === 'sem_info' ? '<span class="disp muted">Estoque não consultado</span>' : '<span class="disp muted">Consultando…</span>';
         if (inc) { const g = k === 'ok' ? 'ok' : (k === 'prev' ? 'prev' : 'sem'); tot[g] += l.sub; un += l.q; if (g === 'sem') semAlgum = true; }
         const alerta = (k === 'sem' || k === 'sem_info') ? '<div class="orc-pass" style="color:#9a3412">' + (k === 'sem' ? 'Sem previsão de chegada: o prazo fica a confirmar. ' : '') + 'Marque se quer incluir este item mesmo assim.</div>' : '';
-        return '<tr' + (inc ? '' : ' style="opacity:.45"') + '><td><label style="display:flex;gap:8px;align-items:flex-start;text-transform:none;letter-spacing:0;font-size:13px;color:#1a202c;margin:0"><input type="checkbox" style="width:auto;margin-top:3px" ' + (inc ? 'checked' : '') + ' onchange="orcAlternarItem(\'' + l.p.codigo + '\', this.checked)"><span><b>' + esc(l.p.modelo) + '</b><br><span class="orc-pass">Cód. ' + esc(l.p.codigo) + '</span></span></label>' + alerta + '</td><td>' + rotulo + '</td><td style="text-align:right">' + l.q + '</td><td style="text-align:right;white-space:nowrap">' + fmt(l.u) + '</td><td style="text-align:right;white-space:nowrap">' + fmt(l.sub) + '</td></tr>';
+        return '<tr' + (inc ? '' : ' style="opacity:.45"') + '><td><label style="display:flex;gap:8px;align-items:flex-start;text-transform:none;letter-spacing:0;font-size:13px;color:#1a202c;margin:0"><input type="checkbox" style="width:auto;margin-top:3px" ' + (inc ? 'checked' : '') + ' onchange="orcAlternarItem(\'' + l.p.codigo + '\', this.checked)"><span><b>' + esc(l.p.modelo) + '</b><br><span class="orc-pass">Cód. ' + esc(l.p.codigo) + '</span></span></label>' + alerta + '</td><td>' + rotulo + '</td><td style="text-align:right">' + l.q + '</td><td id="orcPr_' + l.p.codigo + '" style="text-align:right;white-space:nowrap"><span onclick="orcEditarPreco(\'' + l.p.codigo + '\')" title="Clique para ajustar o preço deste item" style="cursor:pointer;border-bottom:1px dotted #a0aec0">' + fmt(l.u) + '</span>' + (l.man ? '<br><span class="orc-pass" style="font-size:11px">tabela ' + fmt(l.uBase) + ' · <a href="javascript:void(0)" onclick="orcRestaurarPreco(\'' + l.p.codigo + '\')" style="color:#718096">restaurar</a></span>' : '') + '</td><td style="text-align:right;white-space:nowrap">' + fmt(l.sub) + '</td></tr>';
     }).join('');
     const geral = tot.ok + tot.prev + tot.sem;
     const linha = (rot, v, forte) => (v > 0 || forte) ? '<tr><td colspan="4" style="text-align:right;' + (forte ? 'font-weight:700;' : '') + '">' + rot + '</td><td style="text-align:right;white-space:nowrap;' + (forte ? 'font-weight:700;color:#1d327b' : '') + '">' + fmt(v) + '</td></tr>' : '';
@@ -1631,7 +1660,7 @@ async function enviarOrcamento() {
     try {
         const j = await orcApi({
             acao: 'criar', tabela: TID, uf: cState, segmento: cSeg, classe: cCls,
-            itens: orcLinhas().filter(l => !ORC_EXCL.has(l.p.codigo)).map(l => ({ codigo: l.p.codigo, qtd: l.q, disp: l.sit.k === 'carregando' ? 'sem_info' : l.sit.k, previsao: l.sit.iso || null })),
+            itens: orcLinhas().filter(l => !ORC_EXCL.has(l.p.codigo)).map(l => Object.assign({ codigo: l.p.codigo, qtd: l.q, disp: l.sit.k === 'carregando' ? 'sem_info' : l.sit.k, previsao: l.sit.iso || null }, l.man ? { preco: l.u } : {})),
             pagamento: { tipo: AVISTA ? 'avista' : 'boleto', parcelas: PARC },
             cliente, observacoes: $('orcObs').value.trim(), vendedor: { telefone: meuTel }
         });
@@ -1681,7 +1710,7 @@ function editarOrcNaTabela(id) {
     if (o.segmento && SEG.includes(o.segmento)) cSeg = o.segmento;
     if (o.classe && CLS.includes(Number(o.classe))) cCls = Number(o.classe);
     AVISTA = o.pagamento_tipo === 'avista'; PARC = o.parcelas || 1;
-    itens.forEach(i => { if (PBY[i.codigo]) QTD[i.codigo] = i.qtd; });
+    itens.forEach(i => { if (PBY[i.codigo]) { QTD[i.codigo] = i.qtd; if (i.preco > 0) ORC_PRECO[i.codigo] = i.preco; } });
     ORC_EDIT = { id: o.id, codigo: o.codigo, cliente: o.cliente_nome, status: o.status, obs: o.observacoes || '', cel: o.cliente_celular || '', email: o.cliente_email || '' };
     logUso('orc_editar_abrir', { tabela: TID, codigo: o.codigo });
     fecharOrc();
@@ -1736,7 +1765,7 @@ async function enviarEdicaoOrc() {
     try {
         const j = await orcApi({
             acao: 'editar', celular: cel, email, id: ORC_EDIT.id, uf: cState, segmento: cSeg, classe: cCls,
-            itens: orcLinhas().filter(l => !ORC_EXCL.has(l.p.codigo)).map(l => ({ codigo: l.p.codigo, qtd: l.q, disp: l.sit.k === 'carregando' ? 'sem_info' : l.sit.k, previsao: l.sit.iso || null })),
+            itens: orcLinhas().filter(l => !ORC_EXCL.has(l.p.codigo)).map(l => Object.assign({ codigo: l.p.codigo, qtd: l.q, disp: l.sit.k === 'carregando' ? 'sem_info' : l.sit.k, previsao: l.sit.iso || null }, l.man ? { preco: l.u } : {})),
             pagamento: { tipo: AVISTA ? 'avista' : 'boleto', parcelas: PARC },
             observacoes: $('orcObs').value.trim()
         });
