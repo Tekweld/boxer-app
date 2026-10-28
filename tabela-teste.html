@@ -204,6 +204,8 @@ body.locked .header,body.locked .content,body.locked #barProposta,body.locked #t
 .orc-acoes-col .orc-btn{text-align:center;padding:10px 14px;font-size:13.5px}
 .orc-acoes-lin{display:flex;gap:10px}.orc-acoes-lin .orc-btn{flex:1}
 .orc-canc{background:none;border:none;color:#718096;font-family:Outfit;font-size:12px;text-decoration:underline;cursor:pointer;padding:4px;align-self:flex-end}
+#orcEditBar{position:fixed;top:0;left:0;right:0;z-index:2600;background:#1d327b;color:#fff;padding:10px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+#orcEditBar .ebtn{display:flex;gap:8px}
 .orc-canc:hover{color:#991b1b}
 .orc-filtros{display:grid;grid-template-columns:2fr 1.3fr 1.3fr;gap:10px;margin-bottom:6px}
 .orc-filtros input,.orc-filtros select{font-family:Outfit;font-size:14px;padding:10px 12px;border:1px solid #c3cfe2;border-radius:8px;width:100%}
@@ -1515,6 +1517,7 @@ function abrirOrcamento() {
     if (!cSeg || !cCls) { alert('Escolha o segmento e a classe antes de gerar o orçamento.'); return; }
     const r = totalNaClasse(itens, cCls);
     if (r.sem) { alert('Há ' + r.sem + ' item(ns) sem preço nesta configuração. Remova-os para gerar o orçamento.'); return; }
+    if (ORC_EDIT) return abrirEdicaoOrc();
     const cd = condicoes();
     const total = r.t * fatorVista();
     const pg = AVISTA ? 'À vista (−' + String(cd.vista).replace('.', ',') + '%)' : 'Boleto ' + PARC + 'x';
@@ -1665,6 +1668,91 @@ function copiarOrc(txt, btn) {
 }
 
 const ORC_ST = { enviado: ['Enviado', ''], visualizado: ['Visto pelo cliente', 'azul'], aceito_cliente: ['Aceito pelo cliente', 'laranja'], aprovado: ['No ZEN', 'verde'], cancelado: ['Cancelado', 'verm'], erro: ['Erro', 'verm'] };
+// ---------- edicao de orcamento pela tabela ----------
+let ORC_EDIT = null;
+function editarOrcNaTabela(id) {
+    const o = (window._ORC || {})[id];
+    if (!o) return;
+    if (TID !== 1) { alert('A edição de orçamentos é feita na tabela de Revendas.'); return; }
+    const itens = o.itens_edicao || [];
+    const faltam = itens.filter(i => !PBY[i.codigo]).map(i => i.codigo);
+    limparSelecao();
+    if (o.uf && ST.some(s => s.uf === o.uf)) { cState = o.uf; $('selState').value = o.uf; }
+    if (o.segmento && SEG.includes(o.segmento)) cSeg = o.segmento;
+    if (o.classe && CLS.includes(Number(o.classe))) cCls = Number(o.classe);
+    AVISTA = o.pagamento_tipo === 'avista'; PARC = o.parcelas || 1;
+    itens.forEach(i => { if (PBY[i.codigo]) QTD[i.codigo] = i.qtd; });
+    ORC_EDIT = { id: o.id, codigo: o.codigo, cliente: o.cliente_nome, status: o.status, obs: o.observacoes || '' };
+    logUso('orc_editar_abrir', { tabela: TID, codigo: o.codigo });
+    fecharOrc();
+    updBtns(); render(); atualizarTodasDisponibilidades(); updateBar();
+    mostrarBannerEdicao();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (faltam.length) alert('Estes itens do orçamento não existem mais na tabela e ficaram de fora: ' + faltam.join(', '));
+}
+function mostrarBannerEdicao() {
+    let b = $('orcEditBar');
+    if (!ORC_EDIT) { if (b) b.remove(); $('btnOrc').textContent = '📄 Gerar orçamento'; return; }
+    if (!b) { b = document.createElement('div'); b.id = 'orcEditBar'; document.body.appendChild(b); }
+    b.innerHTML = '<span>✏️ Editando <b>' + esc(ORC_EDIT.codigo) + '</b> · ' + esc(ORC_EDIT.cliente) + '. Ajuste itens, quantidades, classe ou pagamento na tabela e depois salve.</span>'
+        + '<span class="ebtn"><button class="orc-btn prim sm" onclick="abrirOrcamento()">Salvar alterações</button><button class="orc-btn sm" onclick="descartarEdicaoOrc()">Descartar edição</button></span>';
+    $('btnOrc').textContent = '💾 Salvar alterações';
+}
+function descartarEdicaoOrc() {
+    if (!confirm('Descartar a edição? O orçamento ' + ORC_EDIT.codigo + ' continua como estava.')) return;
+    ORC_EDIT = null; mostrarBannerEdicao(); limparSelecao();
+}
+function abrirEdicaoOrc() {
+    const itens = itensDoPedido();
+    const r = totalNaClasse(itens, cCls);
+    const cd = condicoes();
+    const pg = AVISTA ? 'À vista (−' + String(cd.vista).replace('.', ',') + '%)' : 'Boleto em ' + PARC + 'x';
+    const total = r.t * fatorVista();
+    $('orcTitulo').textContent = 'Salvar alterações em ' + ORC_EDIT.codigo;
+    $('orcSub').textContent = ORC_EDIT.cliente + ' · ' + itens.length + (itens.length > 1 ? ' itens' : ' item') + ' · ' + cState + ' · ' + cSeg + ' · classe ' + cCls;
+    $('orcCorpo').innerHTML =
+        '<div class="orc-resumo"><b>' + fmt(total) + '</b> · ' + pg + '. Os preços são recalculados com a tabela de hoje e a validade volta a 7 dias. O link continua o mesmo e a venda no ZEN é atualizada.'
+        + (ORC_EDIT.status === 'aceito_cliente' ? '<br><b>O cliente já tinha aceitado: ele vai precisar aceitar de novo.</b>' : '') + '</div>'
+        + '<h4 class="orc-sec">Itens e estoque</h4><div id="orcItens"></div>'
+        + '<h4 class="orc-sec">Observações para o cliente</h4><textarea id="orcObs" rows="2" maxlength="1500" style="width:100%;font-family:Outfit;font-size:14px;padding:10px;border:1px solid #c3cfe2;border-radius:8px">' + esc(ORC_EDIT.obs) + '</textarea>'
+        + '<div class="orc-err" id="orcErr"></div>'
+        + '<div class="orc-acoes"><button class="orc-btn" onclick="fecharOrc()">Voltar à tabela</button><button class="orc-btn prim" id="orcGerarBtn" onclick="enviarEdicaoOrc()">Salvar alterações</button></div>';
+    $('orcOverlay').classList.add('show');
+    ORC_EXCL = new Set();
+    orcIniciarItens();
+    logUso('orc_editar_revisar', { tabela: TID, codigo: ORC_EDIT.codigo, itens: itens.length });
+}
+async function enviarEdicaoOrc() {
+    const err = $('orcErr'); err.style.display = 'none';
+    const falha = m => { err.textContent = m; err.style.display = 'block'; };
+    if (!orcLinhas().some(l => !ORC_EXCL.has(l.p.codigo))) return falha('Marque ao menos um item para o orçamento.');
+    const btn = $('orcGerarBtn'); btn.disabled = true; btn.textContent = 'Salvando…';
+    try {
+        const j = await orcApi({
+            acao: 'editar', id: ORC_EDIT.id, uf: cState, segmento: cSeg, classe: cCls,
+            itens: orcLinhas().filter(l => !ORC_EXCL.has(l.p.codigo)).map(l => ({ codigo: l.p.codigo, qtd: l.q, disp: l.sit.k === 'carregando' ? 'sem_info' : l.sit.k, previsao: l.sit.iso || null })),
+            pagamento: { tipo: AVISTA ? 'avista' : 'boleto', parcelas: PARC },
+            observacoes: $('orcObs').value.trim()
+        });
+        logUso('orc_editar_salvar', { tabela: TID, codigo: j.codigo, total: j.total_final });
+        ORC_EDIT = null; mostrarBannerEdicao(); limparSelecao();
+        const zen = j.zen && j.zen.ok
+            ? '<div class="orc-resumo">✔ Venda nº <b>' + j.zen.sale_id + '</b> atualizada no ZEN.</div>'
+            : '<div class="orc-av">⚠ ' + esc(j.zen && j.zen.erro || 'Não foi possível atualizar o ZEN.') + '</div>';
+        const av = (j.avisos || []).length ? '<div class="orc-av"><b>Pontos de atenção:</b><br>' + j.avisos.map(esc).join('<br>') + '</div>' : '';
+        $('orcTitulo').textContent = 'Orçamento ' + j.codigo + ' atualizado';
+        $('orcSub').textContent = 'Válido até ' + new Date(j.validade_em).toLocaleDateString('pt-BR') + ' · ' + fmt(j.total_final);
+        $('orcCorpo').innerHTML = zen + av
+            + (j.reaceite ? '<div class="orc-av">O cliente precisa aceitar novamente pelo link.</div>' : '')
+            + '<label>Link do orçamento (o mesmo de antes)</label>'
+            + '<div class="orc-link"><input id="orcLinkIn" readonly value="' + j.link + '" onclick="this.select()"><button class="orc-btn" onclick="copiarOrc(\'' + j.link + '\', this)">Copiar</button></div>'
+            + '<div class="orc-acoes"><button class="orc-btn" onclick="abrirMeusOrc()">Meus orçamentos</button><button class="orc-btn" onclick="fecharOrc()">Fechar</button></div>';
+    } catch (e) {
+        btn.disabled = false; btn.textContent = 'Salvar alterações';
+        falha(e.message || 'Não foi possível salvar agora.');
+    }
+}
+
 let ORC_FILTRO = { q: '', st: 'abertos', cli: '' };
 const ORC_GRUPOS = {
     abertos: o => !o.arquivado && ['enviado', 'visualizado', 'aceito_cliente'].includes(o.status) && !o.expirado,
@@ -1729,6 +1817,7 @@ function orcCard(o) {
     const zenTxt = o.zen_etapa ? '<div class="orc-pass">No ZEN: ' + esc(o.zen_etapa) + '</div>' : (o.zen_status === 'sem_cliente_zen' ? '<div class="orc-pass">Cliente sem cadastro no ZEN</div>' : (!o.zen_sale_id ? '<div class="orc-pass">Sem venda no ZEN</div>' : ''));
     const err = o.zen_erro && o.status !== 'aprovado' ? '<div class="orc-pass" style="color:#991b1b">' + esc(o.zen_erro) + '</div>' : '';
     let acoes = '<div class="orc-acoes-lin"><button class="orc-btn" onclick="copiarOrc(\'' + o.link + '\', this)">Copiar link</button><a class="orc-btn" href="' + o.link + '" target="_blank" rel="noopener">Ver como cliente</a></div>';
+    if (aberto) acoes += '<button class="orc-btn" onclick="editarOrcNaTabela(\'' + o.id + '\')" title="Carrega este orçamento na tabela para você trocar itens, quantidades, classe ou pagamento">Editar na tabela</button>';
     if (o.zen_sale_id && aberto) acoes += '<button class="orc-btn" onclick="abrirNoZen(' + o.zen_sale_id + ')" title="Abre a venda no ZEN para você editar. O que mudar lá aparece aqui ao reabrir esta tela">Ajustar no ZEN</button>';
     if (aberto && o.zen_sale_id) acoes += '<button class="orc-btn prim" onclick="aprovarOrc(\'' + o.id + '\', this)">' + (o.status === 'aceito_cliente' ? 'Confirmar e enviar ao ZEN' : 'Cliente confirmou por outro canal: enviar ao ZEN') + '</button>';
     if (aberto) acoes += '<button class="orc-canc" onclick="cancelarOrc(\'' + o.id + '\', this)">Cancelar orçamento</button>';
