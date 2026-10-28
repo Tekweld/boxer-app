@@ -1682,7 +1682,7 @@ function editarOrcNaTabela(id) {
     if (o.classe && CLS.includes(Number(o.classe))) cCls = Number(o.classe);
     AVISTA = o.pagamento_tipo === 'avista'; PARC = o.parcelas || 1;
     itens.forEach(i => { if (PBY[i.codigo]) QTD[i.codigo] = i.qtd; });
-    ORC_EDIT = { id: o.id, codigo: o.codigo, cliente: o.cliente_nome, status: o.status, obs: o.observacoes || '' };
+    ORC_EDIT = { id: o.id, codigo: o.codigo, cliente: o.cliente_nome, status: o.status, obs: o.observacoes || '', cel: o.cliente_celular || '', email: o.cliente_email || '' };
     logUso('orc_editar_abrir', { tabela: TID, codigo: o.codigo });
     fecharOrc();
     updBtns(); render(); atualizarTodasDisponibilidades(); updateBar();
@@ -1701,6 +1701,7 @@ function mostrarBannerEdicao() {
 function descartarEdicaoOrc() {
     if (!confirm('Descartar a edição? O orçamento ' + ORC_EDIT.codigo + ' continua como estava.')) return;
     ORC_EDIT = null; mostrarBannerEdicao(); limparSelecao();
+    abrirMeusOrc();
 }
 function abrirEdicaoOrc() {
     const itens = itensDoPedido();
@@ -1708,6 +1709,7 @@ function abrirEdicaoOrc() {
     const cd = condicoes();
     const pg = AVISTA ? 'À vista (−' + String(cd.vista).replace('.', ',') + '%)' : 'Boleto em ' + PARC + 'x';
     const total = r.t * fatorVista();
+    const contatoOk = telValido(ORC_EDIT.cel) && /^\S+@\S+\.\S+$/.test(ORC_EDIT.email);
     $('orcTitulo').textContent = 'Salvar alterações em ' + ORC_EDIT.codigo;
     $('orcSub').textContent = ORC_EDIT.cliente + ' · ' + itens.length + (itens.length > 1 ? ' itens' : ' item') + ' · ' + cState + ' · ' + cSeg + ' · classe ' + cCls;
     $('orcCorpo').innerHTML =
@@ -1715,6 +1717,7 @@ function abrirEdicaoOrc() {
         + (ORC_EDIT.status === 'aceito_cliente' ? '<br><b>O cliente já tinha aceitado: ele vai precisar aceitar de novo.</b>' : '') + '</div>'
         + '<h4 class="orc-sec">Itens e estoque</h4><div id="orcItens"></div>'
         + '<h4 class="orc-sec">Observações para o cliente</h4><textarea id="orcObs" rows="2" maxlength="1500" style="width:100%;font-family:Outfit;font-size:14px;padding:10px;border:1px solid #c3cfe2;border-radius:8px">' + esc(ORC_EDIT.obs) + '</textarea>'
+        + (contatoOk ? '' : '<h4 class="orc-sec">Corrija o contato do cliente</h4><div class="orc-av">Este orçamento foi criado com um contato incompleto. Ajuste abaixo para poder salvar.</div><div class="orc-filtros" style="grid-template-columns:1fr 1fr"><input id="orcEdCel" inputmode="tel" maxlength="15" placeholder="(11) 99999-9999" oninput="maskTel(this)" value="' + esc(maskTelStr(ORC_EDIT.cel)) + '"><input id="orcEdEmail" type="email" placeholder="E-mail do cliente" value="' + esc(ORC_EDIT.email) + '"></div>')
         + '<div class="orc-err" id="orcErr"></div>'
         + '<div class="orc-acoes"><button class="orc-btn" onclick="fecharOrc()">Voltar à tabela</button><button class="orc-btn prim" id="orcGerarBtn" onclick="enviarEdicaoOrc()">Salvar alterações</button></div>';
     $('orcOverlay').classList.add('show');
@@ -1726,10 +1729,13 @@ async function enviarEdicaoOrc() {
     const err = $('orcErr'); err.style.display = 'none';
     const falha = m => { err.textContent = m; err.style.display = 'block'; };
     if (!orcLinhas().some(l => !ORC_EXCL.has(l.p.codigo))) return falha('Marque ao menos um item para o orçamento.');
+    const cel = $('orcEdCel') ? $('orcEdCel').value.trim() : ORC_EDIT.cel, email = $('orcEdEmail') ? $('orcEdEmail').value.trim() : ORC_EDIT.email;
+    if (!telValido(cel)) return falha('Celular do cliente inválido: use DDD + número, ex.: (19) 99999-9999.');
+    if (!/^\S+@\S+\.\S+$/.test(email)) return falha('E-mail do cliente inválido.');
     const btn = $('orcGerarBtn'); btn.disabled = true; btn.textContent = 'Salvando…';
     try {
         const j = await orcApi({
-            acao: 'editar', id: ORC_EDIT.id, uf: cState, segmento: cSeg, classe: cCls,
+            acao: 'editar', celular: cel, email, id: ORC_EDIT.id, uf: cState, segmento: cSeg, classe: cCls,
             itens: orcLinhas().filter(l => !ORC_EXCL.has(l.p.codigo)).map(l => ({ codigo: l.p.codigo, qtd: l.q, disp: l.sit.k === 'carregando' ? 'sem_info' : l.sit.k, previsao: l.sit.iso || null })),
             pagamento: { tipo: AVISTA ? 'avista' : 'boleto', parcelas: PARC },
             observacoes: $('orcObs').value.trim()
