@@ -205,6 +205,9 @@ body.locked .header,body.locked .content,body.locked #barProposta,body.locked #t
 .orc-acoes-lin{display:flex;gap:10px}.orc-acoes-lin .orc-btn{flex:1}
 .orc-canc{background:none;border:none;color:#718096;font-family:Outfit;font-size:12px;text-decoration:underline;cursor:pointer;padding:4px;align-self:flex-end}
 .orc-canc:hover{color:#991b1b}
+.orc-filtros{display:grid;grid-template-columns:2fr 1.3fr 1.3fr;gap:10px;margin-bottom:6px}
+.orc-filtros input,.orc-filtros select{font-family:Outfit;font-size:14px;padding:10px 12px;border:1px solid #c3cfe2;border-radius:8px;width:100%}
+@media(max-width:760px){.orc-filtros{grid-template-columns:1fr}}
 @media(max-width:760px){.orc-card{grid-template-columns:1fr}}
 tbody tr.row-ajuste{background:#fff0f0 !important}
 tbody tr.row-ajuste .td-price-final{color:#e30613}
@@ -262,7 +265,7 @@ tbody tr.row-ajuste .td-price-final{color:#e30613}
       <p class="sub">Preencha para pedir acesso. A equipe Boxer vai analisar e avisar por email.</p>
       <div class="field"><label for="sNome">Nome</label><input id="sNome" type="text" maxlength="120" autocomplete="name"></div>
       <div class="field"><label for="sEmail">Email</label><input id="sEmail" type="email" maxlength="200" autocomplete="email"></div>
-      <div class="field"><label for="sTel">Telefone / WhatsApp</label><input id="sTel" type="tel" maxlength="20" autocomplete="tel" placeholder="(11) 99999-9999"></div>
+      <div class="field"><label for="sTel">Telefone / WhatsApp</label><input id="sTel" type="tel" maxlength="15" autocomplete="tel" placeholder="(11) 99999-9999" oninput="maskTel(this)"></div>
       <div class="field"><label for="sEmpresa">Empresa</label><input id="sEmpresa" type="text" maxlength="160" autocomplete="organization"></div>
       <div class="field"><label for="sMensagem">Por que precisa de acesso? (opcional)</label><textarea id="sMensagem" rows="3" maxlength="600"></textarea></div>
       <input id="sWebsite" type="text" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;opacity:0" aria-hidden="true">
@@ -484,7 +487,7 @@ async function enviarSolicitacao() {
     if (nome.length < 2) { msgLogin('Informe seu nome.'); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msgLogin('Informe um email válido.'); return; }
     const tel = ($('sTel').value || '').replace(/\D/g, '');
-    if (tel.length < 10) { msgLogin('Informe seu telefone com DDD.'); return; }
+    if (!telValido(tel)) { msgLogin('Telefone inválido. Use DDD + número, por exemplo (19) 99999-9999.'); return; }
     const btn = $('btnSolicitar');
     btn.disabled = true; btn.textContent = 'Enviando...';
     try {
@@ -1525,14 +1528,14 @@ function abrirOrcamento() {
         + '<div><label>Razão social / nome *</label><input id="orcNome" placeholder="preenche sozinho se já for cliente"></div>'
         + '<div><label>Contato (aos cuidados de)</label><input id="orcContato"></div>'
         + '<div><label>E-mail do cliente *</label><input id="orcEmail" type="email"></div>'
-        + '<div><label>Celular do cliente *</label><input id="orcCel" inputmode="tel" placeholder="(11) 99999-9999"></div>'
+        + '<div><label>Celular do cliente *</label><input id="orcCel" inputmode="tel" maxlength="15" placeholder="(11) 99999-9999" oninput="maskTel(this)"></div>'
         + '<div class="full"><label>Observações para o cliente</label><textarea id="orcObs" rows="2" maxlength="1500"></textarea></div>'
         + '</div>'
         + '<div class="orc-av" id="orcCliInfo" style="display:none"></div>'
         + '<h4 class="orc-sec">Seus dados (aparecem no orçamento)</h4><div class="orc-grid">'
         + '<div><label>Nome</label><input id="orcMeuNome" readonly value="' + esc(window.ACESSO_NOME || (USER && USER.email) || '') + '"></div>'
         + '<div><label>E-mail</label><input id="orcMeuEmail" readonly value="' + esc(USER ? USER.email : '') + '"></div>'
-        + '<div><label>Telefone / WhatsApp *</label><input id="orcMeuTel" inputmode="tel" placeholder="(11) 99999-9999" value="' + esc(window.ACESSO_TEL || lerTelOrc()) + '"></div>'
+        + '<div><label>Telefone / WhatsApp *</label><input id="orcMeuTel" inputmode="tel" maxlength="15" placeholder="(11) 99999-9999" oninput="maskTel(this)" value="' + esc(maskTelStr(window.ACESSO_TEL || lerTelOrc())) + '"></div>'
         + '</div>'        + '<div class="orc-err" id="orcErr"></div>'
         + '<div class="orc-acoes"><button class="orc-btn" onclick="fecharOrc()">Cancelar</button><button class="orc-btn prim" id="orcGerarBtn" onclick="enviarOrcamento()">Gerar orçamento e link</button></div>';
     $('orcOverlay').classList.add('show');
@@ -1615,10 +1618,10 @@ async function enviarOrcamento() {
     if (cliente.cnpj.length !== 14 && cliente.cnpj.length !== 11) return falha('Informe o CNPJ (14 dígitos) ou CPF do cliente.');
     if (!cliente.nome) return falha('Informe a razão social ou o nome do cliente.');
     if (!/^\S+@\S+\.\S+$/.test(cliente.email)) return falha('Informe um e-mail válido do cliente.');
-    if (onlyDig(cliente.celular).length < 10) return falha('Informe o celular do cliente com DDD.');
+    if (!telValido(cliente.celular)) return falha('Celular do cliente inválido. Use DDD + número, por exemplo (19) 99999-9999.');
     if (!orcLinhas().some(l => !ORC_EXCL.has(l.p.codigo))) return falha('Marque ao menos um item para o orçamento.');
     const meuTel = onlyDig($('orcMeuTel').value);
-    if (meuTel.length < 10) return falha('Informe o seu telefone/WhatsApp com DDD: ele aparece no orçamento para o cliente falar com você.');
+    if (!telValido(meuTel)) return falha('Seu telefone/WhatsApp está inválido. Use DDD + número, por exemplo (19) 99999-9999: ele aparece no orçamento para o cliente falar com você.');
     try { localStorage.setItem('orc_tel', meuTel); } catch (e) {}
     if (meuTel !== onlyDig(window.ACESSO_TEL) && window.ACESSO_ORIGEM === 'tabela_usuarios') { sbc.rpc('tabela_salvar_telefone', { p_tel: meuTel }).then(() => { window.ACESSO_TEL = meuTel; }); }
     const btn = $('orcGerarBtn'); btn.disabled = true; btn.textContent = 'Gerando…';
@@ -1661,7 +1664,16 @@ function copiarOrc(txt, btn) {
     else { const i = $('orcLinkIn'); if (i) { i.select(); document.execCommand('copy'); ok(); } }
 }
 
-const ORC_ST = { enviado: ['Enviado', ''], visualizado: ['Visto pelo cliente', 'azul'], aceito_cliente: ['Aceito pelo cliente', 'laranja'], aprovado: ['No ZEN', 'verde'], cancelado: ['Cancelado', 'verm'] };
+const ORC_ST = { enviado: ['Enviado', ''], visualizado: ['Visto pelo cliente', 'azul'], aceito_cliente: ['Aceito pelo cliente', 'laranja'], aprovado: ['No ZEN', 'verde'], cancelado: ['Cancelado', 'verm'], erro: ['Erro', 'verm'] };
+let ORC_FILTRO = { q: '', st: 'abertos', cli: '' };
+const ORC_GRUPOS = {
+    abertos: o => !o.arquivado && ['enviado', 'visualizado', 'aceito_cliente'].includes(o.status) && !o.expirado,
+    confirmar: o => !o.arquivado && o.status === 'aceito_cliente',
+    aprovados: o => !o.arquivado && o.status === 'aprovado',
+    encerrados: o => !o.arquivado && (o.status === 'cancelado' || o.expirado),
+    arquivados: o => !!o.arquivado,
+    todos: o => !o.arquivado
+};
 async function abrirMeusOrc() {
     $('orcTitulo').textContent = 'Meus orçamentos';
     $('orcSub').textContent = 'Acompanhe o aceite do cliente e confirme o pedido no ZEN';
@@ -1672,31 +1684,81 @@ async function abrirMeusOrc() {
     try {
         const j = await orcApi({ acao: 'listar' });
         const L = j.orcamentos || [];
-        if (!L.length) { $('orcCorpo').innerHTML = '<p>Você ainda não gerou orçamentos.</p>'; return; }
         window._ORC = {}; L.forEach(o => { window._ORC[o.id] = o; });
+        window._ORCL = L;
+        if (!L.length) { $('orcCorpo').innerHTML = '<p>Você ainda não gerou orçamentos.</p>'; return; }
         $('orcOverlay').classList.add('larga');
-        $('orcCorpo').innerHTML = '<div class="orc-cards">' + L.map(o => {
-            const st = o.expirado ? ['Expirado', 'verm'] : (ORC_ST[o.status] || [o.status, '']);
-            const fdh = d => new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-            const vis = o.visualizacoes ? 'Aberto ' + o.visualizacoes + 'x pelo cliente' + (o.ultima_visualizacao_em ? ' · último acesso ' + fdh(o.ultima_visualizacao_em) : '') : 'Cliente ainda não abriu o link';
-            const aceite = o.aceito_em ? 'Aceito pelo cliente em ' + fdh(o.aceito_em) : '';
-            const aberto = ['enviado', 'visualizado', 'aceito_cliente'].includes(o.status);
-            let zen;
-            if (o.status === 'aprovado' && o.zen_sale_id) zen = '<div class="orc-pass">Pedido criado no ZEN, etapa WEB Pronta entrega</div><a class="orc-zenlink" href="' + ZEN_URL_VENDA + o.zen_sale_id + '" target="_blank" rel="noopener">Pedido ZEN nº ' + o.zen_sale_id + ' ↗</a>';
-            else if (o.zen_sale_id && o.status !== 'cancelado') zen = '<div class="orc-pass">Salvo no ZEN como orçamento (Preparando)</div><a class="orc-zenlink" href="' + ZEN_URL_VENDA + o.zen_sale_id + '" target="_blank" rel="noopener">Venda ZEN nº ' + o.zen_sale_id + ' ↗</a>';
-            else zen = '<div class="orc-pass">' + (o.zen_status === 'sem_cliente_zen' ? 'Cliente sem cadastro no ZEN' : (o.zen_sale_id ? 'Venda ' + o.zen_sale_id + ' no ZEN: ' + (o.zen_status || '') : 'Sem venda no ZEN')) + '</div>';
-            const err = o.zen_erro && o.status !== 'aprovado' ? '<div class="orc-pass" style="color:#991b1b">' + esc(o.zen_erro) + '</div>' : '';
-            let acoes = '<div class="orc-acoes-lin"><button class="orc-btn" onclick="copiarOrc(\'' + o.link + '\', this)">Copiar link</button><a class="orc-btn" href="' + o.link + '" target="_blank" rel="noopener">Ver como cliente</a></div>';
-            if (o.zen_sale_id && aberto) acoes += '<button class="orc-btn" onclick="abrirNoZen(' + o.zen_sale_id + ')" title="Abre o ZEN para você editar a venda">Ajustar no ZEN</button>';
-            if (aberto && o.zen_sale_id) acoes += '<button class="orc-btn prim" onclick="aprovarOrc(\'' + o.id + '\', this)">' + (o.status === 'aceito_cliente' ? 'Confirmar e enviar ao ZEN' : 'Cliente confirmou por outro canal: enviar ao ZEN') + '</button>';
-            if (aberto) acoes += '<button class="orc-canc" onclick="cancelarOrc(\'' + o.id + '\', this)">Cancelar orçamento</button>';
-            return '<div class="orc-card"><div><div class="c-tit">' + esc(o.codigo) + '</div><div class="orc-pass">Criado em ' + new Date(o.criado_em).toLocaleDateString('pt-BR') + '<br>Validade ' + new Date(o.validade_em).toLocaleDateString('pt-BR') + '</div><div class="c-tot">' + fmt(o.total_final) + '</div></div>'
-                + '<div><div class="c-cli">' + esc(o.cliente_nome) + '</div><div class="orc-pass">' + mascCnpj(o.cliente_cnpj) + '</div><div style="margin-top:10px"><span class="orc-st ' + st[1] + '">' + st[0] + '</span></div><div class="orc-pass">' + vis + '</div>' + (aceite ? '<div class="orc-pass">' + aceite + '</div>' : '') + zen + err + '</div>'
-                + '<div class="orc-acoes-col">' + acoes + '</div></div>';
-        }).join('') + '</div>';
+        const clientes = [...new Set(L.map(o => o.cliente_nome))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        $('orcCorpo').innerHTML = (j.aviso_sync ? '<div class="orc-pass" style="color:#9a3412;margin-bottom:8px">' + esc(j.aviso_sync) + '</div>' : '')
+            + '<div class="orc-filtros">'
+            + '<input id="orcFQ" type="search" placeholder="Buscar por nº do orçamento, nº do pedido ZEN, cliente ou produto" oninput="orcFiltrar()" value="' + esc(ORC_FILTRO.q) + '">'
+            + '<select id="orcFSt" onchange="orcFiltrar()">'
+            + [['abertos', 'Sem aprovação (em aberto)'], ['confirmar', 'Cliente aceitou: falta minha confirmação'], ['aprovados', 'Aprovados (pedido no ZEN)'], ['encerrados', 'Cancelados e expirados'], ['arquivados', 'Arquivados'], ['todos', 'Todos (menos arquivados)']].map(x => '<option value="' + x[0] + '"' + (ORC_FILTRO.st === x[0] ? ' selected' : '') + '>' + x[1] + '</option>').join('')
+            + '</select>'
+            + '<select id="orcFCli" onchange="orcFiltrar()"><option value="">Todos os clientes</option>' + clientes.map(c => '<option value="' + esc(c) + '"' + (ORC_FILTRO.cli === c ? ' selected' : '') + '>' + esc(c) + '</option>').join('') + '</select>'
+            + '</div><div class="orc-pass" id="orcFCont" style="margin:2px 0 12px"></div><div id="orcLista"></div>';
+        orcFiltrar();
     } catch (e) {
         $('orcCorpo').innerHTML = '<p>Não foi possível carregar seus orçamentos agora. ' + esc(e.message) + '</p>';
     }
+}
+function orcFiltrar() {
+    ORC_FILTRO = { q: $('orcFQ').value.trim(), st: $('orcFSt').value, cli: $('orcFCli').value };
+    const q = ORC_FILTRO.q.toLowerCase(), qd = q.replace(/\D/g, '');
+    const L = (window._ORCL || []).filter(o => {
+        if (ORC_FILTRO.q) {
+            // buscando por algo especifico, procura em todos (inclusive arquivados)
+            const alvo = (o.codigo + ' ' + (o.zen_sale_id || '') + ' ' + o.cliente_nome + ' ' + (o.cliente_cnpj || '') + ' ' + (o.itens_resumo || []).join(' ')).toLowerCase();
+            if (!(alvo.includes(q) || (qd.length >= 3 && String(o.codigo).replace(/\D/g, '').replace(/^0+/, '') === qd.replace(/^0+/, '')))) return false;
+        } else if (!ORC_GRUPOS[ORC_FILTRO.st](o)) return false;
+        if (ORC_FILTRO.cli && o.cliente_nome !== ORC_FILTRO.cli) return false;
+        return true;
+    });
+    $('orcFCont').textContent = L.length + (L.length === 1 ? ' orçamento' : ' orçamentos');
+    $('orcLista').innerHTML = L.length ? '<div class="orc-cards">' + L.map(orcCard).join('') + '</div>' : '<p style="padding:24px 4px;color:#718096">Nenhum orçamento neste filtro.</p>';
+}
+function orcCard(o) {
+    const fdh = d => new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    const aberto = ['enviado', 'visualizado', 'aceito_cliente'].includes(o.status);
+    let st = ORC_ST[o.status] || [o.status, ''];
+    if (o.expirado) st = ['Expirado', 'verm'];
+    if (o.status === 'cancelado') st = ['Cancelado ' + ({ cliente: 'pelo cliente', representante: 'por você', zen: 'no ZEN' }[o.cancelado_por] || ''), 'verm'];
+    const vis = o.visualizacoes ? 'Aberto ' + o.visualizacoes + 'x pelo cliente' + (o.ultima_visualizacao_em ? ' · último acesso ' + fdh(o.ultima_visualizacao_em) : '') : 'Cliente ainda não abriu o link';
+    const aceite = o.aceito_em ? 'Aceito pelo cliente em ' + fdh(o.aceito_em) + (o.aceito_nome ? ' (' + esc(o.aceito_nome) + ')' : '') : '';
+    const zenLink = o.zen_sale_id && o.status !== 'cancelado' ? '<a class="orc-zenlink" href="' + ZEN_URL_VENDA + o.zen_sale_id + '" target="_blank" rel="noopener" title="Abrir no ZEN">' + (o.status === 'aprovado' ? 'Pedido' : 'Venda') + ' ZEN nº ' + o.zen_sale_id + ' ↗</a>' : '';
+    const zenTxt = o.zen_etapa ? '<div class="orc-pass">No ZEN: ' + esc(o.zen_etapa) + '</div>' : (o.zen_status === 'sem_cliente_zen' ? '<div class="orc-pass">Cliente sem cadastro no ZEN</div>' : (!o.zen_sale_id ? '<div class="orc-pass">Sem venda no ZEN</div>' : ''));
+    const err = o.zen_erro && o.status !== 'aprovado' ? '<div class="orc-pass" style="color:#991b1b">' + esc(o.zen_erro) + '</div>' : '';
+    let acoes = '<div class="orc-acoes-lin"><button class="orc-btn" onclick="copiarOrc(\'' + o.link + '\', this)">Copiar link</button><a class="orc-btn" href="' + o.link + '" target="_blank" rel="noopener">Ver como cliente</a></div>';
+    if (o.zen_sale_id && aberto) acoes += '<button class="orc-btn" onclick="abrirNoZen(' + o.zen_sale_id + ')" title="Abre a venda no ZEN para você editar. O que mudar lá aparece aqui ao reabrir esta tela">Ajustar no ZEN</button>';
+    if (aberto && o.zen_sale_id) acoes += '<button class="orc-btn prim" onclick="aprovarOrc(\'' + o.id + '\', this)">' + (o.status === 'aceito_cliente' ? 'Confirmar e enviar ao ZEN' : 'Cliente confirmou por outro canal: enviar ao ZEN') + '</button>';
+    if (aberto) acoes += '<button class="orc-canc" onclick="cancelarOrc(\'' + o.id + '\', this)">Cancelar orçamento</button>';
+    if (!aberto && !o.arquivado) acoes += '<button class="orc-canc" onclick="arquivarOrc(\'' + o.id + '\', true, this)">Arquivar</button>';
+    if (o.arquivado) acoes += '<button class="orc-canc" onclick="arquivarOrc(\'' + o.id + '\', false, this)">Tirar do arquivo</button>';
+    return '<div class="orc-card"><div><div class="c-tit">' + esc(o.codigo) + '</div>' + zenLink + '<div class="orc-pass">Criado em ' + new Date(o.criado_em).toLocaleDateString('pt-BR') + '<br>Validade ' + new Date(o.validade_em).toLocaleDateString('pt-BR') + '</div><div class="c-tot">' + fmt(o.total_final) + '</div></div>'
+        + '<div><div class="c-cli">' + esc(o.cliente_nome) + '</div><div class="orc-pass">' + mascCnpj(o.cliente_cnpj) + '</div><div style="margin-top:10px"><span class="orc-st ' + st[1] + '">' + st[0] + '</span></div><div class="orc-pass">' + vis + '</div>' + (aceite ? '<div class="orc-pass">' + aceite + '</div>' : '') + zenTxt + err + '</div>'
+        + '<div class="orc-acoes-col">' + acoes + '</div></div>';
+}
+async function arquivarOrc(id, flag, btn) {
+    btn.disabled = true;
+    try { await orcApi({ acao: 'arquivar', id, arquivar: flag }); const o = window._ORC[id]; if (o) o.arquivado = flag; orcFiltrar(); }
+    catch (e) { btn.disabled = false; alert(e.message); }
+}
+// telefone: so digitos, com mascara (11) 99999-9999 e no maximo 11 numeros
+function maskTelStr(v) {
+    const d = String(v || '').replace(/\D/g, '').slice(0, 11);
+    if (d.length <= 2) return d ? '(' + d : '';
+    if (d.length <= 6) return '(' + d.slice(0, 2) + ') ' + d.slice(2);
+    if (d.length <= 10) return '(' + d.slice(0, 2) + ') ' + d.slice(2, 6) + '-' + d.slice(6);
+    return '(' + d.slice(0, 2) + ') ' + d.slice(2, 7) + '-' + d.slice(7);
+}
+function maskTel(el) { el.value = maskTelStr(el.value); }
+function telValido(v) {
+    const d = String(v || '').replace(/\D/g, '');
+    if (d.length !== 10 && d.length !== 11) return false;
+    const ddd = parseInt(d.slice(0, 2), 10);
+    if (ddd < 11 || ddd > 99) return false;
+    if (d.length === 11 && d[2] !== '9') return false;
+    return true;
 }
 const ZEN_URL_VENDA = 'https://zenerp.app.br/sale/saleItem.html?q=sale.id==';
 async function cancelarOrc(id, btn) {
