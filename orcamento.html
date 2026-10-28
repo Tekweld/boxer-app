@@ -11,20 +11,20 @@
 :root{--az:#1d327b;--az2:#162666;--ciano:#25bbee;--verm:#e30613;--bg:#f0f4f8;--tx:#1a202c;--tx2:#718096;--bd:#d0d8e8;--bd2:#e2e8f0;--ok:#16a34a}
 body{font-family:Outfit,sans-serif;background:var(--bg);color:var(--tx);padding-bottom:92px}
 .top{background:linear-gradient(135deg,var(--az),var(--az2));border-bottom:3px solid var(--ciano);color:#fff}
-.top-in{max-width:980px;margin:0 auto;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.top-in{max-width:980px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .brand{display:flex;align-items:center;gap:12px}
-.brand img{width:38px;height:38px}
+.brand img{width:32px;height:32px}
 .brand b{font-size:20px;letter-spacing:.3px}
 .brand span{display:block;font-size:12px;color:#93b4d4;font-weight:400}
-.cod{font-size:13px;color:#c8ddf0;text-align:right}
-.cod b{display:block;font-size:18px;color:#fff}
+.cod{font-size:14px;color:#c8ddf0;text-align:right;white-space:nowrap}
+.cod b{font-size:18px;color:#fff;margin-left:4px}
 .wrap{max-width:980px;margin:0 auto;padding:20px}
-.hero{background:#fff;border:1px solid var(--bd);border-radius:14px;padding:26px 26px 22px;margin-bottom:16px;position:relative;overflow:hidden}
+.hero{background:#fff;border:1px solid var(--bd);border-radius:14px;padding:18px 24px 16px;margin-bottom:16px;position:relative;overflow:hidden}
 .hero:before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:linear-gradient(var(--verm),var(--az))}
 .hero small{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--tx2);font-weight:500}
-.hero h1{font-size:26px;line-height:1.2;color:var(--az);margin:6px 0 10px}
+.hero h1{font-size:23px;line-height:1.2;color:var(--az);margin:0 0 6px}
 .hero p{font-size:15px;color:#4a5568;line-height:1.5;max-width:640px}
-.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .chip{background:#eef2fa;color:var(--az);border-radius:999px;padding:6px 13px;font-size:13px;font-weight:500}
 .chip.val{background:#fff4e5;color:#9a5b00}
 .chip.exp{background:#fee2e2;color:#991b1b}
@@ -52,7 +52,7 @@ body{font-family:Outfit,sans-serif;background:var(--bg);color:var(--tx);padding-
 .lin.total{border:none;margin-top:6px;padding-top:12px;font-size:17px;color:var(--tx);font-weight:600;border-top:2px solid var(--az)}
 .lin.total b{font-size:26px;color:var(--az)}
 .nota{font-size:12px;color:var(--tx2);margin-top:8px;line-height:1.5}
-.cond{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:0}
+.cond{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
 .cond>div{padding:16px 22px;border-top:1px solid var(--bd2)}
 .cond .t{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--tx2);font-weight:600;margin-bottom:6px}
 .cond .v{font-size:15px;color:var(--tx);line-height:1.45}
@@ -61,7 +61,9 @@ body{font-family:Outfit,sans-serif;background:var(--bg);color:var(--tx);padding-
 .porque div{background:#f7fafc;border:1px solid var(--bd2);border-radius:10px;padding:14px}
 .porque b{display:block;color:var(--az);font-size:14.5px;margin-bottom:4px}
 .porque span{font-size:13px;color:#4a5568;line-height:1.45}
-.dados{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:0}
+.dados{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
+.dados small{display:block;font-size:11.5px;color:#718096;line-height:1.4;margin-top:2px}
+.recusar{text-align:center;padding:4px 0 6px}.recusar button{background:none;border:none;color:#a0aec0;font-family:Outfit;font-size:12px;text-decoration:underline;cursor:pointer}.recusar button:hover{color:#991b1b}
 .dados>div{padding:14px 22px;border-top:1px solid var(--bd2);font-size:13.5px;line-height:1.55;color:#4a5568}
 .dados b{display:block;color:var(--tx);font-size:14px}
 .rodape{text-align:center;font-size:12px;color:#a0aec0;padding:8px 0 22px;line-height:1.6}
@@ -94,6 +96,7 @@ body{font-family:Outfit,sans-serif;background:var(--bg);color:var(--tx);padding-
 .estado p{font-size:14.5px;color:#4a5568;line-height:1.5}
 .err{color:#991b1b;background:#fee2e2;border-radius:8px;padding:9px 12px;font-size:13px;margin-bottom:12px;display:none}
 @media(max-width:640px){
+  .cond,.dados{grid-template-columns:1fr}
   .tab thead{display:none}
   .tab,.tab tbody,.tab tr,.tab td,.tab tfoot{display:block;width:100%}
   .tab tbody tr{padding:14px;border-bottom:1px solid var(--bd2);display:grid;grid-template-columns:1fr 1fr;gap:6px 10px}
@@ -114,9 +117,18 @@ body{font-family:Outfit,sans-serif;background:var(--bg);color:var(--tx);padding-
   .cta .btn.noprint{display:none}
 }
 @media print{
-  body{background:#fff;padding:0}.cta,.noprint{display:none!important}
-  .wrap{padding:0}.card,.hero{break-inside:avoid;border-color:#cbd5e0}
+  @page{size:A4;margin:10mm}
+  body{background:#fff;padding:0;font-size:13px}.cta,.noprint,.recusar{display:none!important}
+  .wrap{padding:8px 0 0}.card,.hero{border-color:#cbd5e0;margin-bottom:10px}
+  .card:not(.tbl),.hero{break-inside:avoid}
+  .tab tr{break-inside:avoid}
   .top{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .top-in{padding:6px 12px}
+  .hero{padding:10px 16px}.hero h1{font-size:19px}.chips{margin-top:8px}.chip{padding:4px 10px;font-size:12px}
+  .tab td{padding:8px 10px}.tab th{padding:8px 10px}.tab .foto{width:40px;height:40px}
+  .cond>div,.dados>div{padding:10px 16px}
+  .cond,.dados{grid-template-columns:repeat(3,1fr)}
+  .rodape{padding:4px 0 0}
 }
 </style>
 </head>
@@ -141,7 +153,7 @@ const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsIn
 const HUB = 'https://hub.boxersoldas.com.br/api/push-pedido?target=orcamento';
 const TOKEN = new URLSearchParams(location.search).get('t') || '';
 // dados da Boxer (mesmos do pedido de venda do ZEN)
-const BOXER = { nome: 'Tekweld Indústria e Comércio Ltda (Boxer Soldas)', cnpj: '13.881.630/0001-64', end: 'Rua Alvino Cristo, 36 · Parque Industrial Experts · Nova Odessa/SP · CEP 13387-793', email: 'admin@boxersoldas.com.br', tel: '(19) 3469-1876' };
+const BOXER = { nome: 'Tekweld Indústria e Comércio Ltda', cnpj: '13.881.630/0001-64', end: 'Rua Alvino Cristo, 36 · Parque Industrial Experts · Nova Odessa/SP · CEP 13387-793', email: 'admin@boxersoldas.com.br', tel: '(19) 3469-1876' };
 let O = null;
 
 const $ = id => document.getElementById(id);
@@ -206,14 +218,14 @@ function desenhar() {
   const wa = contatoWhats();
   const estRot = it => it.estoque === 'ok' ? '<span class="est ok">✓ Disponível</span>'
     : it.estoque === 'prev' ? '<span class="est prev">Previsão ' + (it.previsao ? dt(it.previsao + 'T12:00:00') : 'a confirmar') + '</span>'
-    : '<span class="est sem">Sem previsão</span><div class="obs">Prazo a confirmar com o representante</div>';
+    : '<span class="est sem">Sem previsão</span>';
   const itensHtml = O.itens.map(it => {
     const desc = it.unit < it.unit_tabela;
     return '<tr><td><div class="prod"><div class="foto">' + (it.imagem_url ? '<img src="' + esc(it.imagem_url) + '" alt="" loading="lazy" onerror="this.replaceWith(semFoto())">' : semFotoHtml()) + '</div><div><div class="nm">' + esc(it.modelo) + '</div><div class="cd">Código ' + esc(it.codigo) + '</div></div></div></td>'
       + '<td data-l="Estoque">' + estRot(it) + '</td>'
       + '<td class="r" data-l="Qtd">' + it.qtd + '</td>'
-      + '<td class="r" data-l="Unitário">' + (desc ? '<span class="riscado">' + brl(it.unit_tabela) + '</span>' : '') + brl(it.unit) + '</td>'
-      + '<td class="r" data-l="Total"><b>' + brl(it.subtotal) + '</b></td></tr>';
+      + '<td class="r" data-l="Valor unitário">' + (desc ? '<span class="riscado">' + brl(it.unit_tabela) + '</span>' : '') + brl(it.unit) + '</td>'
+      + '<td class="r" data-l="Valor total"><b>' + brl(it.subtotal) + '</b></td></tr>';
   }).join('');
   const un = O.itens.reduce((a, i) => a + i.qtd, 0);
   const grp = { ok: 0, prev: 0, sem: 0 };
@@ -228,24 +240,25 @@ function desenhar() {
   const pg = condPagamento(), fr = condFrete();
 
   $('app').innerHTML =
-    '<div class="top"><div class="top-in"><div class="brand"><img src="Estrela-Boxer.svg" alt="Boxer"><div><b>Boxer Soldas</b><span>Equipamentos de solda e corte</span></div></div><div class="cod">Orçamento<b>' + esc(O.codigo) + '</b></div></div></div>'
+    '<div class="top"><div class="top-in"><div class="brand"><img src="Estrela-Boxer.svg" alt="Boxer"><div><b>Boxer Soldas</b></div></div><div class="cod">Orçamento <b>' + esc(O.codigo) + '</b></div></div></div>'
     + '<div class="wrap">'
     + (aceito ? '<div class="aceito"><b>✔ Orçamento aceito' + (O.aceito_em ? ' em ' + dt(O.aceito_em) : '') + '</b>' + (O.status === 'aprovado' ? 'Seu pedido foi confirmado pela Boxer.' : 'Seu representante foi avisado e vai confirmar o pedido com você.') + '</div>' : '')
-    + '<div class="hero"><small>Proposta comercial</small><h1>Orçamento para ' + esc(O.cliente_fantasia || O.cliente_nome) + '</h1>'
-    + '<p>Preparamos esta proposta com os equipamentos e as condições combinadas. ' + (O.vendedor_nome ? 'Quem cuida do seu atendimento é <b>' + esc(O.vendedor_nome) + '</b>.' : '') + '</p>'
+    + '<div class="hero"><h1>Orçamento para ' + esc(O.cliente_fantasia || O.cliente_nome) + '</h1>'
+    + (O.vendedor_nome ? '<p>Quem cuida do seu atendimento é <b>' + esc(O.vendedor_nome) + '</b>.</p>' : '')
     + '<div class="chips">' + valChip + '<span class="chip">Emitido em ' + dt(O.criado_em) + '</span>' + (O.itens.length ? '<span class="chip">' + O.itens.length + (O.itens.length > 1 ? ' produtos' : ' produto') + '</span>' : '') + '</div></div>'
-    + '<div class="card"><h2>Produtos</h2><table class="tab"><thead><tr><th>Produto</th><th>Estoque</th><th class="r">Qtd</th><th class="r">Unitário</th><th class="r">Total</th></tr></thead><tbody>' + itensHtml + '</tbody>' + tfoot + '</table><div class="resumo"><div class="nota">' + descTxt + 'Preços com todos os impostos inclusos.' + (grp.sem > 0.004 ? ' Itens sem previsão de estoque têm prazo de entrega a confirmar com o representante.' : '') + '</div></div></div>'
+    + '<div class="card tbl"><h2>Proposta detalhada</h2><table class="tab"><thead><tr><th>Produto</th><th>Estoque</th><th class="r">Qtd</th><th class="r">Valor unitário</th><th class="r">Valor total</th></tr></thead><tbody>' + itensHtml + '</tbody>' + tfoot + '</table><div class="resumo"><div class="nota">' + descTxt + 'Preços com todos os impostos inclusos.' + (grp.sem > 0.004 ? ' Itens sem previsão de chegada ao estoque: o prazo de entrega será informado pelo seu representante antes da confirmação do pedido.' : '') + '</div></div></div>'
     + '<div class="card"><h2>Condições</h2><div class="cond">'
     + '<div><div class="t">Pagamento</div><div class="v">' + pg.v + '<small>' + pg.s + '</small></div></div>'
     + '<div><div class="t">Frete</div><div class="v">' + fr.v + '<small>' + fr.s + '</small></div></div>'
-    + '<div><div class="t">Validade</div><div class="v">' + dt(O.validade_em) + '<small>Os preços e condições valem até esta data.</small></div></div>'
     + '<div><div class="t">Entrega</div><div class="v">Sujeita à disponibilidade<small>O prazo é confirmado por ' + (O.vendedor_nome ? esc(O.vendedor_nome) : 'seu representante') + ' ao aprovar o pedido.</small></div></div>'
-    + '</div>' + (O.observacoes ? '<div class="resumo" style="padding-top:0"><div class="t" style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#718096;font-weight:600;margin:6px 0">Observações</div><div style="font-size:14px;color:#4a5568;white-space:pre-line;line-height:1.5">' + esc(O.observacoes) + '</div></div>' : '') + '</div>'
-    + '<div class="card"><h2>Dados</h2><div class="dados">'
-    + '<div><b>Cliente</b>' + esc(O.cliente_nome) + '<br>' + fmtCnpj(O.cliente_cnpj) + (O.cliente_contato ? '<br>A/C ' + esc(O.cliente_contato) : '') + (O.cliente_cidade ? '<br>' + esc(O.cliente_cidade) + '/' + esc(O.cliente_uf || '') : '') + '</div>'
-    + '<div><b>Seu representante</b>' + esc(O.vendedor_nome || '') + (O.vendedor_telefone ? '<br>' + fmtTel(O.vendedor_telefone) : '') + (O.vendedor_email ? '<br>' + esc(O.vendedor_email) : '') + '</div>'
-    + '<div><b>Boxer</b>' + BOXER.nome + '<br>CNPJ ' + BOXER.cnpj + '<br>' + BOXER.end + '<br>' + BOXER.email + ' · ' + BOXER.tel + '</div>'
     + '</div></div>'
+    + (O.observacoes && String(O.observacoes).trim() ? '<div class="card"><h2>Observações</h2><div class="resumo" style="padding-top:10px"><div style="font-size:14px;color:#4a5568;white-space:pre-line;line-height:1.5">' + esc(String(O.observacoes).trim()) + '</div></div></div>' : '')
+    + '<div class="card"><h2>Dados</h2><div class="dados">'
+    + '<div><b>Cliente · Local de entrega</b>' + esc(O.cliente_nome) + '<br>' + fmtCnpj(O.cliente_cnpj) + (O.cliente_contato ? '<br>A/C ' + esc(O.cliente_contato) : '') + (O.cliente_cidade ? '<br>' + esc(O.cliente_cidade) + '/' + esc(O.cliente_uf || '') : '') + (O.cliente_endereco ? '<small>' + esc(O.cliente_endereco) + '</small>' : '') + '</div>'
+    + '<div><b>Seu representante</b>' + esc(O.vendedor_nome || '') + (O.vendedor_empresa ? '<br>' + esc(O.vendedor_empresa) : '') + (O.vendedor_telefone ? '<br>' + fmtTel(O.vendedor_telefone) : '') + (O.vendedor_email ? '<br>' + esc(O.vendedor_email) : '') + '</div>'
+    + '<div><b>Boxer Soldas</b>' + BOXER.nome + '</div>'
+    + '</div></div>'
+    + (aceito || exp ? '' : '<div class="recusar"><button onclick="recusar()">Não tenho interesse neste orçamento</button></div>')
     + '<div class="rodape">Orçamento ' + esc(O.codigo) + ' · gerado em ' + dt(O.criado_em) + ' · sujeito a disponibilidade de estoque e análise de crédito.</div>'
     + '</div>'
     + '<div class="cta"><div class="cta-in"><div class="tot">Total<b>' + brl(O.total_final) + '</b></div><div class="btns">'
@@ -280,6 +293,15 @@ async function confirmarAceite() {
     $('aceBtn').disabled = false; $('aceBtn').textContent = 'Aceitar orçamento';
     erro('Falha de conexão. Tente novamente.');
   }
+}
+async function recusar() {
+  if (!confirm('Recusar este orçamento? Seu representante será avisado e o link deixará de funcionar.')) return;
+  try {
+    const r = await rpc('recusar_orcamento_publico', { p_token: TOKEN, p_motivo: null });
+    if (!r.ok) return alert('Não foi possível recusar agora. Fale com o seu representante.');
+    fetch(HUB, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ acao: 'avisar', token: TOKEN }) }).catch(() => {});
+    estado('Orçamento recusado', 'Avisamos o seu representante. Se mudar de ideia, peça um novo orçamento.');
+  } catch (e) { alert('Falha de conexão. Tente novamente.'); }
 }
 iniciar();
 </script>
