@@ -7,6 +7,7 @@
 <meta name="robots" content="noindex,nofollow">
 <link rel="manifest" href="manifest-tabela.json">
 <meta name="theme-color" content="#1d327b">
+<meta name="color-scheme" content="light only">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Tabela Boxer">
@@ -246,6 +247,7 @@ tbody tr.row-ajuste .td-price-final{color:#e30613}
 #prelimFrame{flex:1;width:100%;border:0;background:#fff}
 /* === RESPONSIVO: tablet e celular === */
 #barToggle{display:none}
+.det-fechar-mob{display:none}
 @media(max-width:1100px){
   .header{padding:14px 16px}.content{padding:14px 16px;padding-bottom:110px}
   body.t1 table th:nth-child(6),body.t1 table th:nth-child(7),body.t1 table th:nth-child(8),body.t1 td.td-pct,body.t1 td.td-ncm{display:none}
@@ -304,8 +306,12 @@ tbody tr.row-ajuste .td-price-final{color:#e30613}
   #btnLimpar{flex:0 0 auto!important}
   /* janelas viram folhas de tela cheia */
   #orcOverlay,#detOverlay,#regrasOverlay,#expOverlay{padding:0;align-items:flex-end}
-  .det-card,#orcOverlay .det-card,#orcOverlay.larga .det-card{max-width:100%;max-height:94vh;border-radius:16px 16px 0 0}
-  .det-head{padding:14px 16px}
+  .det-card,#orcOverlay .det-card,#orcOverlay.larga .det-card{max-width:100%;max-height:calc(100% - 16px);border-radius:16px 16px 0 0;overscroll-behavior:contain}
+  .det-head{padding:12px 8px 12px 16px;z-index:5}
+  .det-x{font-size:34px;min-width:52px;min-height:52px;padding:0 10px;color:#1d327b}
+  #detCorpo{padding:14px 16px 8px}
+  .det-imgs img{max-height:220px}
+  .det-fechar-mob{display:block;position:sticky;bottom:0;width:calc(100% - 32px);margin:8px 16px 14px;padding:14px;border:none;border-radius:10px;background:#1d327b;color:#fff;font-family:Outfit;font-size:15px;font-weight:600}
   .orc-corpo{padding:6px 14px 20px}
   .orc-grid{grid-template-columns:1fr}
   .orc-acoes{flex-wrap:wrap}.orc-acoes .orc-btn{flex:1 1 140px;text-align:center}
@@ -418,6 +424,7 @@ tbody tr.row-ajuste .td-price-final{color:#e30613}
   <div class="det-card">
     <div class="det-head"><div><h3 id="detTitulo"></h3><div class="cod" id="detCodigo"></div></div><button class="det-x" onclick="fecharDetalhes()" aria-label="Fechar">&times;</button></div>
     <div id="detCorpo"></div>
+    <button class="det-fechar-mob" onclick="fecharDetalhes()">Fechar</button>
   </div>
 </div>
 
@@ -1625,7 +1632,7 @@ document.body.classList.add('t' + TID);
 // ---------- modo offline (app instalavel) ----------
 // Tabela, estoque consultado, clientes e orcamentos feitos sem sinal ficam no aparelho (IndexedDB) por ate 7 dias.
 const OFF_MS = 7 * 864e5;
-const APP_BUILD = '1793221409';
+const APP_BUILD = '1793222517';
 let _idbP = null, DADOS_OFF_TS = null, _sync = false;
 function idbAbrir() {
     if (!_idbP) _idbP = new Promise((res, rej) => {
@@ -1874,7 +1881,7 @@ function montarViewRascunho(linhas, cliente, meuTel) {
         itens: linhas.map(l => ({ codigo: l.p.codigo, modelo: l.p.modelo, categoria: l.p.cat || '', qtd: l.q, u: l.u, ut: l.ut, sub: l.sub, sit: l.sit.k, iso: l.sit.iso || null })),
         avista: AVISTA, parcelas: PARC, descVista: condicoes().vista,
         total, pagamento: AVISTA ? 'À vista (−' + String(cd.vista).replace('.', ',') + '%)' : 'Boleto em ' + PARC + 'x', uf: cState,
-        cliente: { nome: cliente.nome, cnpj: cliente.cnpj, contato: cliente.contato, email: cliente.email, celular: cliente.celular, cidade: cliente.cidade },
+        cliente: { nome: cliente.nome || ('CNPJ/CPF ' + mascCnpj(cliente.cnpj)), cnpj: cliente.cnpj, contato: cliente.contato, email: cliente.email, celular: cliente.celular, cidade: cliente.cidade },
         vendedor: { nome: window.ACESSO_NOME || (USER && USER.email) || '', tel: meuTel, email: USER ? USER.email : '' },
         obs: $('orcObs').value.trim()
     };
@@ -1943,7 +1950,7 @@ function abrirOrcamento() {
         + '<h4 class="orc-sec">Itens e estoque</h4><div id="orcItens"></div>'
         + '<h4 class="orc-sec">Cliente</h4><div class="orc-grid">'
         + '<div><label>CNPJ / CPF *</label><input id="orcCnpj" inputmode="numeric" placeholder="00.000.000/0000-00" maxlength="18" oninput="orcCnpjInput()" onblur="orcBuscaCnpj()"><div id="orcDocMsg" class="orc-pass" style="color:#991b1b"></div></div>'
-        + '<div><label>Razão social / nome *</label><input id="orcNome" placeholder="preenche sozinho se já for cliente"></div>'
+        + '<div><label>Razão social / nome</label><input id="orcNome" placeholder="preenche sozinho pelo CNPJ (opcional sem internet)"></div>'
         + '<div><label>Contato (aos cuidados de)</label><input id="orcContato"></div>'
         + '<div><label>E-mail do cliente *</label><input id="orcEmail" type="email"></div>'
         + '<div><label>Celular do cliente *</label><input id="orcCel" inputmode="tel" maxlength="15" placeholder="(11) 99999-9999" oninput="maskTel(this)"></div>'
@@ -2047,8 +2054,20 @@ async function orcBuscaCnpj() {
     $('orcCnpj').value = mascCnpj(d);
     const info = $('orcCliInfo');
     try {
+        window._orcEnd = '';
         const c = await orcApi({ acao: 'cliente', cnpj: d });
-        if (!c.encontrado) { info.style.display = 'block'; info.textContent = 'Cliente não está no cadastro do ZEN. O orçamento será gerado, mas o cadastro precisa ser feito antes de confirmar o pedido.'; return; }
+        if (!c.encontrado) {
+            const pb = c.publico;
+            if (pb) {
+                if (!$('orcNome').value) $('orcNome').value = pb.razao_social || '';
+                if (!$('orcEmail').value && pb.email) $('orcEmail').value = String(pb.email).toLowerCase();
+                window._orcCidade = pb.cidade || ''; window._orcEnd = pb.endereco || '';
+                preencherDoCache(await kvGet('cli:' + d));
+            }
+            info.style.display = 'block';
+            info.textContent = (pb ? 'Dados preenchidos pela Receita Federal' + (pb.situacao && !/ativa/i.test(pb.situacao) ? ' (situação cadastral: ' + pb.situacao + ')' : '') + '. ' : '') + 'Cliente ainda não está no cadastro do ZEN: o orçamento é gerado, e a venda no ZEN é criada sozinha quando o cadastro existir.';
+            return;
+        }
         if (!$('orcNome').value) $('orcNome').value = c.razao_social || '';
                 if (!$('orcEmail').value) $('orcEmail').value = c.email || '';
         window._orcCidade = c.cidade || '';
@@ -2067,10 +2086,10 @@ async function orcBuscaCnpj() {
 
 async function enviarOrcamento() {
     const err = $('orcErr'); err.style.display = 'none';
-    const cliente = { cnpj: onlyDig($('orcCnpj').value), nome: $('orcNome').value.trim(), contato: $('orcContato').value.trim(), email: $('orcEmail').value.trim(), celular: $('orcCel').value, uf: cState, cidade: window._orcCidade || '' };
+    const cliente = { cnpj: onlyDig($('orcCnpj').value), nome: $('orcNome').value.trim(), contato: $('orcContato').value.trim(), email: $('orcEmail').value.trim(), celular: $('orcCel').value, uf: cState, cidade: window._orcCidade || '', endereco: window._orcEnd || '' };
     const falha = m => { err.textContent = m; err.style.display = 'block'; };
     if (!docValido(cliente.cnpj)) return falha('CNPJ/CPF do cliente inválido. Confira os números: ele é usado para cadastrar o cliente no ZEN.');
-    if (!cliente.nome) return falha('Informe a razão social ou o nome do cliente.');
+    if (!cliente.nome && navigator.onLine) return falha('Informe a razão social ou o nome do cliente.');
     if (!/^\S+@\S+\.\S+$/.test(cliente.email)) return falha('Informe um e-mail válido do cliente.');
     if (!telValido(cliente.celular)) return falha('Celular do cliente inválido. Use DDD + número, por exemplo (19) 99999-9999.');
     if (!orcLinhas().some(l => !ORC_EXCL.has(l.p.codigo))) return falha('Marque ao menos um item para o orçamento.');
@@ -2116,7 +2135,7 @@ function mostrarOrcCriado(j, cliente) {
     $('orcCorpo').innerHTML = zen + av
         + '<label>Link do orçamento (válido por 7 dias)</label>'
         + '<div class="orc-link"><input id="orcLinkIn" readonly value="' + j.link + '" onclick="this.select()"><button class="orc-btn" onclick="copiarOrc(\'' + j.link + '\', this)">Copiar</button></div>'
-        + '<div class="orc-acoes" style="justify-content:flex-start;flex-wrap:wrap"><a class="orc-btn prim" href="' + wa + '" target="_blank" rel="noopener">Enviar por WhatsApp</a><a class="orc-btn" href="' + mail + '">Enviar por e-mail</a><a class="orc-btn" href="' + j.link + '" target="_blank" rel="noopener">Ver como o cliente</a></div>'
+        + '<div class="orc-acoes" style="justify-content:flex-start;flex-wrap:wrap"><a class="orc-btn prim" href="' + wa + '" target="_blank" rel="noopener">Enviar por WhatsApp</a><a class="orc-btn" href="' + mail + '">Enviar por e-mail</a><a class="orc-btn" href="' + j.link + '" target="_blank" rel="noopener">Ver como o cliente</a><a class="orc-btn" href="' + j.link + '&pdf=1" target="_blank" rel="noopener">Baixar PDF</a></div>'
         + '<div class="orc-pass" style="margin-top:14px">Quando o cliente aceitar, você recebe um e-mail e confirma em <b>Meus orçamentos</b>. Só então o pedido avança no ZEN para WEB Pronta entrega.</div>'
         + '<div class="orc-acoes"><button class="orc-btn" onclick="abrirMeusOrc()">Meus orçamentos</button><button class="orc-btn" onclick="fecharOrc()">Fechar</button></div>';
 }
@@ -2290,7 +2309,7 @@ function orcCard(o) {
     const zenLink = o.zen_sale_id && o.status !== 'cancelado' ? '<a class="orc-zenlink" href="' + ZEN_URL_VENDA + o.zen_sale_id + '" target="_blank" rel="noopener" title="Abrir no ZEN">' + (o.status === 'aprovado' ? 'Pedido' : 'Venda') + ' ZEN nº ' + o.zen_sale_id + ' ↗</a>' : '';
     const zenTxt = o.zen_etapa ? '<div class="orc-pass">No ZEN: ' + esc(o.zen_etapa) + '</div>' : (o.zen_status === 'sem_cliente_zen' ? '<div class="orc-pass">Aguardando cadastro do cliente no ZEN (a venda é criada sozinha)</div>' : (!o.zen_sale_id ? '<div class="orc-pass">Sem venda no ZEN</div>' : ''));
     const err = o.zen_erro && o.status !== 'aprovado' ? '<div class="orc-pass" style="color:#991b1b">' + esc(o.zen_erro) + '</div>' : '';
-    let acoes = '<div class="orc-acoes-lin"><button class="orc-btn" onclick="copiarOrc(\'' + o.link + '\', this)">Copiar link</button><a class="orc-btn" href="' + o.link + '" target="_blank" rel="noopener">Ver como cliente</a></div>';
+    let acoes = '<div class="orc-acoes-lin"><button class="orc-btn" onclick="copiarOrc(\'' + o.link + '\', this)">Copiar link</button><a class="orc-btn" href="' + o.link + '" target="_blank" rel="noopener">Ver como cliente</a><a class="orc-btn" href="' + o.link + '&pdf=1" target="_blank" rel="noopener">PDF</a></div>';
     if (aberto) acoes += '<button class="orc-btn" onclick="editarOrcNaTabela(\'' + o.id + '\')" title="Carrega este orçamento na tabela para você trocar itens, quantidades, classe ou pagamento">Editar na tabela</button>';
     if (o.zen_sale_id && aberto) acoes += '<button class="orc-btn" onclick="abrirNoZen(' + o.zen_sale_id + ')" title="Abre a venda no ZEN para você editar. O que mudar lá aparece aqui ao reabrir esta tela">Ajustar no ZEN</button>';
     if (aberto && o.zen_sale_id) acoes += '<button class="orc-btn prim" onclick="aprovarOrc(\'' + o.id + '\', this)">' + (o.status === 'aceito_cliente' ? 'Confirmar e enviar ao ZEN' : 'Cliente confirmou por outro canal: enviar ao ZEN') + '</button>';
