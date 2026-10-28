@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <meta name="robots" content="noindex,nofollow">
+<meta name="color-scheme" content="light only">
 <title>Orçamento Boxer</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -63,6 +64,7 @@ body{font-family:Outfit,sans-serif;background:var(--bg);color:var(--tx);padding-
 .porque span{font-size:13px;color:#4a5568;line-height:1.45}
 .dados{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
 .dados small{display:block;font-size:11.5px;color:#718096;line-height:1.4;margin-top:2px}
+.acoes-mob{display:none}
 .recusar{text-align:center;padding:4px 0 6px}.recusar button{background:none;border:none;color:#a0aec0;font-family:Outfit;font-size:12px;text-decoration:underline;cursor:pointer}.recusar button:hover{color:#991b1b}
 .dados>div{padding:14px 22px;border-top:1px solid var(--bd2);font-size:13.5px;line-height:1.55;color:#4a5568}
 .dados b{display:block;color:var(--tx);font-size:14px}
@@ -114,8 +116,18 @@ body{font-family:Outfit,sans-serif;background:var(--bg);color:var(--tx);padding-
   .cta{padding:10px 14px}.cta-in{flex-wrap:nowrap;gap:10px}
   .cta .tot b{font-size:18px}
   .cta .btns{gap:8px}.cta .btn{padding:11px 14px;font-size:14px}
-  .cta .btn.noprint{display:none}
-  body.prelim .cta .btn.noprint{display:inline-block}
+  .cta .btn.sec{display:none}
+  .acoes-mob{display:flex;gap:8px;margin:-4px 0 14px}.acoes-mob .btn{flex:1;padding:12px 8px;font-size:14px;text-align:center}
+  .wrap{padding:14px 12px}
+  .hero{padding:16px 16px 14px}.hero h1{font-size:20px}
+  .chip{font-size:12px;padding:5px 10px}
+  .card h2{padding:14px 16px 0}
+  .cond>div,.dados>div{padding:12px 16px}
+  .resumo{padding:8px 16px 16px}
+  .tab tfoot tr{flex-wrap:wrap;gap:2px 10px;padding:6px 16px}
+  .tab tfoot td{white-space:normal;font-size:14px}
+  .tab tfoot tr.tg td{font-size:14px!important}.tab tfoot tr.tg td.r{font-size:19px!important}
+  .top-in{padding:8px 12px}.brand b{font-size:17px}.cod{font-size:13px}.cod b{font-size:15px}
 }
 @media print{
   @page{size:A4;margin:10mm}
@@ -190,6 +202,7 @@ async function iniciar() {
   if (!O || !O.encontrado) return estado('Orçamento não encontrado', 'Este link não existe ou foi cancelado. Peça um novo ao seu representante Boxer.');
   if (O.status === 'cancelado') return estado('Orçamento cancelado', 'Este orçamento foi cancelado pelo seu representante Boxer. Se precisar, peça uma nova proposta.');
   desenhar();
+  if (new URLSearchParams(location.search).get('pdf') === '1') setTimeout(() => window.print(), 900);
 }
 
 function contatoWhats() {
@@ -253,8 +266,8 @@ function desenhar() {
     + '<div class="wrap">'
     + (aceito ? '<div class="aceito"><b>✔ Orçamento aceito' + (O.aceito_em ? ' em ' + dt(O.aceito_em) : '') + '</b>' + (O.status === 'aprovado' ? 'Seu pedido foi confirmado pela Boxer.' : 'Seu representante foi avisado e vai confirmar o pedido com você.') + '</div>' : '')
     + '<div class="hero"><h1>Orçamento para ' + esc(O.cliente_fantasia || O.cliente_nome) + '</h1>'
-    + (O.vendedor_nome ? '<p>Quem cuida do seu atendimento é <b>' + esc(O.vendedor_nome) + '</b>.</p>' : '')
-    + '<div class="chips">' + valChip + '<span class="chip">Emitido em ' + dt(O.criado_em) + '</span>' + (O.itens.length ? '<span class="chip">' + O.itens.length + (O.itens.length > 1 ? ' produtos' : ' produto') + '</span>' : '') + '</div></div>'
+    + '<div class="chips">' + valChip + '<span class="chip">Emitido em ' + dt(O.criado_em) + '</span>' + '</div></div>'
+    + '<div class="acoes-mob noprint"><button class="btn sec" onclick="window.print()">📄 Salvar em PDF</button>' + (wa && !PRELIM ? '<a class="btn sec" href="' + wa + '" target="_blank" rel="noopener">💬 Falar com ' + (O.vendedor_nome ? esc(O.vendedor_nome.split(' ')[0]) : 'o representante') + '</a>' : '') + '</div>'
     + '<div class="card tbl"><h2>Proposta detalhada</h2><table class="tab"><thead><tr><th>Produto</th><th>Estoque</th><th class="r">Qtd</th><th class="r">Valor unitário</th><th class="r">Valor total</th></tr></thead><tbody>' + itensHtml + '</tbody>' + tfoot + '</table><div class="resumo"><div class="nota">' + descTxt + 'Preços com todos os impostos inclusos.' + (grp.sem > 0.004 ? ' Itens sem previsão de chegada ao estoque: o prazo de entrega será informado pelo seu representante antes da confirmação do pedido.' : '') + '</div></div></div>'
     + '<div class="card"><h2>Condições</h2><div class="cond">'
     + '<div><div class="t">Pagamento</div><div class="v">' + pg.v + '<small>' + pg.s + '</small></div></div>'
