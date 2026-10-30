@@ -60,6 +60,7 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 .btn-login{width:100%;padding:12px;background:#1d327b;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:Outfit}
 .btn-login:hover{background:#162666}
 .err-msg{background:#fee2e2;color:#991b1b;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;border:1px solid #fecaca}
+@media(max-width:760px){#acLista table,#acLista tbody,#acLista tr,#acLista td{display:block;width:100%}#acLista thead{display:none}#acLista tr{border:1px solid #d0d8e8;border-radius:10px;margin-bottom:10px;padding:10px 12px;background:#fff}#acLista td{border:none;padding:3px 0;text-align:left!important}#acLista td[data-l]::before{content:attr(data-l) ': ';color:#718096;font-size:11px;text-transform:uppercase}#acLista td.ac-acoes{padding-top:8px;display:flex;gap:6px;flex-wrap:wrap}#acLista td.ac-acoes .btn{flex:1;min-height:40px}}
 </style>
 </head>
 <body>
@@ -158,8 +159,8 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 </div>
 
 <div class="panel-content hidden" id="tab-acessos">
-<div class="panel-header"><div><div class="panel-title">Acessos à Tabela de Preços</div><div class="panel-sub">Quem pode entrar na tela com login por código enviado ao email</div></div>
-<button class="btn btn-primary btn-sm" onclick="openAcessoModal()">+ Adicionar pessoa</button></div>
+<div class="panel-header"><div><div class="panel-title">Acessos à Tabela de Preços</div><div class="panel-sub">Quem pode entrar na tabela (login por código enviado ao e-mail, sem senha): cadastrar, editar, inativar e excluir</div></div>
+<button class="btn btn-primary btn-sm" onclick="openAcessoModal()">+ Novo usuário</button></div>
 <div id="acessosWrap"><div class="loading">Carregando...</div></div>
 </div>
 
@@ -264,6 +265,7 @@ setTimeout(() => {
     document.getElementById('loginPage').classList.add('hidden');
     document.getElementById('adminPage').classList.remove('hidden');
     loadProdutos();
+    abrirPorUrl();
 }, 50);
 
 }
@@ -710,38 +712,175 @@ function renderUso(){
 // ACESSOS À TABELA DE PREÇOS (tela com login por código)
 let ACESSOS_USU = [], ACESSOS_SOL = [];
 function fmtDataBR(d){ if(!d) return '—'; const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(d)); return m? m[3]+'/'+m[2]+'/'+m[1] : new Date(d).toLocaleDateString('pt-BR'); }
-function statusAcesso(u){
-    if(!u.ativo) return {t:'Revogado',c:'#fee2e2',f:'#991b1b'};
-    if(u.validade && u.validade < new Date().toISOString().slice(0,10)) return {t:'Expirado',c:'#fef9c3',f:'#854d0e'};
-    return {t:'Ativo',c:'#dcfce7',f:'#166534'};
+// ---------- ACESSOS: lista unica (cadastrados + equipe), com criar, editar, excluir, inativar e reativar ----------
+const PERFIS_ACESSO={admin:'Admin',gestor:'Gestor',vendedor:'Vendedor',representante:'Representante'};
+const PERFIS_DICA={admin:'Tudo na tabela, incluindo o Painel de gestão dos orçamentos.',gestor:'Usa a tabela e vê o Painel de gestão dos orçamentos.',vendedor:'Usa a tabela e faz orçamentos (equipe interna).',representante:'Usa a tabela e faz orçamentos (representante externo).'};
+let ACESSOS_ROWS=[],ACESSOS_FILTRO={q:'',st:'',pf:''},ACESSOS_ULT={};
+function maskTelAdmin(t){const d=String(t||'').replace(/\D/g,'');return d.length===11?d.replace(/(\d{2})(\d{5})(\d{4})/,'($1) $2-$3'):d.length===10?d.replace(/(\d{2})(\d{4})(\d{4})/,'($1) $2-$3'):t;}
+function hojeISO(){return new Date().toISOString().slice(0,10);}
+function maisDiasISO(n){return new Date(Date.now()+n*864e5).toISOString().slice(0,10);}
+function perfilPadrao(u){return u.perfil||(u.tipo==='interno'?'vendedor':'representante');}
+function statusLinha(r){
+    if(r.u&&!r.u.ativo)return{k:'inativo',t:'Inativo',c:'#fee2e2',f:'#991b1b'};
+    if(r.u&&r.u.validade&&r.u.validade<hojeISO())return{k:'expirado',t:'Expirado',c:'#fef9c3',f:'#854d0e'};
+    return{k:'ativo',t:'Ativo',c:'#dcfce7',f:'#166534'};
 }
 async function loadAcessos(){
     const wrap=document.getElementById('acessosWrap');
     try{
-        const [sol,usu,logs]=await Promise.all([
+        const [sol,usu,logs,equipe]=await Promise.all([
             sb('/tabela_solicitacoes?status=eq.pendente&select=*&order=criado_em.desc'),
             sb('/tabela_usuarios?select=*&order=criado_em.desc'),
-            sb('/tabela_acessos_log?evento=in.(login,acesso)&select=email,criado_em&order=criado_em.desc&limit=1000')
+            sb('/tabela_acessos_log?evento=in.(login,acesso)&select=email,criado_em&order=criado_em.desc&limit=1000'),
+            sb('/rpc/tabela_equipe','POST',{}).catch(()=>[])
         ]);
         ACESSOS_SOL=sol;ACESSOS_USU=usu;
-        const ult={};logs.forEach(l=>{const k=(l.email||'').toLowerCase();if(k&&!ult[k])ult[k]=l.criado_em;});
+        ACESSOS_ULT={};logs.forEach(l=>{const k=(l.email||'').toLowerCase();if(k&&!ACESSOS_ULT[k])ACESSOS_ULT[k]=l.criado_em;});
+        const por={};
+        usu.forEach(u=>{const k=u.email.toLowerCase();por[k]={email:k,u,nome:u.nome,telefone:u.telefone,empresa:u.empresa,perfil:perfilPadrao(u),equipe:false,origemEquipe:''};});
+        (Array.isArray(equipe)?equipe:[]).forEach(e=>{
+            const k=e.email;if(!k)return;
+            if(por[k]){por[k].equipe=true;por[k].origemEquipe=(por[k].origemEquipe?por[k].origemEquipe+' + ':'')+e.origem;if(!por[k].nome)por[k].nome=e.nome;return;}
+            por[k]={email:k,u:null,nome:e.nome,telefone:'',empresa:'',perfil:e.perfil,equipe:true,origemEquipe:e.origem};
+        });
+        ACESSOS_ROWS=Object.values(por).sort((a,b)=>(a.nome||a.email).localeCompare(b.nome||b.email,'pt-BR'));
         let h='<div style="font-weight:600;color:#1d327b;margin:0 0 6px">Solicitações pendentes <span style="font-weight:400;color:#718096">('+sol.length+')</span></div>';
         if(sol.length){
-            h+='<table><thead><tr><th>Quando</th><th>Nome</th><th>Email</th><th>Telefone</th><th>Empresa</th><th>Mensagem</th><th class="text-center">Ação</th></tr></thead><tbody>';
+            h+='<div style="overflow-x:auto"><table><thead><tr><th>Quando</th><th>Nome</th><th>Email</th><th>Telefone</th><th>Empresa</th><th>Mensagem</th><th class="text-center">Ação</th></tr></thead><tbody>';
             sol.forEach(s=>{h+=`<tr><td style="white-space:nowrap">${new Date(s.criado_em).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</td><td>${escUso(s.nome)}</td><td>${escUso(s.email)}</td><td style="white-space:nowrap">${escUso(s.telefone||'—')}</td><td>${escUso(s.empresa||'—')}</td><td style="font-size:12px;color:#4a5568;max-width:260px">${escUso(s.mensagem||'—')}</td><td class="text-center" style="white-space:nowrap"><button class="btn btn-primary btn-sm" onclick="openAcessoModal(null,'${s.id}')">Aprovar</button> <button class="btn btn-danger btn-sm" onclick="negarSolicitacao('${s.id}')">Negar</button></td></tr>`;});
-            h+='</tbody></table>';
-        } else h+='<div style="color:#a0aec0;padding:8px 0 14px">Nenhuma solicitação pendente.</div>';
-        h+='<div style="font-weight:600;color:#1d327b;margin:20px 0 6px">Pessoas com acesso <span style="font-weight:400;color:#718096">('+usu.length+')</span></div>';
-        h+='<table><thead><tr><th>Nome</th><th>Email</th><th>Telefone</th><th>Empresa</th><th>Tipo</th><th>Validade</th><th>Status</th><th>Último acesso</th><th class="text-center">Ação</th></tr></thead><tbody>';
-        usu.forEach(u=>{const st=statusAcesso(u);const ua=ult[u.email.toLowerCase()];
-            h+=`<tr><td>${escUso(u.nome||'—')}</td><td>${escUso(u.email)}</td><td style="white-space:nowrap">${escUso(u.telefone||'—')}</td><td>${escUso(u.empresa||'—')}</td><td>${u.tipo==='interno'?'Interno':'Externo'}${u.origem==='dominio'?' <span style="font-size:10px;color:#a0aec0">(domínio Boxer)</span>':''}</td><td>${u.validade?fmtDataBR(u.validade):'Sem prazo'}</td><td><span class="size-badge" style="background:${st.c};color:${st.f}">${st.t}</span></td><td style="font-size:12px">${ua?new Date(ua).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'nunca'}</td><td class="text-center" style="white-space:nowrap"><button class="btn btn-outline btn-sm" onclick="openAcessoModal('${u.id}')">Editar</button> <button class="btn btn-outline btn-sm" onclick="renovarAcesso('${u.id}')">+90 dias</button> ${u.ativo?`<button class="btn btn-danger btn-sm" onclick="alterarAtivoAcesso('${u.id}',false)">Revogar</button>`:`<button class="btn btn-outline btn-sm" onclick="alterarAtivoAcesso('${u.id}',true)">Reativar</button>`}</td></tr>`;});
-        if(!usu.length)h+='<tr><td colspan="9" style="text-align:center;color:#a0aec0;padding:16px">Ninguém cadastrado ainda</td></tr>';
-        h+='</tbody></table><p style="font-size:11px;color:#718096;margin-top:10px">A equipe já cadastrada no painel admin e no sistema de propostas entra automaticamente, sem aparecer aqui. Quem tem email @boxersoldas.com.br é adicionado como Interno no primeiro acesso. A sessão vale 15 dias; depois disso é preciso pedir um novo código.</p>';
+            h+='</tbody></table></div>';
+        }else h+='<div style="color:#a0aec0;padding:8px 0 14px">Nenhuma solicitação pendente.</div>';
+        h+='<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:20px 0 8px"><div style="font-weight:600;color:#1d327b">Pessoas com acesso <span id="acCont" style="font-weight:400;color:#718096"></span></div>'
+          +'<input id="acQ" type="search" placeholder="Buscar por nome, e-mail ou empresa" style="flex:1 1 220px;min-width:180px" oninput="acessosFiltrar()">'
+          +'<select id="acSt" onchange="acessosFiltrar()"><option value="">Todos os status</option><option value="ativo">Ativos</option><option value="inativo">Inativos</option><option value="expirado">Expirados</option></select>'
+          +'<select id="acPf" onchange="acessosFiltrar()"><option value="">Todos os perfis</option>'+Object.keys(PERFIS_ACESSO).map(k=>`<option value="${k}">${PERFIS_ACESSO[k]}</option>`).join('')+'</select></div>'
+          +'<div id="acLista" style="overflow-x:auto"></div>'
+          +'<p style="font-size:11px;color:#718096;margin-top:10px">Entrada sem senha: a pessoa cadastrada pede um código na tela da tabela e recebe por e-mail, sem precisar de admin. A sessão vale 15 dias. <b>Inativar</b> suspende o acesso à tabela (a pessoa perde o acesso em até 2 minutos, mesmo com a tela aberta) e <b>Reativar</b> devolve. Quem tentar entrar sem cadastro gera um aviso por e-mail para os admins. A equipe já cadastrada no sistema comercial e no painel aparece aqui como “equipe”: editar cria um perfil só para a tabela, e excluir devolve o acesso padrão da equipe.</p>';
         wrap.innerHTML=h;
+        document.getElementById('acQ').value=ACESSOS_FILTRO.q;document.getElementById('acSt').value=ACESSOS_FILTRO.st;document.getElementById('acPf').value=ACESSOS_FILTRO.pf;
+        acessosFiltrar();
     }catch(e){
         wrap.innerHTML=`<div style="text-align:center;padding:20px;color:#dc2626">Erro ao carregar acessos: ${escUso(e.message)} <button class="btn btn-outline btn-sm" onclick="loadAcessos()">Tentar novamente</button></div>`;
     }
 }
+function acessosFiltrar(){
+    ACESSOS_FILTRO={q:document.getElementById('acQ').value.trim(),st:document.getElementById('acSt').value,pf:document.getElementById('acPf').value};
+    const q=ACESSOS_FILTRO.q.toLowerCase();
+    const L=ACESSOS_ROWS.filter(r=>{
+        if(q&&!((r.nome||'')+' '+r.email+' '+(r.empresa||'')).toLowerCase().includes(q))return false;
+        if(ACESSOS_FILTRO.st&&statusLinha(r).k!==ACESSOS_FILTRO.st)return false;
+        if(ACESSOS_FILTRO.pf&&r.perfil!==ACESSOS_FILTRO.pf)return false;
+        return true;
+    });
+    document.getElementById('acCont').textContent='('+L.length+(L.length!==ACESSOS_ROWS.length?' de '+ACESSOS_ROWS.length:'')+')';
+    let h='<table><thead><tr><th>Pessoa</th><th>Contato</th><th>Perfil</th><th>Validade</th><th>Status</th><th>Último acesso</th><th class="text-center">Ação</th></tr></thead><tbody>';
+    L.forEach(r=>{
+        const st=statusLinha(r),ua=ACESSOS_ULT[r.email],k=escUso(r.email);
+        const podeExcluir=!!r.u;
+        const bAtivo=st.k==='ativo'?`<button class="btn btn-danger btn-sm" onclick="inativarAcesso('${k}')">Inativar</button>`:`<button class="btn btn-primary btn-sm" onclick="reativarAcesso('${k}')">Reativar</button>`;
+        h+=`<tr><td data-l="Pessoa"><b>${escUso(r.nome||'—')}</b>${r.empresa?`<div style="font-size:12px;color:#718096">${escUso(r.empresa)}</div>`:''}</td><td data-l="Contato" style="word-break:break-word">${escUso(r.email)}${r.telefone?`<div style="font-size:12px;color:#718096">${escUso(maskTelAdmin(r.telefone))}</div>`:''}</td><td data-l="Perfil">${PERFIS_ACESSO[r.perfil]||r.perfil}${r.equipe?' <span style="font-size:10px;color:#a0aec0">(equipe)</span>':''}${r.u&&r.u.origem==='dominio'?' <span style="font-size:10px;color:#a0aec0">(domínio Boxer)</span>':''}</td><td data-l="Validade" style="white-space:nowrap">${r.u&&r.u.validade?fmtDataBR(r.u.validade):'Sem prazo'}</td><td data-l="Status"><span class="size-badge" style="background:${st.c};color:${st.f}">${st.t}</span></td><td data-l="Último acesso" style="font-size:12px">${ua?new Date(ua).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'nunca'}</td><td class="text-center ac-acoes" style="white-space:nowrap"><button class="btn btn-outline btn-sm" onclick="openAcessoModal('${k}')">Editar</button> ${bAtivo} <button class="btn btn-outline btn-sm" ${podeExcluir?'':'disabled title="Pessoa da equipe sem perfil próprio na tabela: use Inativar para bloquear o acesso"'} onclick="excluirAcesso('${k}')">Excluir</button></td></tr>`;
+    });
+    if(!L.length)h+='<tr><td colspan="7" style="text-align:center;color:#a0aec0;padding:16px">Ninguém encontrado</td></tr>';
+    document.getElementById('acLista').innerHTML=h+'</tbody></table>';
+}
+function acessoDoModal(){
+    const email=document.getElementById('ac_e').value.trim().toLowerCase();
+    return{email,nome:document.getElementById('ac_n').value.trim()||null,telefone:document.getElementById('ac_tel').value.replace(/\D/g,'')||null,empresa:document.getElementById('ac_emp').value.trim()||null,tipo:document.getElementById('ac_t').value,perfil:document.getElementById('ac_p').value,validade:document.getElementById('ac_v').value||null};
+}
+function acessoDica(){document.getElementById('ac_pd').textContent=PERFIS_DICA[document.getElementById('ac_p').value]||'';}
+function acessoTipoMuda(){
+    // sugere o prazo: externo 90 dias, interno sem prazo (so quando o campo ainda nao foi mexido)
+    const v=document.getElementById('ac_v');if(v.dataset.mexeu)return;
+    v.value=document.getElementById('ac_t').value==='externo'?maisDiasISO(90):'';
+}
+function openAcessoModal(key,solId,pre){
+    const r=key?ACESSOS_ROWS.find(x=>x.email===key):null;
+    const s=solId?ACESSOS_SOL.find(x=>x.id===solId):null;
+    const u=r&&r.u;
+    const interno=pre&&pre.email&&/@boxersoldas\.com\.br$/i.test(pre.email);
+    const base=r?{nome:r.nome,email:r.email,telefone:u?u.telefone:'',empresa:u?u.empresa:'',tipo:u?u.tipo:'interno',perfil:r.perfil,validade:u?u.validade:null}
+        :(s?{nome:s.nome,email:s.email,telefone:s.telefone,empresa:s.empresa,tipo:'externo',perfil:'representante',validade:maisDiasISO(90)}
+        :{nome:'',email:(pre&&pre.email)||'',telefone:'',empresa:'',tipo:interno?'interno':'externo',perfil:interno?'vendedor':'representante',validade:interno?'':maisDiasISO(90)});
+    const novo=!r;
+    openModal(`<h3>${r?'Editar acesso':(s?'Aprovar solicitação':'Novo usuário')}</h3>
+<div class="form-row"><label>Nome *</label><input id="ac_n" value="${escUso(base.nome||'')}"></div>
+<div class="form-row"><label>Email *</label><input id="ac_e" type="email" value="${escUso(base.email||'')}" ${r?'readonly style="background:#f7fafc"':''}></div>
+<div class="form-row-inline"><div class="form-row"><label>Telefone / WhatsApp *</label><input id="ac_tel" type="tel" placeholder="(11) 99999-9999" value="${escUso(base.telefone||'')}"></div>
+<div class="form-row"><label>Empresa</label><input id="ac_emp" value="${escUso(base.empresa||'')}"></div></div>
+<div class="form-row-inline"><div class="form-row"><label>Perfil *</label><select id="ac_p" onchange="acessoDica()">${Object.keys(PERFIS_ACESSO).map(k=>`<option value="${k}" ${base.perfil===k?'selected':''}>${PERFIS_ACESSO[k]}</option>`).join('')}</select></div>
+<div class="form-row"><label>Tipo</label><select id="ac_t" onchange="acessoTipoMuda()"><option value="externo" ${base.tipo==='externo'?'selected':''}>Externo</option><option value="interno" ${base.tipo==='interno'?'selected':''}>Interno</option></select></div></div>
+<p id="ac_pd" style="font-size:12px;color:#4a5568;margin:-6px 0 12px"></p>
+<div class="form-row"><label>Válido até (vazio = sem prazo)</label><input id="ac_v" type="date" value="${base.validade||''}" oninput="this.dataset.mexeu=1"></div>
+${r&&r.equipe&&!u?'<p style="font-size:12px;color:#854d0e;background:#fef9c3;border-radius:6px;padding:8px 10px">Pessoa da equipe: ao salvar, criamos um perfil só para a tabela. O cadastro dela no sistema comercial e no painel não muda.</p>':''}
+${novo?'<label style="display:flex;gap:8px;align-items:center;font-size:13px;text-transform:none;letter-spacing:0"><input id="ac_mail" type="checkbox" checked style="width:auto"> Avisar a pessoa por e-mail que o acesso foi liberado</label>':''}
+<p style="font-size:11px;color:#718096;margin-top:8px">Não há senha: a pessoa pede um código na tela da tabela e recebe por e-mail. O perfil não dá acesso a este painel admin.</p>
+<div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveAcesso(${r?`'${escUso(r.email)}'`:'null'},${s?`'${s.id}'`:'null'})">Salvar</button></div>`);
+    acessoDica();
+}
+async function saveAcesso(key,solId){
+    const body=acessoDoModal();
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)){toast('Informe um email válido.','error');return;}
+    if(!body.nome){toast('Informe o nome.','error');return;}
+    if(!body.telefone||body.telefone.length<10){toast('Informe o telefone com DDD.','error');return;}
+    body.atualizado_em=new Date().toISOString();body.atualizado_por=SESSION.user.email;
+    try{
+        const r=key?ACESSOS_ROWS.find(x=>x.email===key):ACESSOS_ROWS.find(x=>x.email===body.email);
+        const novo=!(r&&r.u);
+        if(r&&r.u){await sb('/tabela_usuarios?id=eq.'+r.u.id,'PATCH',body);}
+        else{await sb('/tabela_usuarios','POST',Object.assign({origem:solId?'solicitacao':(r&&r.equipe?'equipe':'admin'),criado_por:SESSION.user.email,ativo:true},body));}
+        if(solId){await sb('/tabela_solicitacoes?id=eq.'+solId,'PATCH',{status:'aprovada',decidido_por:SESSION.user.email,decidido_em:new Date().toISOString()});}
+        logAdmin(key?'acesso_editado':(solId?'acesso_aprovado':'acesso_adicionado'),{pessoa:body.email,perfil:body.perfil,tipo:body.tipo,validade:body.validade});
+        const mail=document.getElementById('ac_mail');
+        if(novo&&(!mail||mail.checked)){
+            fetch('https://hub.boxersoldas.com.br/api/email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo:'acesso_liberado',dados:{email:body.email,nome:body.nome,validade:body.validade?fmtDataBR(body.validade):''}})}).catch(()=>{});
+        }
+        toast(novo?'Usuário cadastrado'+((!mail||mail.checked)?' e avisado por email':''):'Acesso atualizado');closeModal();loadAcessos();
+    }catch(e){toast('Erro: '+e.message,'error');}
+}
+async function negarSolicitacao(id){
+    const s=ACESSOS_SOL.find(x=>x.id===id);
+    if(!confirm('Negar a solicitação de "'+(s?s.nome:'')+'"?'))return;
+    try{
+        await sb('/tabela_solicitacoes?id=eq.'+id,'PATCH',{status:'negada',decidido_por:SESSION.user.email,decidido_em:new Date().toISOString()});
+        logAdmin('solicitacao_negada',{pessoa:s&&s.email});
+        toast('Solicitação negada');loadAcessos();
+    }catch(e){toast('Erro: '+e.message,'error');}
+}
+async function inativarAcesso(key){
+    const r=ACESSOS_ROWS.find(x=>x.email===key);if(!r)return;
+    if(!confirm('Inativar "'+(r.nome||r.email)+'"? O acesso à tabela fica suspenso (em até 2 minutos, mesmo com a tela aberta) até você reativar.'))return;
+    try{
+        if(r.u)await sb('/tabela_usuarios?id=eq.'+r.u.id,'PATCH',{ativo:false,atualizado_em:new Date().toISOString(),atualizado_por:SESSION.user.email});
+        else await sb('/tabela_usuarios','POST',{email:r.email,nome:r.nome||null,tipo:'interno',perfil:r.perfil,ativo:false,origem:'equipe',criado_por:SESSION.user.email});
+        logAdmin('acesso_inativado',{pessoa:r.email});toast('Acesso inativado');loadAcessos();
+    }catch(e){toast('Erro: '+e.message,'error');}
+}
+async function reativarAcesso(key){
+    const r=ACESSOS_ROWS.find(x=>x.email===key);if(!r||!r.u)return;
+    const patch={ativo:true,atualizado_em:new Date().toISOString(),atualizado_por:SESSION.user.email};
+    let msg='Acesso reativado';
+    if(r.u.validade&&r.u.validade<hojeISO()){patch.validade=maisDiasISO(90);msg='Acesso reativado até '+fmtDataBR(patch.validade);}
+    try{await sb('/tabela_usuarios?id=eq.'+r.u.id,'PATCH',patch);logAdmin('acesso_reativado',{pessoa:r.email,validade:patch.validade||null});toast(msg);loadAcessos();}
+    catch(e){toast('Erro: '+e.message,'error');}
+}
+async function excluirAcesso(key){
+    const r=ACESSOS_ROWS.find(x=>x.email===key);if(!r||!r.u)return;
+    const msg=r.equipe?'Excluir o perfil de "'+(r.nome||r.email)+'" na tabela? Ela continua na equipe e volta ao acesso padrão da equipe.':'Excluir "'+(r.nome||r.email)+'"? Ela perde o acesso à tabela e, para voltar, será preciso cadastrar de novo.';
+    if(!confirm(msg))return;
+    try{await sb('/tabela_usuarios?id=eq.'+r.u.id,'DELETE');logAdmin('acesso_excluido',{pessoa:r.email});toast('Usuário excluído');loadAcessos();}
+    catch(e){toast('Erro: '+e.message,'error');}
+}
+// abre direto a aba/ação pedida pelo link do e-mail de aviso (?aba=acessos&novo=email)
+function abrirPorUrl(){
+    const q=new URLSearchParams(location.search);
+    if(q.get('aba')!=='acessos'||!IS_ADMIN)return;
+    const tab=[...document.querySelectorAll('.tab')].find(t=>/Acessos/.test(t.textContent));
+    if(!tab)return;
+    showTab('acessos',tab);
+    if(q.get('novo'))setTimeout(()=>openAcessoModal(null,null,{email:q.get('novo')}),800);
+    if(q.get('busca'))ACESSOS_FILTRO.q=q.get('busca');
+}
+
 // REGRAS DA TABELA
 let REGRAS_ROWS=[];
 async function loadRegras(){
@@ -778,65 +917,6 @@ async function delRegra(id){
 }
 function logAdmin(evento,detalhe){
     sb('/tabela_acessos_log','POST',{user_id:SESSION.user.id,email:SESSION.user.email,evento,detalhe}).catch(()=>{});
-}
-function openAcessoModal(id,solId){
-    const u=id?ACESSOS_USU.find(x=>x.id===id):null;
-    const s=solId?ACESSOS_SOL.find(x=>x.id===solId):null;
-    const base=u||(s?{nome:s.nome,email:s.email,telefone:s.telefone,empresa:s.empresa,tipo:'externo',validade:new Date(Date.now()+90*864e5).toISOString().slice(0,10)}:{tipo:'externo',validade:new Date(Date.now()+90*864e5).toISOString().slice(0,10)});
-    openModal(`<h3>${u?'Editar acesso':(s?'Aprovar solicitação':'Adicionar pessoa')}</h3>
-<div class="form-row"><label>Nome</label><input id="ac_n" value="${escUso(base.nome||'')}"></div>
-<div class="form-row"><label>Email</label><input id="ac_e" type="email" value="${escUso(base.email||'')}" ${u?'readonly style="background:#f7fafc"':''}></div>
-<div class="form-row"><label>Telefone / WhatsApp *</label><input id="ac_tel" type="tel" placeholder="(11) 99999-9999" value="${escUso(base.telefone||'')}"></div>
-<div class="form-row"><label>Empresa</label><input id="ac_emp" value="${escUso(base.empresa||'')}"></div>
-<div class="form-row-inline"><div class="form-row"><label>Tipo</label><select id="ac_t"><option value="externo" ${base.tipo==='externo'?'selected':''}>Externo</option><option value="interno" ${base.tipo==='interno'?'selected':''}>Interno</option></select></div>
-<div class="form-row"><label>Válido até (vazio = sem prazo)</label><input id="ac_v" type="date" value="${base.validade||''}"></div></div>
-<p style="font-size:11px;color:#718096">Ao salvar${s?' esta aprovação':' uma pessoa nova'}, enviamos um email avisando que o acesso foi liberado.</p>
-<div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveAcesso(${u?`'${u.id}'`:'null'},${s?`'${s.id}'`:'null'})">Salvar</button></div>`);
-}
-async function saveAcesso(id,solId){
-    const email=document.getElementById('ac_e').value.trim().toLowerCase();
-    const body={email,nome:document.getElementById('ac_n').value.trim()||null,telefone:document.getElementById('ac_tel').value.replace(/\D/g,'')||null,empresa:document.getElementById('ac_emp').value.trim()||null,tipo:document.getElementById('ac_t').value,validade:document.getElementById('ac_v').value||null,ativo:true};
-    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){toast('Informe um email válido.','error');return;}
-    if(!body.telefone||body.telefone.length<10){toast('Informe o telefone com DDD.','error');return;}
-    try{
-        const existente=ACESSOS_USU.find(x=>x.email.toLowerCase()===email);
-        const alvoId=id||(existente&&existente.id);
-        if(alvoId){await sb('/tabela_usuarios?id=eq.'+alvoId,'PATCH',body);}
-        else{await sb('/tabela_usuarios','POST',Object.assign({origem:solId?'solicitacao':'admin',criado_por:SESSION.user.email},body));}
-        if(solId){await sb('/tabela_solicitacoes?id=eq.'+solId,'PATCH',{status:'aprovada',decidido_por:SESSION.user.email,decidido_em:new Date().toISOString()});}
-        logAdmin(id?'acesso_editado':(solId?'acesso_aprovado':'acesso_adicionado'),{pessoa:email,tipo:body.tipo,validade:body.validade});
-        if(!id){
-            fetch('https://hub.boxersoldas.com.br/api/email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo:'acesso_liberado',dados:{email,nome:body.nome,validade:body.validade?fmtDataBR(body.validade):''}})}).catch(()=>{});
-        }
-        toast(id?'Acesso atualizado':'Acesso liberado e pessoa avisada por email');closeModal();loadAcessos();
-    }catch(e){toast('Erro: '+e.message,'error');}
-}
-async function negarSolicitacao(id){
-    const s=ACESSOS_SOL.find(x=>x.id===id);
-    if(!confirm('Negar a solicitação de "'+(s?s.nome:'')+'"?'))return;
-    try{
-        await sb('/tabela_solicitacoes?id=eq.'+id,'PATCH',{status:'negada',decidido_por:SESSION.user.email,decidido_em:new Date().toISOString()});
-        logAdmin('solicitacao_negada',{pessoa:s&&s.email});
-        toast('Solicitação negada');loadAcessos();
-    }catch(e){toast('Erro: '+e.message,'error');}
-}
-async function renovarAcesso(id){
-    const u=ACESSOS_USU.find(x=>x.id===id);
-    const nova=new Date(Date.now()+90*864e5).toISOString().slice(0,10);
-    try{
-        await sb('/tabela_usuarios?id=eq.'+id,'PATCH',{validade:nova,ativo:true});
-        logAdmin('acesso_renovado',{pessoa:u&&u.email,validade:nova});
-        toast('Acesso renovado até '+fmtDataBR(nova));loadAcessos();
-    }catch(e){toast('Erro: '+e.message,'error');}
-}
-async function alterarAtivoAcesso(id,ativo){
-    const u=ACESSOS_USU.find(x=>x.id===id);
-    if(!ativo&&!confirm('Revogar o acesso de "'+(u?(u.nome||u.email):'')+'"? Ele perde o acesso em até 2 minutos, mesmo com a tela aberta.'))return;
-    try{
-        await sb('/tabela_usuarios?id=eq.'+id,'PATCH',{ativo});
-        logAdmin(ativo?'acesso_reativado':'acesso_revogado',{pessoa:u&&u.email});
-        toast(ativo?'Acesso reativado':'Acesso revogado');loadAcessos();
-    }catch(e){toast('Erro: '+e.message,'error');}
 }
 
 // ESTADOS
