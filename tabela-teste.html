@@ -288,7 +288,11 @@ tbody tr.row-ajuste .td-price-final{color:#e30613}
   .search-input{flex:1 1 100%;min-height:46px;font-size:16px}
   .cat-select{min-width:0;flex:1 1 100%;min-height:46px;font-size:15px}
   .chip{min-height:42px;flex:1 1 auto}
-  #testBanner{padding:6px 12px}
+  #testBanner{padding:5px 12px;gap:8px;flex-wrap:nowrap;font-size:12px}
+  #testBanner>span:not(#userInfo){display:none}
+  #testBanner strong{white-space:nowrap;font-size:11px}
+  #userInfo{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #testBanner a{white-space:nowrap;padding:6px 4px}
   /* tabela vira cartoes */
   .tbl-wrap{overflow:visible;border:none;border-radius:0}
   .tbl-wrap table,.tbl-wrap tbody{display:block;width:100%}
@@ -623,6 +627,7 @@ async function enviarSolicitacao() {
 }
 
 async function doLogout() {
+    if (!document.body.classList.contains('locked') && !confirm('Sair deste aparelho? Para entrar de novo você vai precisar pedir um novo código por e-mail.')) return;
     const fila = (await rascunhosLer()).filter(r => r.estado !== 'enviado').length;
     if (fila && !confirm('Há ' + fila + ' orçamento(s) guardado(s) neste aparelho aguardando envio. Se sair agora, eles serão apagados. Sair mesmo assim?')) return;
     logUso('logout');
@@ -1773,7 +1778,7 @@ async function abrirPainel(dias) {
 // ---------- modo offline (app instalavel) ----------
 // Tabela, estoque consultado, clientes e orcamentos feitos sem sinal ficam no aparelho (IndexedDB) por ate 7 dias.
 const OFF_MS = 7 * 864e5;
-const APP_BUILD = '1793375660';
+const APP_BUILD = '1793388929';
 let _idbP = null, DADOS_OFF_TS = null, _sync = false;
 function idbAbrir() {
     if (!_idbP) _idbP = new Promise((res, rej) => {
