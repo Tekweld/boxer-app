@@ -75,7 +75,10 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 <div id="loginErr" class="err-msg hidden"></div>
 <div class="field"><label>Email</label><input id="loginEmail" type="email" placeholder="seu@email.com"></div>
 <div class="field"><label>Senha</label><input id="loginPass" type="password" placeholder="••••••••"></div>
-<button class="btn-login" onclick="doLogin()">Entrar</button>
+<button class="btn-login" onclick="doLogin()">Entrar com senha</button>
+<div style="text-align:center;margin:12px 0 8px;font-size:12px;color:#718096">ou, sem senha</div>
+<button class="btn-login" id="btnCodigo" style="background:#fff;color:#1d327b;border:1px solid #c3cfe2" onclick="doEnviarCodigo()">Receber código por e-mail</button>
+<div id="codeWrap" class="hidden"><div class="field" style="margin-top:14px"><label>Código recebido</label><input id="loginCode" inputmode="numeric" maxlength="8" placeholder="000000"></div><button class="btn-login" onclick="doEntrarCodigo()">Entrar com o código</button></div>
 </div>
 </div>
 
@@ -111,7 +114,6 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 <div class="tab admin-only hidden" onclick="showTab('estados',this)">Estados</div>
 <div class="tab admin-only hidden" onclick="showTab('multiplicadores',this)">Multiplicadores</div>
 <div class="tab admin-only hidden" onclick="showTab('comissoes',this)">Comissões</div>
-<div class="tab admin-only hidden" onclick="showTab('usuarios',this)">Usuários</div>
 <div class="tab admin-only hidden" onclick="showTab('acessos',this)">Acessos</div>
 <div class="tab admin-only hidden" onclick="showTab('uso',this)">Log de Uso</div>
 <div class="tab admin-only hidden" onclick="showTab('regras',this)">Regras da Tabela</div>
@@ -150,12 +152,6 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 <span id="comCatFilterWrap" style="display:none"><select id="comCatFilter" class="select-sm" onchange="renderComissoes()"><option value="TODOS">Todas as categorias</option></select></span>
 </div></div>
 <div id="comGrid"><div class="loading">Carregando...</div></div>
-</div>
-
-<div class="panel-content hidden" id="tab-usuarios">
-<div class="panel-header"><div><div class="panel-title">Gestão de Usuários</div><div class="panel-sub">Apenas admin</div></div>
-<button class="btn btn-primary btn-sm" onclick="openUserModal()">+ Novo usuário</button></div>
-<div id="usersList"><div class="loading">Carregando...</div></div>
 </div>
 
 <div class="panel-content hidden" id="tab-acessos">
@@ -270,18 +266,52 @@ setTimeout(() => {
 
 }
 
+function negarPainel(msg){
+    SESSION = null; PERFIL = null;
+    const e = document.getElementById('loginErr'); e.textContent = msg; e.style.cssText = ''; e.classList.remove('hidden');
+    document.getElementById('loginPage').classList.remove('hidden'); document.getElementById('loginPage').style.display = 'flex';
+}
 async function resolverPerfilEEntrar(email, userId) {
     if (email.toLowerCase() === 'bruno@boxersoldas.com.br') {
         PERFIL = { permissao: 'admin', nome: 'Bruno Boxer (CEO)' };
     } else {
-        try {
-            const perfis = await sb('/perfis?id=eq.'+userId+'&select=*');
-            PERFIL = perfis[0] || {permissao:'editor', nome: email};
-        } catch(e) {
-            PERFIL = {permissao:'editor', nome: email};
-        }
+        let perfis;
+        try { perfis = await sb('/perfis?id=eq.'+userId+'&select=*'); }
+        catch(e) { negarPainel('Não foi possível confirmar o seu perfil agora. Tente novamente.'); return; }
+        PERFIL = perfis[0];
+        if (!PERFIL || !['admin','editor','marketing'].includes(PERFIL.permissao)) { negarPainel('O seu perfil não tem acesso ao painel admin. Fale com um administrador.'); return; }
     }
     setupAdminSession(PERFIL.nome, PERFIL.permissao);
+}
+
+async function doEnviarCodigo() {
+    const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+    const errEl = document.getElementById('loginErr');
+    const msg = (t, ok) => { errEl.textContent = t; errEl.classList.remove('hidden'); errEl.style.cssText = ok ? 'background:#dcfce7;color:#166534;border-color:#bbf7d0' : ''; };
+    if (!email) { msg('Informe o e-mail.'); return; }
+    const btn = document.getElementById('btnCodigo'); btn.disabled = true;
+    try {
+        const r = await fetch('https://hub.boxersoldas.com.br/api/disponibilidade?target=acesso', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ acao: 'codigo', email }) });
+        const j = await r.json().catch(() => ({}));
+        if (j.status === 'enviado') { msg('Código enviado para ' + email + '. Confira também o spam.', true); document.getElementById('codeWrap').classList.remove('hidden'); document.getElementById('loginCode').focus(); }
+        else if (j.status === 'limite') msg('Muitas tentativas. Aguarde alguns minutos e tente de novo.');
+        else msg('Este e-mail não tem acesso. Fale com um administrador.');
+    } catch (e) { msg('Erro de conexão. Tente novamente.'); }
+    finally { btn.disabled = false; }
+}
+async function doEntrarCodigo() {
+    const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+    const token = document.getElementById('loginCode').value.replace(/\D/g, '');
+    const errEl = document.getElementById('loginErr');
+    if (token.length < 6) { errEl.textContent = 'Digite o código recebido por e-mail.'; errEl.style.cssText = ''; errEl.classList.remove('hidden'); return; }
+    try {
+        let res = await sbAuth('/verify', { type: 'email', email, token });
+        if (!res.access_token) res = await sbAuth('/verify', { type: 'magiclink', email, token });
+        if (!res.access_token) { errEl.textContent = 'Código inválido ou expirado. Peça um novo código.'; errEl.style.cssText = ''; errEl.classList.remove('hidden'); return; }
+        errEl.classList.add('hidden');
+        SESSION = res;
+        await resolverPerfilEEntrar(email, res.user.id);
+    } catch (e) { errEl.textContent = 'Erro de conexão. Tente novamente.'; errEl.style.cssText = ''; errEl.classList.remove('hidden'); }
 }
 
 async function doLogin() {
@@ -404,7 +434,6 @@ function showTab(n,el){
     if(n==='estados')loadEstados();
     if(n==='multiplicadores')loadMult();
     if(n==='comissoes')loadComissoes();
-    if(n==='usuarios')loadUsuarios();
     if(n==='acessos')loadAcessos();
     if(n==='uso')loadUsoTabela();
     if(n==='regras')loadRegras();
@@ -713,13 +742,14 @@ function renderUso(){
 let ACESSOS_USU = [], ACESSOS_SOL = [];
 function fmtDataBR(d){ if(!d) return '—'; const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(d)); return m? m[3]+'/'+m[2]+'/'+m[1] : new Date(d).toLocaleDateString('pt-BR'); }
 // ---------- ACESSOS: lista unica (cadastrados + equipe), com criar, editar, excluir, inativar e reativar ----------
-const PERFIS_ACESSO={admin:'Admin',gestor:'Gestor',vendedor:'Vendedor',representante:'Representante'};
-const PERFIS_DICA={admin:'Tudo na tabela, incluindo o Painel de gestão dos orçamentos.',gestor:'Usa a tabela e vê o Painel de gestão dos orçamentos.',vendedor:'Usa a tabela e faz orçamentos (equipe interna).',representante:'Usa a tabela e faz orçamentos (representante externo).'};
+const PERFIS_ACESSO={admin:'Admin',editor:'Editor',usuario:'Usuário'};
+const PERFIS_DICA={admin:'Faz tudo: tabelas de preço, painel admin, comissões, usuários e Painel de gestão dos orçamentos.',editor:'Equipe Boxer: usa as tabelas e acessa o painel admin só para incluir e ajustar produtos. Não mexe em comissões, usuários nem demais cadastros.',usuario:'Usa as duas tabelas de preço e faz orçamentos. Não acessa o painel admin. E-mails fora de @boxersoldas.com.br são sempre Usuário.'};
 let ACESSOS_ROWS=[],ACESSOS_FILTRO={q:'',st:'',pf:''},ACESSOS_ULT={};
 function maskTelAdmin(t){const d=String(t||'').replace(/\D/g,'');return d.length===11?d.replace(/(\d{2})(\d{5})(\d{4})/,'($1) $2-$3'):d.length===10?d.replace(/(\d{2})(\d{4})(\d{4})/,'($1) $2-$3'):t;}
 function hojeISO(){return new Date().toISOString().slice(0,10);}
 function maisDiasISO(n){return new Date(Date.now()+n*864e5).toISOString().slice(0,10);}
-function perfilPadrao(u){return u.perfil||(u.tipo==='interno'?'vendedor':'representante');}
+function perfilPadrao(u){return ['admin','editor','usuario'].includes(u.perfil)?u.perfil:'usuario';}
+function ehBoxer(e){return /@boxersoldas\.com\.br$/i.test(String(e||'').trim());}
 function statusLinha(r){
     if(r.u&&!r.u.ativo)return{k:'inativo',t:'Inativo',c:'#fee2e2',f:'#991b1b'};
     if(r.u&&r.u.validade&&r.u.validade<hojeISO())return{k:'expirado',t:'Expirado',c:'#fef9c3',f:'#854d0e'};
@@ -784,45 +814,54 @@ function acessosFiltrar(){
     document.getElementById('acLista').innerHTML=h+'</tbody></table>';
 }
 function acessoDoModal(){
-    const email=document.getElementById('ac_e').value.trim().toLowerCase();
-    return{email,nome:document.getElementById('ac_n').value.trim()||null,telefone:document.getElementById('ac_tel').value.replace(/\D/g,'')||null,empresa:document.getElementById('ac_emp').value.trim()||null,tipo:document.getElementById('ac_t').value,perfil:document.getElementById('ac_p').value,validade:document.getElementById('ac_v').value||null};
+    const email=document.getElementById('ac_e').value.trim().toLowerCase(),perfil=document.getElementById('ac_p').value;
+    return{email,nome:document.getElementById('ac_n').value.trim()||null,telefone:document.getElementById('ac_tel').value.replace(/\D/g,'')||null,empresa:document.getElementById('ac_emp').value.trim()||null,perfil,tipo:ehBoxer(email)?'interno':'externo',validade:document.getElementById('ac_v').value||null};
 }
 function acessoDica(){document.getElementById('ac_pd').textContent=PERFIS_DICA[document.getElementById('ac_p').value]||'';}
-function acessoTipoMuda(){
-    // sugere o prazo: externo 90 dias, interno sem prazo (so quando o campo ainda nao foi mexido)
-    const v=document.getElementById('ac_v');if(v.dataset.mexeu)return;
-    v.value=document.getElementById('ac_t').value==='externo'?maisDiasISO(90):'';
+// o perfil depende do e-mail: @boxersoldas.com.br = Admin ou Interno; qualquer outro = so Externo
+function acessoOpcoesPerfil(){
+    const e=document.getElementById('ac_e').value,sel=document.getElementById('ac_p');
+    const ops=ehBoxer(e)?['usuario','editor','admin']:['usuario'];
+    const atual=sel.dataset.escolhido||sel.value;
+    sel.innerHTML=ops.map(k=>`<option value="${k}">${PERFIS_ACESSO[k]}</option>`).join('');
+    sel.value=ops.includes(atual)?atual:'usuario';
+    sel.disabled=ops.length===1;
+    acessoDica();
+    // prazo sugerido: externo 90 dias, equipe Boxer sem prazo (so enquanto o campo nao foi mexido)
+    const v=document.getElementById('ac_v');
+    if(!v.dataset.mexeu)v.value=ehBoxer(e)?'':maisDiasISO(90);
 }
+function acessoPerfilEscolhido(){const sel=document.getElementById('ac_p');sel.dataset.escolhido=sel.value;acessoOpcoesPerfil();acessoDica();}
 function openAcessoModal(key,solId,pre){
     const r=key?ACESSOS_ROWS.find(x=>x.email===key):null;
     const s=solId?ACESSOS_SOL.find(x=>x.id===solId):null;
     const u=r&&r.u;
-    const interno=pre&&pre.email&&/@boxersoldas\.com\.br$/i.test(pre.email);
-    const base=r?{nome:r.nome,email:r.email,telefone:u?u.telefone:'',empresa:u?u.empresa:'',tipo:u?u.tipo:'interno',perfil:r.perfil,validade:u?u.validade:null}
-        :(s?{nome:s.nome,email:s.email,telefone:s.telefone,empresa:s.empresa,tipo:'externo',perfil:'representante',validade:maisDiasISO(90)}
-        :{nome:'',email:(pre&&pre.email)||'',telefone:'',empresa:'',tipo:interno?'interno':'externo',perfil:interno?'vendedor':'representante',validade:interno?'':maisDiasISO(90)});
+    const base=r?{nome:r.nome,email:r.email,telefone:u?u.telefone:'',empresa:u?u.empresa:'',perfil:r.perfil,validade:u?u.validade:null}
+        :(s?{nome:s.nome,email:s.email,telefone:s.telefone,empresa:s.empresa,perfil:'usuario',validade:null}
+        :{nome:'',email:(pre&&pre.email)||'',telefone:'',empresa:'',perfil:'',validade:null});
     const novo=!r;
     openModal(`<h3>${r?'Editar acesso':(s?'Aprovar solicitação':'Novo usuário')}</h3>
 <div class="form-row"><label>Nome *</label><input id="ac_n" value="${escUso(base.nome||'')}"></div>
-<div class="form-row"><label>Email *</label><input id="ac_e" type="email" value="${escUso(base.email||'')}" ${r?'readonly style="background:#f7fafc"':''}></div>
+<div class="form-row"><label>Email *</label><input id="ac_e" type="email" value="${escUso(base.email||'')}" oninput="acessoOpcoesPerfil()" ${r?'readonly style="background:#f7fafc"':''}></div>
 <div class="form-row-inline"><div class="form-row"><label>Telefone / WhatsApp *</label><input id="ac_tel" type="tel" placeholder="(11) 99999-9999" value="${escUso(base.telefone||'')}"></div>
 <div class="form-row"><label>Empresa</label><input id="ac_emp" value="${escUso(base.empresa||'')}"></div></div>
-<div class="form-row-inline"><div class="form-row"><label>Perfil *</label><select id="ac_p" onchange="acessoDica()">${Object.keys(PERFIS_ACESSO).map(k=>`<option value="${k}" ${base.perfil===k?'selected':''}>${PERFIS_ACESSO[k]}</option>`).join('')}</select></div>
-<div class="form-row"><label>Tipo</label><select id="ac_t" onchange="acessoTipoMuda()"><option value="externo" ${base.tipo==='externo'?'selected':''}>Externo</option><option value="interno" ${base.tipo==='interno'?'selected':''}>Interno</option></select></div></div>
+<div class="form-row"><label>Perfil *</label><select id="ac_p" data-escolhido="${escUso(base.perfil||'')}" onchange="acessoPerfilEscolhido()"></select></div>
 <p id="ac_pd" style="font-size:12px;color:#4a5568;margin:-6px 0 12px"></p>
-<div class="form-row"><label>Válido até (vazio = sem prazo)</label><input id="ac_v" type="date" value="${base.validade||''}" oninput="this.dataset.mexeu=1"></div>
+<div class="form-row"><label>Válido até (vazio = sem prazo)</label><input id="ac_v" type="date" value="${base.validade||''}" ${r?'data-mexeu="1"':''} oninput="this.dataset.mexeu=1"></div>
 ${r&&r.equipe&&!u?'<p style="font-size:12px;color:#854d0e;background:#fef9c3;border-radius:6px;padding:8px 10px">Pessoa da equipe: ao salvar, criamos um perfil só para a tabela. O cadastro dela no sistema comercial e no painel não muda.</p>':''}
 ${novo?'<label style="display:flex;gap:8px;align-items:center;font-size:13px;text-transform:none;letter-spacing:0"><input id="ac_mail" type="checkbox" checked style="width:auto"> Avisar a pessoa por e-mail que o acesso foi liberado</label>':''}
 <p style="font-size:11px;color:#718096;margin-top:8px">Não há senha: a pessoa pede um código na tela da tabela e recebe por e-mail. O perfil não dá acesso a este painel admin.</p>
 <div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveAcesso(${r?`'${escUso(r.email)}'`:'null'},${s?`'${s.id}'`:'null'})">Salvar</button></div>`);
-    acessoDica();
+    acessoOpcoesPerfil();
 }
 async function saveAcesso(key,solId){
     const body=acessoDoModal();
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)){toast('Informe um email válido.','error');return;}
     if(!body.nome){toast('Informe o nome.','error');return;}
+    if(!ehBoxer(body.email)&&body.perfil!=='usuario'){toast('E-mails fora de @boxersoldas.com.br só podem ser Externos.','error');return;}
     if(!body.telefone||body.telefone.length<10){toast('Informe o telefone com DDD.','error');return;}
     body.atualizado_em=new Date().toISOString();body.atualizado_por=SESSION.user.email;
+    if(solId)body.ativo=true;
     try{
         const r=key?ACESSOS_ROWS.find(x=>x.email===key):ACESSOS_ROWS.find(x=>x.email===body.email);
         const novo=!(r&&r.u);
@@ -830,6 +869,8 @@ async function saveAcesso(key,solId){
         else{await sb('/tabela_usuarios','POST',Object.assign({origem:solId?'solicitacao':(r&&r.equipe?'equipe':'admin'),criado_por:SESSION.user.email,ativo:true},body));}
         if(solId){await sb('/tabela_solicitacoes?id=eq.'+solId,'PATCH',{status:'aprovada',decidido_por:SESSION.user.email,decidido_em:new Date().toISOString()});}
         logAdmin(key?'acesso_editado':(solId?'acesso_aprovado':'acesso_adicionado'),{pessoa:body.email,perfil:body.perfil,tipo:body.tipo,validade:body.validade});
+        const ativoAtual=solId?true:((r&&r.u)?r.u.ativo:true);
+        await sincronizarPainel(body.email,body.nome,ativoAtual?body.perfil:'usuario');
         const mail=document.getElementById('ac_mail');
         if(novo&&(!mail||mail.checked)){
             fetch('https://hub.boxersoldas.com.br/api/email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo:'acesso_liberado',dados:{email:body.email,nome:body.nome,validade:body.validade?fmtDataBR(body.validade):''}})}).catch(()=>{});
@@ -837,6 +878,15 @@ async function saveAcesso(key,solId){
         toast(novo?'Usuário cadastrado'+((!mail||mail.checked)?' e avisado por email':''):'Acesso atualizado');closeModal();loadAcessos();
     }catch(e){toast('Erro: '+e.message,'error');}
 }
+async function sincronizarPainel(email,nome,perfil){
+    try{
+        const r=await fetch('https://hub.boxersoldas.com.br/api/disponibilidade?target=acesso',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SESSION.access_token},body:JSON.stringify({acao:'perfil_painel',email,nome,perfil})});
+        const j=await r.json().catch(()=>({}));
+        if(!r.ok)throw new Error(j.error||('erro '+r.status));
+        return true;
+    }catch(e){toast('Acesso salvo, mas a permissão do painel admin não foi atualizada: '+e.message,'error');return false;}
+}
+function ehEuMesmo(key){return SESSION&&SESSION.user&&String(SESSION.user.email||'').toLowerCase()===key;}
 async function negarSolicitacao(id){
     const s=ACESSOS_SOL.find(x=>x.id===id);
     if(!confirm('Negar a solicitação de "'+(s?s.nome:'')+'"?'))return;
@@ -848,10 +898,12 @@ async function negarSolicitacao(id){
 }
 async function inativarAcesso(key){
     const r=ACESSOS_ROWS.find(x=>x.email===key);if(!r)return;
+    if(ehEuMesmo(key)){toast('Você não pode inativar o seu próprio acesso.','error');return;}
     if(!confirm('Inativar "'+(r.nome||r.email)+'"? O acesso à tabela fica suspenso (em até 2 minutos, mesmo com a tela aberta) até você reativar.'))return;
     try{
         if(r.u)await sb('/tabela_usuarios?id=eq.'+r.u.id,'PATCH',{ativo:false,atualizado_em:new Date().toISOString(),atualizado_por:SESSION.user.email});
         else await sb('/tabela_usuarios','POST',{email:r.email,nome:r.nome||null,tipo:'interno',perfil:r.perfil,ativo:false,origem:'equipe',criado_por:SESSION.user.email});
+        await sincronizarPainel(r.email,r.nome,'usuario');
         logAdmin('acesso_inativado',{pessoa:r.email});toast('Acesso inativado');loadAcessos();
     }catch(e){toast('Erro: '+e.message,'error');}
 }
@@ -860,14 +912,15 @@ async function reativarAcesso(key){
     const patch={ativo:true,atualizado_em:new Date().toISOString(),atualizado_por:SESSION.user.email};
     let msg='Acesso reativado';
     if(r.u.validade&&r.u.validade<hojeISO()){patch.validade=maisDiasISO(90);msg='Acesso reativado até '+fmtDataBR(patch.validade);}
-    try{await sb('/tabela_usuarios?id=eq.'+r.u.id,'PATCH',patch);logAdmin('acesso_reativado',{pessoa:r.email,validade:patch.validade||null});toast(msg);loadAcessos();}
+    try{await sb('/tabela_usuarios?id=eq.'+r.u.id,'PATCH',patch);await sincronizarPainel(r.email,r.nome,r.perfil);logAdmin('acesso_reativado',{pessoa:r.email,validade:patch.validade||null});toast(msg);loadAcessos();}
     catch(e){toast('Erro: '+e.message,'error');}
 }
 async function excluirAcesso(key){
     const r=ACESSOS_ROWS.find(x=>x.email===key);if(!r||!r.u)return;
+    if(ehEuMesmo(key)){toast('Você não pode excluir o seu próprio acesso.','error');return;}
     const msg=r.equipe?'Excluir o perfil de "'+(r.nome||r.email)+'" na tabela? Ela continua na equipe e volta ao acesso padrão da equipe.':'Excluir "'+(r.nome||r.email)+'"? Ela perde o acesso à tabela e, para voltar, será preciso cadastrar de novo.';
     if(!confirm(msg))return;
-    try{await sb('/tabela_usuarios?id=eq.'+r.u.id,'DELETE');logAdmin('acesso_excluido',{pessoa:r.email});toast('Usuário excluído');loadAcessos();}
+    try{await sb('/tabela_usuarios?id=eq.'+r.u.id,'DELETE');if(!r.equipe)await sincronizarPainel(r.email,r.nome,'usuario');logAdmin('acesso_excluido',{pessoa:r.email});toast('Usuário excluído');loadAcessos();}
     catch(e){toast('Erro: '+e.message,'error');}
 }
 // abre direto a aba/ação pedida pelo link do e-mail de aviso (?aba=acessos&novo=email)
@@ -1066,53 +1119,6 @@ async function saveComissao(id,subtitle,antigoRep,antigoRevenda,antigoVt){
 }
 
 // USUÁRIOS
-async function loadUsuarios(){
-    if(!IS_ADMIN)return;
-    try{
-        const d=await sb('/perfis?select=id,nome,permissao');
-        let h='';
-        d.forEach(u=>{const ini=u.nome?u.nome.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase():'?';const bg=u.permissao==='admin'?'#fee2e2':u.permissao==='marketing'?'#f3e8ff':'#dbeafe';const tc=u.permissao==='admin'?'#991b1b':u.permissao==='marketing'?'#7c3aed':'#1d4ed8';
-        h+=`<div class="user-card"><div class="user-avatar" style="background:${bg};color:${tc}">${ini}</div><div style="flex:1"><p style="font-weight:500;font-size:14px;margin:0">${u.nome||'Sem nome'}</p></div><span class="perm-tag perm-${u.permissao}">${u.permissao.toUpperCase()}</span><button class="btn btn-outline btn-sm" onclick="openUserModal('${u.id}')">Editar</button>${u.id!==SESSION.user.id?`<button class="btn btn-danger btn-sm" onclick="delUser('${u.id}','${(u.nome||'').replace(/'/g,"\\'")}')">Excluir</button>`:''}</div>`;
-        });
-        document.getElementById('usersList').innerHTML=h||'<p style="color:#718096;font-size:13px">Nenhum usuário</p>';
-    }catch(e){
-        document.getElementById('usersList').innerHTML=`<div style="text-align:center;padding:20px;color:#dc2626">Erro ao carregar usuários: ${e.message} <button class="btn btn-outline btn-sm" onclick="loadUsuarios()">Tentar novamente</button></div>`;
-    }
-}
-async function openUserModal(id=null){
-    let u={nome:'',permissao:'editor'};
-    if(id){const r=await sb('/perfis?id=eq.'+id+'&select=*');u=r[0];}
-    openModal(`<h3>${id?'Editar':'Novo'} Usuário</h3>
-<div class="form-row"><label>Nome</label><input id="u_n" value="${u.nome||''}"></div>
-${!id?`<div class="form-row"><label>Email</label><input id="u_e" type="email"></div><div class="form-row"><label>Senha</label><input id="u_s" type="password"></div>`:''}
-<div class="form-row"><label>Permissão</label><select id="u_p"><option value="admin" ${u.permissao==='admin'?'selected':''}>Admin</option><option value="editor" ${u.permissao==='editor'?'selected':''}>Editor</option><option value="marketing" ${u.permissao==='marketing'?'selected':''}>Marketing</option></select></div>
-<div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveUser('${id||''}')">Salvar</button></div>`);
-}
-async function saveUser(id){
-    try{
-        if(id){
-            await sb('/perfis?id=eq.'+id,'PATCH',{nome:document.getElementById('u_n').value,permissao:document.getElementById('u_p').value});
-            toast('Usuário atualizado');
-        } else {
-            const email=document.getElementById('u_e').value;
-            const pass=document.getElementById('u_s').value;
-            const nome=document.getElementById('u_n').value;
-            const perm=document.getElementById('u_p').value;
-            const r=await fetch(SB_URL+'/auth/v1/admin/users',{method:'POST',headers:{'Content-Type':'application/json','apikey':SB_ANON,'Authorization':'Bearer '+SESSION.access_token},body:JSON.stringify({email,password:pass,email_confirm:true,user_metadata:{nome,permissao:perm}})});
-            const res=await r.json();
-            if(res.error)throw new Error(res.error.message||res.msg);
-            toast('Usuário criado');
-        }
-        closeModal();loadUsuarios();
-    }catch(e){toast('Erro: '+e.message,'error');}
-}
-async function delUser(id,n){
-    if(!confirm('Excluir "'+n+'"?'))return;
-    try{
-        await fetch(SB_URL+'/auth/v1/admin/users/'+id,{method:'DELETE',headers:{'apikey':SB_ANON,'Authorization':'Bearer '+SESSION.access_token}});
-        toast('Usuário excluído');loadUsuarios();
-    }catch(e){toast('Erro: '+e.message,'error');}
-}
 
 // Inicialização da página
 window.addEventListener('DOMContentLoaded', () => {
