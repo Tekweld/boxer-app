@@ -245,6 +245,24 @@ tbody tr.row-ajuste .td-price-final{color:#e30613}
 #prelimView{position:fixed;top:0;left:0;right:0;bottom:0;background:#f0f4f8;z-index:3000;display:none;flex-direction:column}
 .pl-bar{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 12px;background:#1d327b;color:#fff;font-size:13px}
 #prelimFrame{flex:1;width:100%;border:0;background:#fff}
+.rp-item{display:flex;gap:12px;align-items:center;justify-content:space-between;border:1px solid #d0d8e8;border-radius:12px;padding:12px 14px;margin-bottom:10px;background:#fff}
+.rp-inf{min-width:0}
+#repBar{background:#e8f1ff;color:#1d327b;border-bottom:1px solid #b6d0f7;padding:8px 16px;font-size:13px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.pn-per{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.pn-per button{padding:8px 14px;min-height:40px;border-radius:8px;border:1px solid #c3cfe2;background:#fff;color:#4a5568;font-family:Outfit;font-size:13.5px;cursor:pointer}
+.pn-per button.on{background:#1d327b;border-color:#1d327b;color:#fff}
+.pn-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.pn-k{border:1px solid #d0d8e8;border-radius:10px;padding:12px;background:#fff}
+.pn-k span{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:#718096}
+.pn-k b{display:block;font-size:20px;color:#1d327b;margin-top:2px}
+.pn-k small{color:#718096;font-size:12px}
+.pn-rep{border:1px solid #d0d8e8;border-radius:10px;padding:12px 14px;margin-bottom:8px;background:#fff}
+.pn-rh{display:flex;justify-content:space-between;gap:10px;font-weight:600;color:#1d327b;margin-bottom:8px;flex-wrap:wrap}
+.pn-m{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px}
+.pn-m span{display:block;font-size:11px;color:#718096;text-transform:uppercase}.pn-m b{font-size:14.5px}
+.pn-pr{display:flex;justify-content:space-between;gap:10px;padding:9px 2px;border-bottom:1px solid #edf2f7;font-size:13.5px}
+.pn-neg{color:#b45309}.pn-pos{color:#166534}
+@media(max-width:820px){.rp-item{flex-direction:column;align-items:stretch}.rp-item .orc-btn{width:100%;text-align:center;padding:13px}.pn-k b{font-size:18px}}
 /* === RESPONSIVO: tablet e celular === */
 #barToggle{display:none}
 .det-fechar-mob{display:none}
@@ -429,7 +447,7 @@ tbody tr.row-ajuste .td-price-final{color:#e30613}
 </div>
 
 <div class="header" style="position:relative;"><div class="header-inner">
-<div class="nav-top"><button id="instBtn" class="nav-btn sec" style="display:none" onclick="instalarApp()" title="Instalar a tabela como aplicativo no aparelho">📲 Instalar app</button><button id="orcBtn" class="nav-btn sec" style="display:none" onclick="abrirMeusOrc()" title="Orçamentos enviados aos clientes">📄 Meus orçamentos</button><button id="regrasBtn" class="nav-btn sec" onclick="abrirRegras()" title="Regras da política para consulta rápida">📋 Regras</button><a id="navBtn" href="#" class="nav-btn"></a></div>
+<div class="nav-top"><button id="instBtn" class="nav-btn sec" style="display:none" onclick="instalarApp()" title="Instalar a tabela como aplicativo no aparelho">📲 Instalar app</button><button id="repBtn" class="nav-btn sec" style="display:none" onclick="abrirRepetir()" title="Carrega na tabela os itens do último orçamento de um cliente">↻ Repetir pedido</button><button id="painelBtn" class="nav-btn sec" style="display:none" onclick="abrirPainel()" title="Visão da gestão: funil, desempenho e ajustes de preço">📊 Painel</button><button id="orcBtn" class="nav-btn sec" style="display:none" onclick="abrirMeusOrc()" title="Orçamentos enviados aos clientes">📄 Meus orçamentos</button><button id="regrasBtn" class="nav-btn sec" onclick="abrirRegras()" title="Regras da política para consulta rápida">📋 Regras</button><a id="navBtn" href="#" class="nav-btn"></a></div>
 <div class="logo-row">
 <img src="Estrela-Boxer.svg" width="40" height="40" style="display:block">
 <div><h1 id="pageTitle">Tabela de Preços Boxer</h1><p id="pageSubtitle">Carregando...</p></div></div>
@@ -643,6 +661,8 @@ async function onSession(session, novoLogin) {
         return;
     }
     window.ACESSO_NOME = acesso.nome || ''; window.ACESSO_TEL = acesso.telefone || ''; window.ACESSO_ORIGEM = acesso.origem || '';
+    window.ACESSO_ROLE = acesso.role || '';
+    if (TID === 1 && ['admin', 'gestor', 'manager'].includes(String(acesso.role || '').toLowerCase())) { const pb = $('painelBtn'); if (pb) pb.style.display = ''; }
     $('loginOverlay').classList.remove('show');
     document.body.classList.remove('locked');
     const ate = acesso.sessao_expira_em ? new Date(acesso.sessao_expira_em).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '';
@@ -1494,6 +1514,7 @@ function toggleSel(btn) {
 
 function limparSelecao() {
     ORC_PRECO = {};
+    window._orcPre = null;
     selecionados.clear();
     QTD = {};
     document.querySelectorAll('.qtd-input').forEach(i => { i.value = ''; });
@@ -1629,10 +1650,130 @@ document.body.classList.add('t' + TID);
     new MutationObserver(atualiza).observe(bar, { attributes: true, attributeFilter: ['class'] });
     atualiza();
 })();
+// ---------- melhorias: repetir pedido, classe sugerida, acompanhamento e painel ----------
+function orcAcompanhar(o) {
+    if (!['enviado', 'visualizado'].includes(o.status) || o.expirado) return '';
+    const DIA = 864e5, agora = Date.now();
+    const ate = new Date(o.validade_em).getTime() - agora;
+    if (ate <= 2 * DIA) { const d = Math.max(1, Math.ceil(ate / DIA)); return '⏰ Vence em ' + d + (d > 1 ? ' dias' : ' dia'); }
+    const base = new Date(o.status === 'visualizado' ? o.ultima_visualizacao_em : o.criado_em).getTime();
+    const d = Math.floor((agora - base) / DIA);
+    if (d >= 2) return o.status === 'visualizado' ? '👀 Visto há ' + d + ' dias, sem aceite' : '📭 Enviado há ' + d + ' dias, o cliente ainda não abriu';
+    return '';
+}
+function filtrarAcompanhar() { $('orcFSt').value = 'acompanhar'; $('orcFQ').value = ''; orcFiltrar(); }
+
+async function abrirRepetir() {
+    if (TID !== 1) return;
+    $('orcTitulo').textContent = 'Repetir pedido de um cliente';
+    $('orcSub').textContent = 'Carrega na tabela os itens do último orçamento do cliente, com os preços de hoje';
+    $('orcCorpo').innerHTML = '<p>Carregando…</p>';
+    $('orcOverlay').classList.add('show'); $('orcOverlay').classList.remove('larga');
+    let j;
+    try { j = await orcApi({ acao: 'listar', leve: true }); kvSet('orcl:' + USER.id, { v: j, ts: Date.now() }); }
+    catch (e) {
+        const c = e.rede ? await cacheValido('orcl:' + USER.id) : null;
+        if (!c) { $('orcCorpo').innerHTML = '<p>Não foi possível carregar seus clientes agora. ' + esc(e.message) + '</p>'; return; }
+        j = c.v;
+    }
+    const vistos = {}; window._REP = [];
+    (j.orcamentos || []).forEach(o => { if (o.status === 'cancelado' || !(o.itens_edicao || []).length || vistos[o.cliente_cnpj]) return; vistos[o.cliente_cnpj] = 1; window._REP.push(o); });
+    if (!window._REP.length) { $('orcCorpo').innerHTML = '<p>Você ainda não tem orçamentos para repetir.</p><div class="orc-acoes"><button class="orc-btn" onclick="fecharOrc()">Fechar</button></div>'; return; }
+    $('orcCorpo').innerHTML = '<input id="repQ" type="search" placeholder="Buscar cliente ou CNPJ" oninput="repetirFiltrar()" style="margin-bottom:12px"><div id="repLista"></div>';
+    repetirFiltrar();
+}
+function repetirFiltrar() {
+    const q = ($('repQ').value || '').trim().toLowerCase(), qd = onlyDig(q);
+    const L = (window._REP || []).filter(o => !q || String(o.cliente_nome).toLowerCase().includes(q) || (qd.length >= 3 && String(o.cliente_cnpj).includes(qd)));
+    $('repLista').innerHTML = L.length ? L.map(o => '<div class="rp-item"><div class="rp-inf"><div class="c-cli">' + esc(o.cliente_nome) + '</div><div class="orc-pass">' + mascCnpj(o.cliente_cnpj) + '</div><div class="orc-pass">Último: ' + esc(o.codigo) + ' · ' + new Date(o.criado_em).toLocaleDateString('pt-BR') + ' · ' + o.itens_edicao.length + (o.itens_edicao.length > 1 ? ' itens' : ' item') + ' · ' + fmt(o.total_final) + (o.classe ? ' · classe ' + o.classe : '') + '</div></div><button class="orc-btn prim" onclick="repetirCarregar(\'' + o.cliente_cnpj + '\')">Carregar na tabela</button></div>').join('') : '<p class="orc-pass">Nenhum cliente encontrado.</p>';
+}
+function repetirCarregar(cnpj) {
+    const o = (window._REP || []).find(x => x.cliente_cnpj === cnpj);
+    if (!o) return;
+    const itens = o.itens_edicao || [];
+    const faltam = itens.filter(i => !PBY[i.codigo]).map(i => i.codigo);
+    ORC_EDIT = null; mostrarBannerEdicao();
+    limparSelecao();
+    if (o.uf && ST.some(s => s.uf === o.uf)) { cState = o.uf; $('selState').value = o.uf; }
+    if (o.segmento && SEG.includes(o.segmento)) cSeg = o.segmento;
+    if (o.classe && CLS.includes(Number(o.classe))) cCls = Number(o.classe);
+    AVISTA = o.pagamento_tipo === 'avista'; PARC = o.parcelas || 1;
+    itens.forEach(i => { if (PBY[i.codigo]) QTD[i.codigo] = i.qtd; });
+    window._orcPre = { cnpj: o.cliente_cnpj, nome: o.cliente_nome, contato: o.cliente_contato || '', email: o.cliente_email || '', celular: o.cliente_celular || '', cidade: o.cliente_cidade || '' };
+    logUso('orc_repetir', { tabela: TID, codigo: o.codigo });
+    fecharOrc();
+    updBtns(); render(); atualizarTodasDisponibilidades(); updateBar();
+    const bar = $('repBar') || document.body.insertBefore(Object.assign(document.createElement('div'), { id: 'repBar' }), document.body.firstChild);
+    bar.innerHTML = '<span>↻ Itens do último orçamento de <b>' + esc(o.cliente_nome) + '</b> (' + esc(o.codigo) + ') carregados com os preços de hoje. Ajuste e clique em <b>Gerar orçamento</b>.' + (faltam.length ? ' <b>Fora da tabela e ignorados:</b> ' + faltam.map(esc).join(', ') + '.' : '') + '</span><button class="orc-btn sm" onclick="document.getElementById(\'repBar\').remove()">Ok</button>';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function aplicarPre() {
+    const p = window._orcPre;
+    if (!p || !$('orcCnpj')) return;
+    if (p.cnpj) $('orcCnpj').value = mascCnpj(p.cnpj);
+    if (p.nome) $('orcNome').value = p.nome;
+    if (p.contato) $('orcContato').value = p.contato;
+    if (p.email) $('orcEmail').value = p.email;
+    if (p.celular) $('orcCel').value = maskTelStr(p.celular);
+    if (p.obs) $('orcObs').value = p.obs;
+    if (p.cidade) window._orcCidade = p.cidade;
+    if (p.cnpj && docValido(p.cnpj)) orcBuscaCnpj();
+}
+function mostrarSugestaoClasse(u) {
+    const el = $('orcSugClasse');
+    if (!el) return;
+    el.innerHTML = '';
+    if (!u || !u.classe || Number(u.classe) === cCls || !CLS.includes(Number(u.classe))) return;
+    el.innerHTML = 'Neste cliente você usou a <b>classe ' + u.classe + '</b> no ' + esc(u.codigo) + ' (' + new Date(u.criado_em).toLocaleDateString('pt-BR') + '). Agora está na classe ' + cCls + '. <button class="orc-btn sm" onclick="usarClasseSugerida(' + Number(u.classe) + ')">Usar classe ' + u.classe + '</button>';
+}
+function usarClasseSugerida(n) {
+    window._orcPre = { cnpj: onlyDig($('orcCnpj').value), nome: $('orcNome').value.trim(), contato: $('orcContato').value.trim(), email: $('orcEmail').value.trim(), celular: $('orcCel').value, obs: $('orcObs').value.trim(), cidade: window._orcCidade || '' };
+    cCls = n; updBtns(); render(); updateBar();
+    abrirOrcamento();
+}
+
+async function abrirPainel(dias) {
+    dias = dias || 30;
+    $('orcTitulo').textContent = 'Painel de orçamentos';
+    $('orcSub').textContent = 'Visão da gestão · últimos ' + dias + ' dias';
+    $('orcCorpo').innerHTML = '<p>Carregando…</p>';
+    $('orcOverlay').classList.add('show', 'larga');
+    try {
+        const j = await orcApi({ acao: 'painel', dias });
+        const t = j.totais, pc = (n, d) => d ? Math.round(n / d * 100) + '%' : '—';
+        const aj = v => v == null ? '<b>—</b>' : '<b class="' + (v < 0 ? 'pn-neg' : 'pn-pos') + '">' + (v > 0 ? '+' : '−') + Math.abs(v).toFixed(1).replace('.', ',') + '%</b>';
+        const tempo = h => h == null ? '—' : (h < 48 ? Math.round(h) + ' h' : (h / 24).toFixed(1).replace('.', ',') + ' dias');
+        const k = (r, v, sub) => '<div class="pn-k"><span>' + r + '</span><b>' + v + '</b>' + (sub ? '<small>' + sub + '</small>' : '') + '</div>';
+        const mini = (r, v) => '<div><span>' + r + '</span>' + v + '</div>';
+        $('orcCorpo').innerHTML =
+            '<div class="pn-per">' + [30, 90, 365].map(d => '<button class="' + (d === j.dias ? 'on' : '') + '" onclick="abrirPainel(' + d + ')">' + (d === 365 ? '12 meses' : d + ' dias') + '</button>').join('') + '</div>'
+            + '<div class="pn-kpis">'
+            + k('Orçamentos', t.enviados, t.cancelados + ' cancelados')
+            + k('Vistos pelo cliente', t.vistos, pc(t.vistos, t.enviados))
+            + k('Aceitos', t.aceitos, pc(t.aceitos, t.enviados))
+            + k('Aprovados (pedido)', t.aprovados, pc(t.aprovados, t.enviados))
+            + k('Valor orçado', fmt(t.valor_enviado))
+            + k('Valor aprovado', fmt(t.valor_aprovado))
+            + k('Preço vs tabela', aj(t.ajuste_pct), 'média ponderada')
+            + k('Tempo até o aceite', tempo(t.horas_ate_aceite))
+            + '</div>'
+            + '<h4 class="orc-sec">Por representante</h4>'
+            + (j.representantes.length ? j.representantes.map(r => '<div class="pn-rep"><div class="pn-rh"><span>' + esc(r.nome || '—') + (r.empresa ? ' · ' + esc(r.empresa) : '') + '</span><span>' + fmt(r.valor_enviado) + '</span></div><div class="pn-m">'
+                + mini('Orçamentos', '<b>' + r.enviados + '</b>') + mini('Vistos', '<b>' + pc(r.vistos, r.enviados) + '</b>') + mini('Aceitos', '<b>' + pc(r.aceitos, r.enviados) + '</b>') + mini('Aprovados', '<b>' + r.aprovados + '</b>')
+                + mini('Aprovado R$', '<b>' + fmt(r.valor_aprovado) + '</b>') + mini('Preço vs tabela', aj(r.ajuste_pct)) + mini('Até o aceite', '<b>' + tempo(r.horas_ate_aceite) + '</b>') + '</div></div>').join('') : '<p class="orc-pass">Nenhum orçamento no período.</p>')
+            + '<h4 class="orc-sec">Produtos com maior diferença para a tabela</h4>'
+            + (j.produtos.length ? j.produtos.map(p => '<div class="pn-pr"><span>' + esc(p.modelo) + '<br><span class="orc-pass">Cód. ' + esc(p.codigo) + ' · ' + p.qtd + ' un.</span></span><span style="text-align:right;white-space:nowrap">' + aj(p.ajuste_pct) + '<br><span class="orc-pass">' + (p.diferenca > 0 ? '+' : '−') + fmt(Math.abs(p.diferenca)) + '</span></span></div>').join('') : '<p class="orc-pass">Nenhum ajuste de preço no período.</p>')
+            + (j.truncado ? '<div class="orc-av" style="margin-top:10px">Mostrando os 1.000 orçamentos mais recentes do período.</div>' : '')
+            + '<div class="orc-acoes"><button class="orc-btn" onclick="fecharOrc()">Fechar</button></div>';
+    } catch (e) {
+        $('orcCorpo').innerHTML = '<p>Não foi possível abrir o painel agora. ' + esc(e.message) + '</p><div class="orc-acoes"><button class="orc-btn" onclick="fecharOrc()">Fechar</button></div>';
+    }
+}
+
 // ---------- modo offline (app instalavel) ----------
 // Tabela, estoque consultado, clientes e orcamentos feitos sem sinal ficam no aparelho (IndexedDB) por ate 7 dias.
 const OFF_MS = 7 * 864e5;
-const APP_BUILD = '1793222517';
+const APP_BUILD = '1793375660';
 let _idbP = null, DADOS_OFF_TS = null, _sync = false;
 function idbAbrir() {
     if (!_idbP) _idbP = new Promise((res, rej) => {
@@ -1949,7 +2090,7 @@ function abrirOrcamento() {
         '<div class="orc-resumo"><b>' + fmt(total) + '</b> · ' + pg + ' · validade de 7 dias. O orçamento sai com os preços desta tela; o link é rastreável e o cliente pode aceitar por ele.</div>'
         + '<h4 class="orc-sec">Itens e estoque</h4><div id="orcItens"></div>'
         + '<h4 class="orc-sec">Cliente</h4><div class="orc-grid">'
-        + '<div><label>CNPJ / CPF *</label><input id="orcCnpj" inputmode="numeric" placeholder="00.000.000/0000-00" maxlength="18" oninput="orcCnpjInput()" onblur="orcBuscaCnpj()"><div id="orcDocMsg" class="orc-pass" style="color:#991b1b"></div></div>'
+        + '<div><label>CNPJ / CPF *</label><input id="orcCnpj" inputmode="numeric" placeholder="00.000.000/0000-00" maxlength="18" oninput="orcCnpjInput()" onblur="orcBuscaCnpj()"><div id="orcDocMsg" class="orc-pass" style="color:#991b1b"></div><div id="orcSugClasse" class="orc-pass"></div></div>'
         + '<div><label>Razão social / nome</label><input id="orcNome" placeholder="preenche sozinho pelo CNPJ (opcional sem internet)"></div>'
         + '<div><label>Contato (aos cuidados de)</label><input id="orcContato"></div>'
         + '<div><label>E-mail do cliente *</label><input id="orcEmail" type="email"></div>'
@@ -1967,6 +2108,7 @@ function abrirOrcamento() {
     ORC_EXCL = new Set();
     if (!ORC_EDIT) ORC_PRECO = {};
     orcIniciarItens();
+    aplicarPre();
     logUso('orc_abrir', { tabela: TID, itens: itens.length });
 }
 
@@ -2056,6 +2198,7 @@ async function orcBuscaCnpj() {
     try {
         window._orcEnd = '';
         const c = await orcApi({ acao: 'cliente', cnpj: d });
+        mostrarSugestaoClasse(c.ultimo);
         if (!c.encontrado) {
             const pb = c.publico;
             if (pb) {
@@ -2244,6 +2387,7 @@ const ORC_GRUPOS = {
     confirmar: o => !o.arquivado && o.status === 'aceito_cliente',
     aprovados: o => !o.arquivado && o.status === 'aprovado',
     encerrados: o => !o.arquivado && (o.status === 'cancelado' || o.expirado),
+    acompanhar: o => !o.arquivado && !!orcAcompanhar(o),
     arquivados: o => !!o.arquivado,
     todos: o => !o.arquivado
 };
@@ -2265,16 +2409,18 @@ async function abrirMeusOrc() {
         const L = j.orcamentos || [];
         window._ORC = {}; L.forEach(o => { window._ORC[o.id] = o; });
         window._ORCL = L;
+        const nAc = L.filter(o => !o.arquivado && orcAcompanhar(o)).length;
+        const acHtml = nAc ? '<div class="orc-av" style="margin-bottom:10px">⏰ ' + nAc + (nAc > 1 ? ' orçamentos pedem' : ' orçamento pede') + ' acompanhamento. <button class="orc-btn sm" onclick="filtrarAcompanhar()">Ver</button></div>' : '';
         const nFila = (await rascunhosLer()).filter(r => r.estado !== 'enviado').length;
         const filaHtml = nFila ? '<div class="orc-av" style="margin-bottom:10px">📤 ' + nFila + (nFila > 1 ? ' orçamentos feitos sem sinal aguardam' : ' orçamento feito sem sinal aguarda') + ' envio. <button class="orc-btn sm" onclick="abrirFila()">Ver fila</button></div>' : '';
         if (!L.length) { $('orcCorpo').innerHTML = filaHtml + '<p>Você ainda não gerou orçamentos.</p>'; return; }
         $('orcOverlay').classList.add('larga');
         const clientes = [...new Set(L.map(o => o.cliente_nome))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
-        $('orcCorpo').innerHTML = filaHtml + (j.aviso_sync ? '<div class="orc-pass" style="color:#9a3412;margin-bottom:8px">' + esc(j.aviso_sync) + '</div>' : '')
+        $('orcCorpo').innerHTML = filaHtml + acHtml + (j.aviso_sync ? '<div class="orc-pass" style="color:#9a3412;margin-bottom:8px">' + esc(j.aviso_sync) + '</div>' : '')
             + '<div class="orc-filtros">'
             + '<input id="orcFQ" type="search" placeholder="Buscar por nº do orçamento, nº do pedido ZEN, cliente ou produto" oninput="orcFiltrar()" value="' + esc(ORC_FILTRO.q) + '">'
             + '<select id="orcFSt" onchange="orcFiltrar()">'
-            + [['abertos', 'Sem aprovação (em aberto)'], ['confirmar', 'Cliente aceitou: falta minha confirmação'], ['aprovados', 'Aprovados (pedido no ZEN)'], ['encerrados', 'Cancelados e expirados'], ['arquivados', 'Arquivados'], ['todos', 'Todos (menos arquivados)']].map(x => '<option value="' + x[0] + '"' + (ORC_FILTRO.st === x[0] ? ' selected' : '') + '>' + x[1] + '</option>').join('')
+            + [['abertos', 'Sem aprovação (em aberto)'], ['confirmar', 'Cliente aceitou: falta minha confirmação'], ['acompanhar', '⏰ Pedem acompanhamento'], ['aprovados', 'Aprovados (pedido no ZEN)'], ['encerrados', 'Cancelados e expirados'], ['arquivados', 'Arquivados'], ['todos', 'Todos (menos arquivados)']].map(x => '<option value="' + x[0] + '"' + (ORC_FILTRO.st === x[0] ? ' selected' : '') + '>' + x[1] + '</option>').join('')
             + '</select>'
             + '<select id="orcFCli" onchange="orcFiltrar()"><option value="">Todos os clientes</option>' + clientes.map(c => '<option value="' + esc(c) + '"' + (ORC_FILTRO.cli === c ? ' selected' : '') + '>' + esc(c) + '</option>').join('') + '</select>'
             + '</div><div class="orc-pass" id="orcFCont" style="margin:2px 0 12px"></div><div id="orcLista"></div>';
@@ -2316,8 +2462,9 @@ function orcCard(o) {
     if (aberto) acoes += '<button class="orc-canc" onclick="cancelarOrc(\'' + o.id + '\', this)">Cancelar orçamento</button>';
     if (!aberto && !o.arquivado) acoes += '<button class="orc-canc" onclick="arquivarOrc(\'' + o.id + '\', true, this)">Arquivar</button>';
     if (o.arquivado) acoes += '<button class="orc-canc" onclick="arquivarOrc(\'' + o.id + '\', false, this)">Tirar do arquivo</button>';
+    const ac = orcAcompanhar(o);
     return '<div class="orc-card"><div><div class="c-tit">' + esc(o.codigo) + '</div>' + zenLink + '<div class="orc-pass">Criado em ' + new Date(o.criado_em).toLocaleDateString('pt-BR') + '<br>Validade ' + new Date(o.validade_em).toLocaleDateString('pt-BR') + '</div><div class="c-tot">' + fmt(o.total_final) + '</div></div>'
-        + '<div><div class="c-cli">' + esc(o.cliente_nome) + '</div><div class="orc-pass">' + mascCnpj(o.cliente_cnpj) + '</div><div style="margin-top:10px"><span class="orc-st ' + st[1] + '">' + st[0] + '</span></div><div class="orc-pass">' + vis + '</div>' + (aceite ? '<div class="orc-pass">' + aceite + '</div>' : '') + zenTxt + err + '</div>'
+        + '<div><div class="c-cli">' + esc(o.cliente_nome) + '</div><div class="orc-pass">' + mascCnpj(o.cliente_cnpj) + '</div><div style="margin-top:10px"><span class="orc-st ' + st[1] + '">' + st[0] + '</span></div><div class="orc-pass">' + vis + '</div>' + (aceite ? '<div class="orc-pass">' + aceite + '</div>' : '') + zenTxt + err + (ac ? '<div class="orc-pass" style="color:#9a3412;font-weight:600">' + ac + '</div>' : '') + '</div>'
         + '<div class="orc-acoes-col">' + acoes + '</div></div>';
 }
 async function arquivarOrc(id, flag, btn) {
@@ -2373,7 +2520,7 @@ async function aprovarOrc(id, btn) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => { if (TID === 1) $('orcBtn').style.display = ''; });
+document.addEventListener('DOMContentLoaded', () => { if (TID === 1) { $('orcBtn').style.display = ''; $('repBtn').style.display = ''; } });
 document.addEventListener('DOMContentLoaded', initAuth);
 </script>
 </body>
