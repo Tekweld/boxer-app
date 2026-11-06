@@ -76,7 +76,10 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 <div class="field"><label>Email</label><input id="loginEmail" type="email" placeholder="seu@email.com"></div>
 <div class="field"><label>Senha</label><input id="loginPass" type="password" placeholder="••••••••"></div>
 <button class="btn-login" onclick="doLogin()">Entrar</button>
-<p style="font-size:11.5px;color:#718096;text-align:center;margin-top:12px">Acesso restrito, somente com e-mail e senha. Primeiro acesso ou senha esquecida: peça um link de senha a um administrador.</p>
+<div style="text-align:center;margin:14px 0 8px;font-size:12px;color:#718096">Editor sem senha?</div>
+<button class="btn-login" id="btnCodigo" style="background:#fff;color:#1d327b;border:1px solid #c3cfe2" onclick="doEnviarCodigo()">Receber código por e-mail</button>
+<div id="codeWrap" class="hidden"><div class="field" style="margin-top:14px"><label>Código recebido</label><input id="loginCode" inputmode="numeric" maxlength="8" placeholder="000000"></div><button class="btn-login" onclick="doEntrarCodigo()">Entrar com o código</button></div>
+<p style="font-size:11.5px;color:#718096;text-align:center;margin-top:12px">Administradores entram somente com e-mail e senha. Primeiro acesso ou senha esquecida: peça um link de senha a outro administrador.</p>
 </div>
 </div>
 
@@ -269,8 +272,9 @@ function negarPainel(msg){
     const e = document.getElementById('loginErr'); e.textContent = msg; e.style.cssText = ''; e.classList.remove('hidden');
     document.getElementById('loginPage').classList.remove('hidden'); document.getElementById('loginPage').style.display = 'flex';
 }
-async function resolverPerfilEEntrar(email, userId) {
+async function resolverPerfilEEntrar(email, userId, viaCodigo) {
     if (email.toLowerCase() === 'bruno@boxersoldas.com.br') {
+        if (viaCodigo) { negarPainel('Administradores entram somente com e-mail e senha.'); return; }
         PERFIL = { permissao: 'admin', nome: 'Bruno Boxer (CEO)' };
     } else {
         let perfis;
@@ -278,10 +282,42 @@ async function resolverPerfilEEntrar(email, userId) {
         catch(e) { negarPainel('Não foi possível confirmar o seu perfil agora. Tente novamente.'); return; }
         PERFIL = perfis[0];
         if (!PERFIL || !['admin','editor','marketing'].includes(PERFIL.permissao)) { negarPainel('O seu perfil não tem acesso ao painel admin. Fale com um administrador.'); return; }
+        if (viaCodigo && PERFIL.permissao === 'admin') { negarPainel('Administradores entram somente com e-mail e senha.'); return; }
     }
     setupAdminSession(PERFIL.nome, PERFIL.permissao);
 }
 
+
+async function doEnviarCodigo() {
+    const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+    const errEl = document.getElementById('loginErr');
+    const msg = (t, ok) => { errEl.textContent = t; errEl.classList.remove('hidden'); errEl.style.cssText = ok ? 'background:#dcfce7;color:#166534;border-color:#bbf7d0' : ''; };
+    if (!email) { msg('Informe o e-mail.'); return; }
+    const btn = document.getElementById('btnCodigo'); btn.disabled = true;
+    try {
+        const r = await fetch('https://hub.boxersoldas.com.br/api/disponibilidade?target=acesso', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ acao: 'codigo', email }) });
+        const j = await r.json().catch(() => ({}));
+        if (j.status === 'enviado') { msg('Código enviado para ' + email + '. Confira também o spam.', true); document.getElementById('codeWrap').classList.remove('hidden'); document.getElementById('loginCode').focus(); }
+        else if (j.status === 'limite') msg('Muitas tentativas. Aguarde alguns minutos e tente de novo.');
+        else msg('Este e-mail não tem acesso. Fale com um administrador.');
+    } catch (e) { msg('Erro de conexão. Tente novamente.'); }
+    finally { btn.disabled = false; }
+}
+async function doEntrarCodigo() {
+    const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+    const token = document.getElementById('loginCode').value.replace(/\D/g, '');
+    const errEl = document.getElementById('loginErr');
+    const erro = t => { errEl.textContent = t; errEl.style.cssText = ''; errEl.classList.remove('hidden'); };
+    if (token.length < 6) { erro('Digite o código recebido por e-mail.'); return; }
+    try {
+        let res = await sbAuth('/verify', { type: 'email', email, token });
+        if (!res.access_token) res = await sbAuth('/verify', { type: 'magiclink', email, token });
+        if (!res.access_token) { erro('Código inválido ou expirado. Peça um novo código.'); return; }
+        errEl.classList.add('hidden');
+        SESSION = res;
+        await resolverPerfilEEntrar(email, res.user.id, true);
+    } catch (e) { erro('Erro de conexão. Tente novamente.'); }
+}
 
 async function doLogin() {
     const email = document.getElementById('loginEmail').value.trim();
@@ -714,7 +750,7 @@ let ACESSOS_USU = [], ACESSOS_SOL = [];
 function fmtDataBR(d){ if(!d) return '—'; const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(d)); return m? m[3]+'/'+m[2]+'/'+m[1] : new Date(d).toLocaleDateString('pt-BR'); }
 // ---------- ACESSOS: lista unica (cadastrados + equipe), com criar, editar, excluir, inativar e reativar ----------
 const PERFIS_ACESSO={admin:'Admin',editor:'Editor',usuario:'Usuário'};
-const PERFIS_DICA={admin:'Faz tudo: tabelas de preço, painel admin, comissões, usuários e Painel de gestão dos orçamentos.',editor:'Equipe Boxer: usa as tabelas e acessa o painel admin só para incluir e ajustar produtos. Não mexe em comissões, usuários nem demais cadastros.',usuario:'Usa as duas tabelas de preço e faz orçamentos. Não acessa o painel admin. E-mails fora de @boxersoldas.com.br são sempre Usuário.'};
+const PERFIS_DICA={admin:'Faz tudo: tabelas de preço, painel admin (somente com senha), comissões, usuários e Painel de gestão dos orçamentos.',editor:'Equipe Boxer: usa as tabelas e acessa o painel admin (por código ou senha) só para incluir e ajustar produtos. Não mexe em comissões, usuários nem demais cadastros.',usuario:'Usa as duas tabelas de preço e faz orçamentos. Não acessa o painel admin. E-mails fora de @boxersoldas.com.br são sempre Usuário.'};
 let ACESSOS_ROWS=[],ACESSOS_FILTRO={q:'',st:'',pf:''},ACESSOS_ULT={};
 function maskTelAdmin(t){const d=String(t||'').replace(/\D/g,'');return d.length===11?d.replace(/(\d{2})(\d{5})(\d{4})/,'($1) $2-$3'):d.length===10?d.replace(/(\d{2})(\d{4})(\d{4})/,'($1) $2-$3'):t;}
 function hojeISO(){return new Date().toISOString().slice(0,10);}
@@ -779,7 +815,7 @@ function acessosFiltrar(){
         const st=statusLinha(r),ua=ACESSOS_ULT[r.email],k=escUso(r.email);
         const podeExcluir=!!r.u;
         const bAtivo=st.k==='ativo'?`<button class="btn btn-danger btn-sm" onclick="inativarAcesso('${k}')">Inativar</button>`:`<button class="btn btn-primary btn-sm" onclick="reativarAcesso('${k}')">Reativar</button>`;
-        h+=`<tr><td data-l="Pessoa"><b>${escUso(r.nome||'—')}</b>${r.empresa?`<div style="font-size:12px;color:#718096">${escUso(r.empresa)}</div>`:''}</td><td data-l="Contato" style="word-break:break-word">${escUso(r.email)}${r.telefone?`<div style="font-size:12px;color:#718096">${escUso(maskTelAdmin(r.telefone))}</div>`:''}</td><td data-l="Perfil">${PERFIS_ACESSO[r.perfil]||r.perfil}${r.equipe?' <span style="font-size:10px;color:#a0aec0">(equipe)</span>':''}${r.u&&r.u.origem==='dominio'?' <span style="font-size:10px;color:#a0aec0">(domínio Boxer)</span>':''}</td><td data-l="Validade" style="white-space:nowrap">${r.u&&r.u.validade?fmtDataBR(r.u.validade):'Sem prazo'}</td><td data-l="Status"><span class="size-badge" style="background:${st.c};color:${st.f}">${st.t}</span></td><td data-l="Último acesso" style="font-size:12px">${ua?new Date(ua).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'nunca'}</td><td class="text-center ac-acoes" style="white-space:nowrap"><button class="btn btn-outline btn-sm" onclick="openAcessoModal('${k}')">Editar</button> ${(r.perfil==='admin'||r.perfil==='editor')&&st.k==='ativo'?`<button class="btn btn-outline btn-sm" title="Envia por e-mail um link para a pessoa criar ou redefinir a senha do painel admin" onclick="linkSenhaDoRow('${k}')">Link de senha</button> `:''}${bAtivo} <button class="btn btn-outline btn-sm" ${podeExcluir?'':'disabled title="Pessoa da equipe sem perfil próprio na tabela: use Inativar para bloquear o acesso"'} onclick="excluirAcesso('${k}')">Excluir</button></td></tr>`;
+        h+=`<tr><td data-l="Pessoa"><b>${escUso(r.nome||'—')}</b>${r.empresa?`<div style="font-size:12px;color:#718096">${escUso(r.empresa)}</div>`:''}</td><td data-l="Contato" style="word-break:break-word">${escUso(r.email)}${r.telefone?`<div style="font-size:12px;color:#718096">${escUso(maskTelAdmin(r.telefone))}</div>`:''}</td><td data-l="Perfil">${PERFIS_ACESSO[r.perfil]||r.perfil}${r.equipe?' <span style="font-size:10px;color:#a0aec0">(equipe)</span>':''}${r.u&&r.u.origem==='dominio'?' <span style="font-size:10px;color:#a0aec0">(domínio Boxer)</span>':''}</td><td data-l="Validade" style="white-space:nowrap">${r.u&&r.u.validade?fmtDataBR(r.u.validade):'Sem prazo'}</td><td data-l="Status"><span class="size-badge" style="background:${st.c};color:${st.f}">${st.t}</span></td><td data-l="Último acesso" style="font-size:12px">${ua?new Date(ua).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'nunca'}</td><td class="text-center ac-acoes" style="white-space:nowrap"><button class="btn btn-outline btn-sm" onclick="openAcessoModal('${k}')">Editar</button> ${r.perfil==='admin'&&st.k==='ativo'?`<button class="btn btn-outline btn-sm" title="Envia por e-mail um link para o admin criar ou redefinir a senha do painel" onclick="linkSenhaDoRow('${k}')">Link de senha</button> `:''}${bAtivo} <button class="btn btn-outline btn-sm" ${podeExcluir?'':'disabled title="Pessoa da equipe sem perfil próprio na tabela: use Inativar para bloquear o acesso"'} onclick="excluirAcesso('${k}')">Excluir</button></td></tr>`;
     });
     if(!L.length)h+='<tr><td colspan="7" style="text-align:center;color:#a0aec0;padding:16px">Ninguém encontrado</td></tr>';
     document.getElementById('acLista').innerHTML=h+'</tbody></table>';
@@ -788,7 +824,7 @@ function acessoDoModal(){
     const email=document.getElementById('ac_e').value.trim().toLowerCase(),perfil=document.getElementById('ac_p').value;
     return{email,nome:document.getElementById('ac_n').value.trim()||null,telefone:document.getElementById('ac_tel').value.replace(/\D/g,'')||null,empresa:document.getElementById('ac_emp').value.trim()||null,perfil,tipo:ehBoxer(email)?'interno':'externo',validade:document.getElementById('ac_v').value||null};
 }
-function acessoDica(){const pf=document.getElementById('ac_p').value;document.getElementById('ac_pd').textContent=PERFIS_DICA[pf]||'';const w=document.getElementById('ac_senha_w');if(w)w.style.display=(pf==='admin'||pf==='editor')?'flex':'none';}
+function acessoDica(){const pf=document.getElementById('ac_p').value;document.getElementById('ac_pd').textContent=PERFIS_DICA[pf]||'';const w=document.getElementById('ac_senha_w');if(w)w.style.display=(pf==='admin')?'flex':'none';}
 // o perfil depende do e-mail: @boxersoldas.com.br = Admin ou Interno; qualquer outro = so Externo
 function acessoOpcoesPerfil(){
     const e=document.getElementById('ac_e').value,sel=document.getElementById('ac_p');
@@ -821,8 +857,8 @@ function openAcessoModal(key,solId,pre){
 <div class="form-row"><label>Válido até (vazio = sem prazo)</label><input id="ac_v" type="date" value="${base.validade||''}" ${r?'data-mexeu="1"':''} oninput="this.dataset.mexeu=1"></div>
 ${r&&r.equipe&&!u?'<p style="font-size:12px;color:#854d0e;background:#fef9c3;border-radius:6px;padding:8px 10px">Pessoa da equipe: ao salvar, criamos um perfil só para a tabela. O cadastro dela no sistema comercial e no painel não muda.</p>':''}
 ${novo?'<label style="display:flex;gap:8px;align-items:center;font-size:13px;text-transform:none;letter-spacing:0"><input id="ac_mail" type="checkbox" checked style="width:auto"> Avisar a pessoa por e-mail que o acesso foi liberado</label>':''}
-<label id="ac_senha_w" style="display:none;gap:8px;align-items:center;font-size:13px;text-transform:none;letter-spacing:0;margin-top:6px"><input id="ac_senha" type="checkbox" ${novo?'checked':''} style="width:auto"> Enviar link para a pessoa criar a senha do painel admin</label>
-<p style="font-size:11px;color:#718096;margin-top:8px">Tabelas de preço: entrada sem senha, por código enviado ao e-mail. Painel admin (Admin e Editor): somente com e-mail e senha.</p>
+<label id="ac_senha_w" style="display:none;gap:8px;align-items:center;font-size:13px;text-transform:none;letter-spacing:0;margin-top:6px"><input id="ac_senha" type="checkbox" ${novo?'checked':''} style="width:auto"> Enviar link para o admin criar a senha do painel</label>
+<p style="font-size:11px;color:#718096;margin-top:8px">Tabelas de preço: entrada sem senha, por código enviado ao e-mail. Painel admin: o Admin entra somente com e-mail e senha; o Editor pode entrar por código.</p>
 <div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveAcesso(${r?`'${escUso(r.email)}'`:'null'},${s?`'${s.id}'`:'null'})">Salvar</button></div>`);
     acessoOpcoesPerfil();
 }
@@ -844,7 +880,7 @@ async function saveAcesso(key,solId){
         const ativoAtual=solId?true:((r&&r.u)?r.u.ativo:true);
         const painelOk=await sincronizarPainel(body.email,body.nome,ativoAtual?body.perfil:'usuario');
         const cs=document.getElementById('ac_senha');
-        if(painelOk&&ativoAtual&&(body.perfil==='admin'||body.perfil==='editor')&&cs&&cs.checked&&cs.offsetParent!==null)await enviarLinkSenha(body.email,body.nome);
+        if(painelOk&&ativoAtual&&body.perfil==='admin'&&cs&&cs.checked&&cs.offsetParent!==null)await enviarLinkSenha(body.email,body.nome);
         const mail=document.getElementById('ac_mail');
         if(novo&&(!mail||mail.checked)){
             fetch('https://hub.boxersoldas.com.br/api/email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo:'acesso_liberado',dados:{email:body.email,nome:body.nome,validade:body.validade?fmtDataBR(body.validade):''}})}).catch(()=>{});
