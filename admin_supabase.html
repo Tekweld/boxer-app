@@ -157,7 +157,7 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 
 <div class="panel-content hidden" id="tab-acessos">
 <div class="panel-header"><div><div class="panel-title">Acessos à Tabela de Preços</div><div class="panel-sub">Quem pode entrar na tabela (login por código enviado ao e-mail, sem senha): cadastrar, editar, inativar e excluir</div></div>
-<button class="btn btn-primary btn-sm" onclick="openAcessoModal()">+ Novo usuário</button></div>
+<span><button class="btn btn-outline btn-sm" onclick="openImportAcessos()">Importar em massa</button> <button class="btn btn-primary btn-sm" onclick="openAcessoModal()">+ Novo usuário</button></span></div>
 <div id="acessosWrap"><div class="loading">Carregando...</div></div>
 </div>
 
@@ -861,6 +861,85 @@ ${novo?'<label style="display:flex;gap:8px;align-items:center;font-size:13px;tex
 <p style="font-size:11px;color:#718096;margin-top:8px">Tabelas de preço: entrada sem senha, por código enviado ao e-mail. Painel admin: o Admin entra somente com e-mail e senha; o Editor pode entrar por código.</p>
 <div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveAcesso(${r?`'${escUso(r.email)}'`:'null'},${s?`'${s.id}'`:'null'})">Salvar</button></div>`);
     acessoOpcoesPerfil();
+}
+// ---------- importacao em massa de usuarios (representantes) ----------
+let IMPORT_LINHAS = [], HUB_EMAILS = null;
+function importarModeloCsv() {
+    const csv = 'nome;email;telefone;empresa\nMaria Silva;maria@empresa.com.br;(19) 99999-9999;Empresa Exemplo\n';
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })); a.download = 'modelo_usuarios.csv'; a.click();
+}
+function openImportAcessos() {
+    openModal(`<h3>Importar usuários em massa</h3>
+<p style="font-size:12.5px;color:#4a5568;margin:0 0 10px">Cole uma linha por pessoa (pode copiar direto do Excel) ou carregue um CSV, na ordem <b>nome; e-mail; telefone; empresa</b>. Todos entram como <b>Usuário externo</b> (só as tabelas de preço) e entram por código enviado ao e-mail. Quem usa o Hub é pulado automaticamente, e e-mails da Boxer, quem já está cadastrado e e-mails inválidos também. <a href="javascript:void(0)" onclick="importarModeloCsv()">Baixar modelo (CSV)</a></p>
+<div class="form-row"><label>Lista</label><textarea id="imp_txt" rows="8" style="width:100%;font-family:monospace;font-size:12px;padding:8px;border:1px solid #c3cfe2;border-radius:6px" placeholder="Maria Silva; maria@empresa.com.br; (19) 99999-9999; Empresa Exemplo"></textarea></div>
+<div class="form-row"><label>Ou arquivo CSV/TXT</label><input id="imp_file" type="file" accept=".csv,.txt,.tsv" onchange="importarLerArquivo(this)"></div>
+<div class="form-row-inline"><div class="form-row"><label>Válido até (vazio = sem prazo)</label><input id="imp_val" type="date" value="${maisDiasISO(90)}"></div>
+<div class="form-row"><label style="visibility:hidden">x</label><label style="display:flex;gap:8px;align-items:center;font-size:13px;text-transform:none;letter-spacing:0"><input id="imp_mail" type="checkbox" checked style="width:auto"> Avisar cada pessoa por e-mail</label></div></div>
+<div id="imp_prev"></div>
+<div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" id="imp_btn" onclick="importarConferir()">Conferir lista</button></div>`);
+}
+function importarLerArquivo(inp) {
+    const f = inp.files && inp.files[0]; if (!f) return;
+    const r = new FileReader(); r.onload = () => { document.getElementById('imp_txt').value = String(r.result || '').replace(/^﻿/, ''); }; r.readAsText(f, 'utf-8');
+}
+function importarParse(txt) {
+    const linhas = String(txt || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const out = [];
+    linhas.forEach((l, i) => {
+        const sep = l.includes('\t') ? '\t' : (l.includes(';') ? ';' : ',');
+        const c = l.split(sep).map(x => x.trim().replace(/^"|"$/g, ''));
+        if (i === 0 && /nome/i.test(c[0]) && /mail/i.test(c[1] || '')) return; // cabecalho
+        out.push({ nome: c[0] || '', email: (c[1] || '').toLowerCase(), telefone: (c[2] || '').replace(/\D/g, ''), empresa: c[3] || '' });
+    });
+    return out;
+}
+async function importarConferir() {
+    const btn = document.getElementById('imp_btn'); btn.disabled = true; btn.textContent = 'Conferindo…';
+    try {
+        if (HUB_EMAILS === null) { try { HUB_EMAILS = new Set((await sb('/rpc/tabela_emails_hub', 'POST', {})) || []); } catch (e) { HUB_EMAILS = new Set(); toast('Não consegui consultar a lista do Hub: confira os resultados antes de cadastrar.', 'error'); } }
+        const existentes = new Set(ACESSOS_ROWS.map(r => r.email));
+        const vistos = new Set();
+        IMPORT_LINHAS = importarParse(document.getElementById('imp_txt').value).map(l => {
+            let motivo = '';
+            if (!l.nome) motivo = 'sem nome';
+            else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(l.email)) motivo = 'e-mail inválido';
+            else if (vistos.has(l.email)) motivo = 'repetido na lista';
+            else if (ehBoxer(l.email)) motivo = 'e-mail da Boxer (use Novo usuário)';
+            else if (existentes.has(l.email)) motivo = 'já cadastrado';
+            else if (HUB_EMAILS.has(l.email)) motivo = 'usa o Hub';
+            else if (l.telefone && (l.telefone.length < 10 || l.telefone.length > 11)) motivo = 'telefone inválido';
+            vistos.add(l.email);
+            return Object.assign(l, { motivo });
+        });
+        const ok = IMPORT_LINHAS.filter(l => !l.motivo), pul = IMPORT_LINHAS.filter(l => l.motivo);
+        document.getElementById('imp_prev').innerHTML = `<div style="margin:6px 0;font-size:13px"><b>${ok.length}</b> serão cadastrados · <b>${pul.length}</b> pulados</div>`
+            + (pul.length ? `<div style="max-height:150px;overflow:auto;border:1px solid #e2e8f0;border-radius:6px;padding:6px 10px;font-size:12px;color:#991b1b;margin-bottom:8px">${pul.map(l => escUso((l.nome || '—') + ' · ' + (l.email || '—') + ': ' + l.motivo)).join('<br>')}</div>` : '')
+            + (ok.length ? `<div style="max-height:120px;overflow:auto;border:1px solid #e2e8f0;border-radius:6px;padding:6px 10px;font-size:12px;color:#166534">${ok.slice(0, 60).map(l => escUso(l.nome + ' · ' + l.email)).join('<br>')}${ok.length > 60 ? '<br>… e mais ' + (ok.length - 60) : ''}</div>` : '');
+        btn.disabled = false; btn.textContent = ok.length ? 'Cadastrar ' + ok.length + (ok.length > 1 ? ' usuários' : ' usuário') : 'Conferir lista';
+        btn.onclick = ok.length ? importarConfirmar : importarConferir;
+    } catch (e) { btn.disabled = false; btn.textContent = 'Conferir lista'; toast('Erro: ' + e.message, 'error'); }
+}
+async function importarConfirmar() {
+    const ok = IMPORT_LINHAS.filter(l => !l.motivo); if (!ok.length) return;
+    const btn = document.getElementById('imp_btn'); btn.disabled = true;
+    const val = document.getElementById('imp_val').value || null, avisar = document.getElementById('imp_mail').checked;
+    const agora = new Date().toISOString();
+    try {
+        for (let i = 0; i < ok.length; i += 100) {
+            btn.textContent = 'Cadastrando… ' + Math.min(i + 100, ok.length) + '/' + ok.length;
+            await sb('/tabela_usuarios', 'POST', ok.slice(i, i + 100).map(l => ({ email: l.email, nome: l.nome, telefone: l.telefone || null, empresa: l.empresa || null, tipo: 'externo', perfil: 'usuario', ativo: true, validade: val, origem: 'importacao', criado_por: SESSION.user.email, atualizado_em: agora, atualizado_por: SESSION.user.email })));
+        }
+        logAdmin('acesso_importacao', { total: ok.length, validade: val });
+        if (avisar) {
+            for (let i = 0; i < ok.length; i++) {
+                btn.textContent = 'Enviando e-mails… ' + (i + 1) + '/' + ok.length;
+                fetch('https://hub.boxersoldas.com.br/api/email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'acesso_liberado', dados: { email: ok[i].email, nome: ok[i].nome, validade: val ? fmtDataBR(val) : '' } }) }).catch(() => {});
+                await new Promise(r => setTimeout(r, 350));
+            }
+        }
+        toast(ok.length + (ok.length > 1 ? ' usuários cadastrados' : ' usuário cadastrado') + (avisar ? ' e avisados por e-mail' : ''));
+        closeModal(); loadAcessos();
+    } catch (e) { btn.disabled = false; btn.textContent = 'Tentar de novo'; toast('Erro ao cadastrar: ' + e.message, 'error'); }
 }
 async function saveAcesso(key,solId){
     const body=acessoDoModal();
