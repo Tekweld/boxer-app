@@ -5,13 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Tabela de Preços Boxer - TESTE</title>
 <meta name="robots" content="noindex,nofollow">
-<link rel="manifest" href="manifest-tabela.json">
 <meta name="theme-color" content="#1d327b">
 <meta name="color-scheme" content="light only">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Tabela Boxer">
-<link rel="apple-touch-icon" href="tabela-icon-192.png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -154,6 +149,7 @@ body.locked .header,body.locked .content,body.locked #barProposta,body.locked #t
 .chip.on{background:#1d327b;border-color:#1d327b;color:#fff}
 .tag-mud{font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px;margin-left:6px;background:#fef3c7;color:#92400e;vertical-align:middle;cursor:help}
 .tag-novo{background:#dcfce7;color:#166534}
+.tag-teto{display:inline-block;margin-left:6px;font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px;background:#e0f2fe;color:#075985;vertical-align:middle;cursor:help;white-space:nowrap}
 .aviso-mult{font-size:12px;color:#92400e;background:#fef3c7;border-radius:6px;padding:6px 10px}
 #barTotal{font-family:Outfit;font-size:14px;color:#fff;margin-left:18px}
 #barTotal strong{color:#25bbee;font-size:18px}
@@ -451,7 +447,7 @@ tbody tr.row-ajuste .td-price-final{color:#e30613}
 </div>
 
 <div class="header" style="position:relative;"><div class="header-inner">
-<div class="nav-top"><button id="instBtn" class="nav-btn sec" style="display:none" onclick="instalarApp()" title="Instalar a tabela como aplicativo no aparelho">📲 Instalar app</button><button id="repBtn" class="nav-btn sec" style="display:none" onclick="abrirRepetir()" title="Carrega na tabela os itens do último orçamento de um cliente">↻ Repetir pedido</button><button id="painelBtn" class="nav-btn sec" style="display:none" onclick="abrirPainel()" title="Visão da gestão: funil, desempenho e ajustes de preço">📊 Painel</button><button id="orcBtn" class="nav-btn sec" style="display:none" onclick="abrirMeusOrc()" title="Orçamentos enviados aos clientes">📄 Meus orçamentos</button><button id="regrasBtn" class="nav-btn sec" onclick="abrirRegras()" title="Regras da política para consulta rápida">📋 Regras</button><a id="navBtn" href="#" class="nav-btn"></a></div>
+<div class="nav-top"><button id="repBtn" class="nav-btn sec" style="display:none" onclick="abrirRepetir()" title="Carrega na tabela os itens do último orçamento de um cliente">↻ Repetir pedido</button><button id="painelBtn" class="nav-btn sec" style="display:none" onclick="abrirPainel()" title="Visão da gestão: funil, desempenho e ajustes de preço">📊 Painel</button><button id="orcBtn" class="nav-btn sec" style="display:none" onclick="abrirMeusOrc()" title="Orçamentos enviados aos clientes">📄 Meus orçamentos</button><button id="regrasBtn" class="nav-btn sec" onclick="abrirRegras()" title="Regras da política para consulta rápida">📋 Regras</button><a id="navBtn" href="#" class="nav-btn"></a></div>
 <div class="logo-row">
 <img src="Estrela-Boxer.svg" width="40" height="40" style="display:block">
 <div><h1 id="pageTitle">Tabela de Preços Boxer</h1><p id="pageSubtitle">Carregando...</p></div></div>
@@ -485,6 +481,8 @@ const params = new URLSearchParams(window.location.search);
 const TID = (parseInt(params.get('t')) === 1) ? 1 : 2;
 const IS_AUTO = TID === 2;
 const IS_TEST = TID === 3;
+const REGRAS_TID = (TID === 1) ? 4 : TID; // regras da nova politica (a tabela atual segue lendo as dela)
+let PMAI = {};
 const MULT_TID = (TID === 1) ? 4 : (TID === 2 ? 5 : TID); // teste: Revendas usa os multiplicadores das regras novas (tabela 4)
 
 const SZ = {Pequenas:'PEQ',Médias:'MED',Grandes:'GRD','Maquinário':'MAQ'};
@@ -520,7 +518,7 @@ function msgLogin(texto, tipo) {
     e.className = 'err-msg show' + (tipo === 'ok' ? ' ok' : '');
 }
 function showLogin(msg) { DADOS_CARREGADOS = false; mostrarVista('vEmail'); msgLogin(msg); }
-function showDenied() { mostrarVista('vNegado'); msgLogin(''); }
+function showDenied(msg) { mostrarVista('vNegado'); msgLogin(''); const p = document.querySelector('#vNegado p.sub'); if (p) p.textContent = msg || 'Seu usuário ainda não tem acesso à tabela de preços.'; }
 function irPara(v) { msgLogin(''); mostrarVista(v); }
 
 async function chamarAcesso(payload) {
@@ -665,6 +663,7 @@ async function onSession(session, novoLogin) {
         showDenied();
         return;
     }
+    if (acesso.teste === false) { try { await sbc.auth.signOut({ scope: 'local' }); } catch (e) {} kvDel('acesso'); USER = null; TOKEN = null; showDenied('Esta é a tabela de teste da nova política e não está liberada para quem usa o Hub. Continue usando o Hub.'); return; }
     window.ACESSO_NOME = acesso.nome || ''; window.ACESSO_TEL = acesso.telefone || ''; window.ACESSO_ORIGEM = acesso.origem || '';
     window.ACESSO_ROLE = acesso.role || '';
     if (TID === 1 && ['admin', 'gestor', 'manager'].includes(String(acesso.role || '').toLowerCase())) { const pb = $('painelBtn'); if (pb) pb.style.display = ''; }
@@ -982,15 +981,17 @@ async function load() {
 }
 
 async function carregarDados(recarga) {
-    const [tabelaRes, estadosRes, multsRes, prodsRes, catsRes, comsRes, estoqueRes] = await Promise.all([
+    const [tabelaRes, estadosRes, multsRes, prodsRes, catsRes, comsRes, estoqueRes, pmaRes] = await Promise.all([
         sbFetch('/tabelas?id=in.('+TID+','+MULT_TID+')&select=*'),
         sbFetch('/estados?select=uf,mult_4_icms,mult_total,bmax_ativo&order=uf'),
         sbFetch('/multiplicadores?tabela_id=eq.'+MULT_TID+'&select=segmento,classe,porte,categoria_grupo,valor'),
         sbFetch('/produtos?tabela_id=eq.'+TID+'&ativo=eq.true&pv_sp=gt.0&select=codigo,modelo,pv_sp,porte,icms,ipi,ncm,categoria_id&order=pv_sp'),
         sbFetch('/categorias?tabela_id=eq.'+TID+'&select=id,nome,ordem,categoria_grupo&order=ordem'),
         sbFetch('/comissoes?tabela_id=eq.'+TID+'&select=segmento,classe,categoria_grupo,rep_pct,revenda_pct,vendedor_tecnico_pct'),
-        IS_TEST ? sbFetchAll('/estoque_zenerp?select=codigo,quantity_balance') : Promise.resolve([])
+        IS_TEST ? sbFetchAll('/estoque_zenerp?select=codigo,quantity_balance') : Promise.resolve([]),
+        TID === 1 ? sbFetch('/tabela_pma_itens?ativo=eq.true&select=codigo,grupo,teto_hibrido,teto_ecommerce,pma_brl').catch(() => []) : Promise.resolve([])
     ]);
+    PMAI = {}; (pmaRes || []).forEach(r => { PMAI[r.codigo] = r; });
 
     estoqueRes.forEach(e => { ESTOQUE[e.codigo] = parseFloat(e.quantity_balance); });
 
@@ -1151,6 +1152,7 @@ function itensBaseFiltro() {
     let it = P;
     if (IS_AUTO) it = it.filter(p => p.catGroup === cCatGrupo);
     if (cCat !== 'TODAS') it = it.filter(p => p.cat === cCat);
+    it = it.filter(visivelNoSegmento);
     if (cSearch.trim()) { const q = cSearch.toLowerCase(); it = it.filter(p => p.modelo.toLowerCase().includes(q) || p.codigo.toLowerCase().includes(q)); }
     return it;
 }
@@ -1224,7 +1226,7 @@ async function abrirRegras() {
     $('regrasOverlay').classList.add('show');
     logUso('ver_regras', { tabela: TID });
     try {
-        if (!REGRAS) REGRAS = await sbFetch('/tabela_regras?tabela_id=eq.' + TID + '&select=ordem,titulo,conteudo&order=ordem,id');
+        if (!REGRAS) REGRAS = await sbFetch('/tabela_regras?tabela_id=eq.' + REGRAS_TID + '&select=ordem,titulo,conteudo&order=ordem,id');
         if (!REGRAS.length) { $('regrasCorpo').innerHTML = '<p>Nenhuma regra cadastrada ainda.</p>'; return; }
         const uf = resumoUF(REGRAS);
         $('regrasUF').innerHTML = uf ? '<div class="regras-uf">' + escDet(uf) + '</div>' : '';
@@ -1277,9 +1279,33 @@ function dicaMarkup(seg, c) {
     const pct = Math.round((m / ref - 1) * 1000) / 10;
     return 'Markup de ' + String(pct).replace('.', ',') + '% sobre o preço de ' + (com ? 'revenda BMax (classe 1)' : 'Varejo Física (classe 1, Grandes)');
 }
+// ---- nova politica: Ecommerce so PMA e sem Grandes; teto mensal por item do PMA (Hibrido e Ecommerce)
+function visivelNoSegmento(p) { return !(TID === 1 && cSeg === 'Ecommerce') || (!!PMAI[p.codigo] && p.porte !== 'Grandes'); }
+function tetoFront(p) {
+    const it = PMAI[p.codigo];
+    if (!it || TID !== 1 || (cSeg !== 'Híbrido' && cSeg !== 'Ecommerce')) return null;
+    const base = cSeg === 'Híbrido' ? it.teto_hibrido : it.teto_ecommerce;
+    if (base == null) return null;
+    return cCls === 2 ? Math.ceil(base / 2) : base;
+}
+function tagTeto(p) {
+    const t = tetoFront(p);
+    return t == null ? '' : '<span class="tag-teto" title="Teto mensal de faturamento deste item (grupo econômico, mês calendário). Acima dele, o faturamento do excedente depende de liberação do gerente comercial.">Teto ' + t + '/mês</span>';
+}
+function excedenteFront(p, q) {
+    const teto = tetoFront(p);
+    if (teto == null) return null;
+    const acum = (window._consumoMes || {})[p.codigo] || 0;
+    const exc = Math.min(q, Math.max(0, acum + q - teto));
+    return exc > 0 ? { teto, acum, exc } : null;
+}
+function removerNaoPermitidos() {
+    Object.keys(QTD).forEach(c => { const p = PBY[c]; if (p && !visivelNoSegmento(p)) { delete QTD[c]; selecionados.delete(c); } });
+    render(); updateBar();
+}
 function dicaClasse(seg, c) {
-    if (seg === 'Física') return c === 1 ? 'Pedidos acima de R$ 20.000' : (c === 2 ? 'Pedidos acima de R$ 7.000' : (c === 3 ? 'Pedidos até R$ 6.999' : ''));
-    if (seg === 'Híbrido' || seg === 'Ecommerce') return c === 1 ? 'Cliente sem ocorrência ou restrição de PMA' : (c === 2 ? 'Cliente com alguma ocorrência de PMA' : '');
+    if (seg === 'Física' || seg === 'BMax') return c === 1 ? 'Pedidos acima de R$ 20.000' : (c === 2 ? 'Pedidos acima de R$ 7.000' : (c === 3 ? 'Pedidos até R$ 6.999' : ''));
+    if (seg === 'Híbrido' || seg === 'Ecommerce') return c === 1 ? 'Cliente sem ocorrência' : (c === 2 ? 'Cliente com ocorrência' : '');
     return '';
 }
 // cada segmento mostra so as classes que existem nos multiplicadores (Hibrido/Ecommerce: 1 e 2)
@@ -1334,6 +1360,7 @@ function render() {
     let items = P;
     if (IS_AUTO) items = items.filter(p => p.catGroup === cCatGrupo);
     if (cCat !== 'TODAS') items = items.filter(p => p.cat===cCat);
+    items = items.filter(visivelNoSegmento);
     if (cSearch.trim()) { const q=cSearch.toLowerCase(); items=items.filter(p=>p.modelo.toLowerCase().includes(q)||p.codigo.toLowerCase().includes(q)); }
 
     if (FILTRO_MUD) items = items.filter(p => CHG[p.codigo]);
@@ -1369,11 +1396,11 @@ function render() {
                     const celSel = podeSelecionar
                         ? `<td class="ac"><button class="btn-sel${jaSel?' selecionado':''}" data-sel="${p.codigo}" data-modelo="${p.modelo.replace(/"/g,'&quot;')}" data-cat="${p.cat}" data-pvsp="${p.pv_sp}" data-final="${(tb*(scm||1)).toFixed(2)}" data-mult="${scm||''}" data-porte="${p.porte}" onclick="toggleSel(this)">${jaSel?'✓ Selecionado':'+ Selecionar'}</button></td>`
                         : `<td class="ac"></td>`;
-                    r += `<tr${jaSel?' class="row-sel"':''}>${celSel}<td class="td-code">${p.codigo}</td><td class="td-name"><span class="info-i" title="Ver foto, descrição e características" role="button" tabindex="0">ⓘ</span>${p.modelo}${tagMud(p.codigo)}</td><td class="ac"><span class="size-badge ${SZC[p.porte]||'sz-grd'}">${SZ[p.porte]||p.porte}</span></td><td class="td-price-base">${fmt(tb)}</td>${pc}<td class="td-pct">${ic}%</td><td class="td-pct">${p.ipi}%</td><td class="td-ncm">${p.ncm}</td>${celFim}</tr>`;
+                    r += `<tr${jaSel?' class="row-sel"':''}>${celSel}<td class="td-code">${p.codigo}</td><td class="td-name"><span class="info-i" title="Ver foto, descrição e características" role="button" tabindex="0">ⓘ</span>${p.modelo}${tagMud(p.codigo)}${tagTeto(p)}</td><td class="ac"><span class="size-badge ${SZC[p.porte]||'sz-grd'}">${SZ[p.porte]||p.porte}</span></td><td class="td-price-base">${fmt(tb)}</td>${pc}<td class="td-pct">${ic}%</td><td class="td-pct">${p.ipi}%</td><td class="td-ncm">${p.ncm}</td>${celFim}</tr>`;
                 } else {
                     const celQtd = IS_TEST ? `<td class="ac"><input type="number" class="qtd-input" min="0" placeholder="0" data-codigo="${p.codigo}" style="width:56px;text-align:center"></td>` : '';
                     const celExtra = IS_TEST ? `<td class="ac disponivel-cell" data-codigo="${p.codigo}"></td><td class="ac previsao-cell" data-codigo="${p.codigo}"></td>` : '';
-                    r += `<tr>${celQtd}<td class="td-code">${p.codigo}</td><td class="td-name"><span class="info-i" title="Ver foto, descrição e características" role="button" tabindex="0">ⓘ</span>${p.modelo}${tagMud(p.codigo)}</td><td class="ac"><span class="size-badge ${SZC[p.porte]||'sz-grd'}">${SZ[p.porte]||p.porte}</span></td><td class="td-price-base">${fmt(tb)}</td>${pc}<td class="td-pct">${ic}%</td><td class="td-pct">${p.ipi}%</td><td class="td-ncm">${p.ncm}</td>${celFim}</tr>`;
+                    r += `<tr>${celQtd}<td class="td-code">${p.codigo}</td><td class="td-name"><span class="info-i" title="Ver foto, descrição e características" role="button" tabindex="0">ⓘ</span>${p.modelo}${tagMud(p.codigo)}${tagTeto(p)}</td><td class="ac"><span class="size-badge ${SZC[p.porte]||'sz-grd'}">${SZ[p.porte]||p.porte}</span></td><td class="td-price-base">${fmt(tb)}</td>${pc}<td class="td-pct">${ic}%</td><td class="td-pct">${p.ipi}%</td><td class="td-ncm">${p.ncm}</td>${celFim}</tr>`;
                 }
             });
             const propHeader = IS_AUTO ? '<th class="ac" style="width:110px">Proposta</th>' : '';
@@ -1446,7 +1473,7 @@ function updateBar() {
     if (!cSeg || !cCls) { $('barTotal').innerHTML = ''; $('barClasse').innerHTML = ''; $('barAlertas').innerHTML = ''; return; }
     if (!REGRAS && !_regrasBarCarregando) {
         _regrasBarCarregando = true;
-        sbFetch('/tabela_regras?tabela_id=eq.' + TID + '&select=ordem,titulo,conteudo&order=ordem,id').then(r => { REGRAS = r; }).catch(() => {}).then(() => { _regrasBarCarregando = false; if (REGRAS) updateBar(); });
+        sbFetch('/tabela_regras?tabela_id=eq.' + REGRAS_TID + '&select=ordem,titulo,conteudo&order=ordem,id').then(r => { REGRAS = r; }).catch(() => {}).then(() => { _regrasBarCarregando = false; if (REGRAS) updateBar(); });
     }
     const cd = condicoes();
     const r = totalNaClasse(itens, cCls);
@@ -1457,7 +1484,7 @@ function updateBar() {
 
     let hint = '', ajuste = false;
     const alertas = [];
-    if (!IS_AUTO && cSeg === 'Física') {
+    if (!IS_AUTO && (cSeg === 'Física' || cSeg === 'BMax')) {
         const ind = classeIndicada(itens);
         if (ind && ind > cCls) {
             ajuste = true;
@@ -1476,8 +1503,16 @@ function updateBar() {
     }
     document.querySelectorAll('input.qtd-input').forEach(i => { const tr = i.closest('tr'); if (tr) tr.classList.toggle('row-ajuste', ajuste && itens.some(x => x.p.codigo === i.dataset.codigo)); });
 
+    if (TID === 1 && cSeg === 'Ecommerce') {
+        const fora = itens.filter(x => !visivelNoSegmento(x.p));
+        if (fora.length) alertas.push('<span class="bar-alerta">⚠ Ecommerce só compra os itens liberados para o segmento e não compra máquinas Grandes: ' + fora.length + (fora.length > 1 ? ' itens' : ' item') + ' fora da regra <button onclick="removerNaoPermitidos()">Remover</button></span>');
+    }
+    if (TID === 1 && (cSeg === 'Híbrido' || cSeg === 'Ecommerce')) {
+        const exs = itens.map(x => ({ x, e: excedenteFront(x.p, x.q) })).filter(y => y.e);
+        if (exs.length) alertas.push('<span class="bar-alerta">⚠ Acima do teto mensal em ' + exs.length + (exs.length > 1 ? ' itens' : ' item') + ' (' + exs.slice(0, 2).map(y => esc(y.x.p.modelo.split(' ')[0]) + ' teto ' + y.e.teto).join(', ') + (exs.length > 2 ? '…' : '') + '): o faturamento do excedente depende de liberação do gerente comercial</span>');
+    }
     if (TID === 1 && (!r.sem || r.t > 0)) {
-        if (cobrado < cd.pedMin) alertas.push('<span class="bar-alerta">Abaixo do pedido mínimo de ' + fmt(cd.pedMin) + ' — adicione mais <b>' + fmt(cd.pedMin - cobrado) + '</b> em produtos</span>');
+        if (cobrado < cd.pedMin && cSeg !== 'Híbrido' && cSeg !== 'Ecommerce') alertas.push('<span class="bar-alerta">Abaixo do pedido mínimo de ' + fmt(cd.pedMin) + ' — adicione mais <b>' + fmt(cd.pedMin - cobrado) + '</b> em produtos</span>');
         const fr = freteUF();
         if (fr && fr.tipo === 'CIF' && fr.min && cobrado < fr.min) alertas.push('<span class="bar-alerta">Frete: abaixo do pedido mín. CIF de ' + fmt(fr.min) + ' (' + cState + ') — adicione mais <b>' + fmt(fr.min - cobrado) + '</b> para o frete CIF sair sem custo, ou será cobrado frete de ' + (fr.frete ? fmt(fr.frete) : 'valor fixo') + '</span>');
         else if (fr && fr.tipo === 'FOB') alertas.push('<span class="bar-info">' + cState + ' é FOB: o cliente indica a transportadora</span>');
@@ -1656,6 +1691,12 @@ document.body.classList.add('t' + TID);
     atualiza();
 })();
 // ---------- melhorias: repetir pedido, classe sugerida, acompanhamento e painel ----------
+async function liberarTetoOrc(id, btn) {
+    if (!confirm('Liberar o faturamento acima do teto mensal deste pedido? A liberação fica registrada com o seu nome.')) return;
+    btn.disabled = true;
+    try { await orcApi({ acao: 'liberar_teto', id }); abrirMeusOrc(); }
+    catch (e) { btn.disabled = false; alert(e.message || 'Não foi possível liberar agora.'); }
+}
 function orcAcompanhar(o) {
     if (!['enviado', 'visualizado'].includes(o.status) || o.expirado) return '';
     const DIA = 864e5, agora = Date.now();
@@ -1778,7 +1819,7 @@ async function abrirPainel(dias) {
 // ---------- modo offline (app instalavel) ----------
 // Tabela, estoque consultado, clientes e orcamentos feitos sem sinal ficam no aparelho (IndexedDB) por ate 7 dias.
 const OFF_MS = 7 * 864e5;
-const APP_BUILD = '1793388929';
+const APP_BUILD = '1794242293';
 let _idbP = null, DADOS_OFF_TS = null, _sync = false;
 function idbAbrir() {
     if (!_idbP) _idbP = new Promise((res, rej) => {
@@ -1819,6 +1860,7 @@ async function acessoOffline() { const c = await cacheValido('acesso'); return c
 async function entrarOffline(ac) {
     USER = ac.user; TOKEN = null; window.OFFLINE_SESSAO = true;
     const a = ac.acesso || {};
+    if (a.teste === false) { showDenied('Esta é a tabela de teste da nova política e não está liberada para quem usa o Hub. Continue usando o Hub.'); return; }
     window.ACESSO_NOME = a.nome || ''; window.ACESSO_TEL = a.telefone || ''; window.ACESSO_ORIGEM = a.origem || '';
     $('loginOverlay').classList.remove('show');
     document.body.classList.remove('locked');
@@ -2007,18 +2049,11 @@ setInterval(verificarVersao, 600000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) verificarVersao(); });
 setTimeout(verificarVersao, 5000);
 
-// ---------- instalar como app ----------
-let _instEv = null;
-function appInstalado() { return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true; }
-function mostrarBotaoInstalar() { const b = $('instBtn'); if (b && !appInstalado()) b.style.display = ''; }
-window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); _instEv = e; mostrarBotaoInstalar(); });
-window.addEventListener('appinstalled', () => { const b = $('instBtn'); if (b) b.style.display = 'none'; });
-function instalarApp() {
-    if (_instEv) { _instEv.prompt(); _instEv = null; $('instBtn').style.display = 'none'; return; }
-    alert('iPhone: toque em Compartilhar (quadrado com seta) e depois em "Adicionar à Tela de Início".\nAndroid: menu ⋮ do navegador e "Instalar app".');
-}
-document.addEventListener('DOMContentLoaded', () => { if (/iphone|ipad|ipod/i.test(navigator.userAgent)) mostrarBotaoInstalar(); });
-if ('serviceWorker' in navigator) window.addEventListener('load', () => { navigator.serviceWorker.register('sw-tabela.js').catch(() => {}); });
+// ---------- sem instalacao como app: remove service worker e caches de versoes anteriores ----------
+if ('serviceWorker' in navigator) window.addEventListener('load', () => {
+    navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(() => {});
+    if (window.caches) caches.keys().then(ks => ks.forEach(k => caches.delete(k))).catch(() => {});
+});
 
 function montarViewRascunho(linhas, cliente, meuTel) {
     const total = Math.round(linhas.reduce((a, l) => a + l.sub, 0) * 100) / 100;
@@ -2111,6 +2146,7 @@ function abrirOrcamento() {
         + '<div class="orc-acoes"><button class="orc-btn" onclick="fecharOrc()">Cancelar</button><button class="orc-btn prim" id="orcGerarBtn" onclick="enviarOrcamento()">Gerar orçamento e link</button></div>';
     $('orcOverlay').classList.add('show');
     ORC_EXCL = new Set();
+    window._consumoMes = null;
     if (!ORC_EDIT) ORC_PRECO = {};
     orcIniciarItens();
     aplicarPre();
@@ -2186,7 +2222,9 @@ function orcRenderItens() {
             : k === 'sem_info' ? '<span class="disp muted">Estoque não consultado</span>' : '<span class="disp muted">Consultando…</span>';
         if (inc) { const g = k === 'ok' ? 'ok' : (k === 'prev' ? 'prev' : 'sem'); tot[g] += l.sub; un += l.q; if (g === 'sem') semAlgum = true; }
         const alerta = (k === 'sem' || k === 'sem_info') ? '<div class="orc-pass" style="color:#9a3412">' + (k === 'sem' ? 'Sem previsão de chegada: o prazo fica a confirmar. ' : '') + 'Marque se quer incluir este item mesmo assim.</div>' : '';
-        return '<tr class="lin"' + (inc ? '' : ' style="opacity:.45"') + '><td><label style="display:flex;gap:8px;align-items:flex-start;text-transform:none;letter-spacing:0;font-size:13px;color:#1a202c;margin:0"><input type="checkbox" style="width:auto;margin-top:3px" ' + (inc ? 'checked' : '') + ' onchange="orcAlternarItem(\'' + l.p.codigo + '\', this.checked)"><span><b>' + esc(l.p.modelo) + '</b><br><span class="orc-pass">Cód. ' + esc(l.p.codigo) + '</span></span></label>' + alerta + '</td><td>' + rotulo + '</td><td style="text-align:right">' + l.q + '</td><td id="orcPr_' + l.p.codigo + '" style="text-align:right;white-space:nowrap"><span onclick="orcEditarPreco(\'' + l.p.codigo + '\')" title="Clique para ajustar o preço deste item" style="cursor:pointer;border-bottom:1px dotted #a0aec0">' + fmt(l.u) + '</span>' + (l.man ? '<br><span class="orc-pass" style="font-size:11px">tabela ' + fmt(l.uBase) + ' · <a href="javascript:void(0)" onclick="orcRestaurarPreco(\'' + l.p.codigo + '\')" style="color:#718096">restaurar</a></span>' : '') + '</td><td style="text-align:right;white-space:nowrap">' + fmt(l.sub) + '</td></tr>';
+        const ex = excedenteFront(l.p, l.q);
+        const tetoNota = ex ? '<div class="orc-pass" style="color:#9a3412">Acima do teto mensal (' + ex.teto + '/mês' + (ex.acum ? ', já ' + ex.acum + ' no mês' : '') + '): o faturamento de ' + ex.exc + ' un. depende de liberação do gerente.</div>' : '';
+        return '<tr class="lin"' + (inc ? '' : ' style="opacity:.45"') + '><td><label style="display:flex;gap:8px;align-items:flex-start;text-transform:none;letter-spacing:0;font-size:13px;color:#1a202c;margin:0"><input type="checkbox" style="width:auto;margin-top:3px" ' + (inc ? 'checked' : '') + ' onchange="orcAlternarItem(\'' + l.p.codigo + '\', this.checked)"><span><b>' + esc(l.p.modelo) + '</b><br><span class="orc-pass">Cód. ' + esc(l.p.codigo) + '</span></span></label>' + alerta + tetoNota + '</td><td>' + rotulo + '</td><td style="text-align:right">' + l.q + '</td><td id="orcPr_' + l.p.codigo + '" style="text-align:right;white-space:nowrap"><span onclick="orcEditarPreco(\'' + l.p.codigo + '\')" title="Clique para ajustar o preço deste item" style="cursor:pointer;border-bottom:1px dotted #a0aec0">' + fmt(l.u) + '</span>' + (l.man ? '<br><span class="orc-pass" style="font-size:11px">tabela ' + fmt(l.uBase) + ' · <a href="javascript:void(0)" onclick="orcRestaurarPreco(\'' + l.p.codigo + '\')" style="color:#718096">restaurar</a></span>' : '') + '</td><td style="text-align:right;white-space:nowrap">' + fmt(l.sub) + '</td></tr>';
     }).join('');
     const geral = tot.ok + tot.prev + tot.sem;
     const linha = (rot, v, forte) => (v > 0 || forte) ? '<tr><td colspan="4" style="text-align:right;' + (forte ? 'font-weight:700;' : '') + '">' + rot + '</td><td style="text-align:right;white-space:nowrap;' + (forte ? 'font-weight:700;color:#1d327b' : '') + '">' + fmt(v) + '</td></tr>' : '';
@@ -2204,6 +2242,11 @@ async function orcBuscaCnpj() {
         window._orcEnd = '';
         const c = await orcApi({ acao: 'cliente', cnpj: d });
         mostrarSugestaoClasse(c.ultimo);
+        window._consumoMes = c.consumo_mes || {};
+        if ($('orcItens')) orcRenderItens();
+        const canalSeg = { varejo: 'Física', hibrido: 'Híbrido', ecommerce: 'Ecommerce' }[String(c.canal || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')];
+        const elSug = $('orcSugClasse');
+        if (elSug && canalSeg && cSeg !== 'BMax' && canalSeg !== cSeg) elSug.innerHTML += '<div style="color:#9a3412;margin-top:4px">O cadastro deste cliente indica <b>' + canalSeg + '</b>, mas você está no segmento <b>' + esc(cSeg) + '</b>. A troca de segmento depende de aprovação do gerente comercial.</div>';
         if (!c.encontrado) {
             const pb = c.publico;
             if (pb) {
@@ -2414,14 +2457,23 @@ async function abrirMeusOrc() {
         const L = j.orcamentos || [];
         window._ORC = {}; L.forEach(o => { window._ORC[o.id] = o; });
         window._ORCL = L;
+        let tetoHtml = '';
+        if (String(window.ACESSO_ROLE || '').toLowerCase() === 'admin') {
+            try {
+                const pj = await orcApi({ acao: 'pendentes_teto' });
+                const pend = pj.pendentes || [];
+                if (pend.length) tetoHtml = '<div class="orc-av" style="margin-bottom:12px"><b>⏳ ' + pend.length + (pend.length > 1 ? ' pedidos aguardam' : ' pedido aguarda') + ' a sua liberação (teto mensal)</b>'
+                    + pend.map(x => '<div class="rp-item" style="margin-top:8px"><div class="rp-inf"><div class="c-cli">' + esc(x.codigo) + ' · ' + esc(x.cliente_nome) + '</div><div class="orc-pass">' + esc(x.vendedor_nome || '') + ' · ' + esc(x.segmento) + ' classe ' + x.classe + ' · ' + fmt(x.total_final) + '</div><div class="orc-pass">' + (x.teto_excedido || []).map(e => esc(e.modelo) + ': teto ' + e.teto + ', excedente ' + e.excedente).join(' · ') + '</div></div><button class="orc-btn prim" onclick="liberarTetoOrc(\'' + x.id + '\', this)">Liberar faturamento</button></div>').join('') + '</div>';
+            } catch (e) { /* sem a lista de liberacoes agora */ }
+        }
         const nAc = L.filter(o => !o.arquivado && orcAcompanhar(o)).length;
         const acHtml = nAc ? '<div class="orc-av" style="margin-bottom:10px">⏰ ' + nAc + (nAc > 1 ? ' orçamentos pedem' : ' orçamento pede') + ' acompanhamento. <button class="orc-btn sm" onclick="filtrarAcompanhar()">Ver</button></div>' : '';
         const nFila = (await rascunhosLer()).filter(r => r.estado !== 'enviado').length;
         const filaHtml = nFila ? '<div class="orc-av" style="margin-bottom:10px">📤 ' + nFila + (nFila > 1 ? ' orçamentos feitos sem sinal aguardam' : ' orçamento feito sem sinal aguarda') + ' envio. <button class="orc-btn sm" onclick="abrirFila()">Ver fila</button></div>' : '';
-        if (!L.length) { $('orcCorpo').innerHTML = filaHtml + '<p>Você ainda não gerou orçamentos.</p>'; return; }
+        if (!L.length) { $('orcCorpo').innerHTML = tetoHtml + filaHtml + '<p>Você ainda não gerou orçamentos.</p>'; return; }
         $('orcOverlay').classList.add('larga');
         const clientes = [...new Set(L.map(o => o.cliente_nome))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
-        $('orcCorpo').innerHTML = filaHtml + acHtml + (j.aviso_sync ? '<div class="orc-pass" style="color:#9a3412;margin-bottom:8px">' + esc(j.aviso_sync) + '</div>' : '')
+        $('orcCorpo').innerHTML = tetoHtml + filaHtml + acHtml + (j.aviso_sync ? '<div class="orc-pass" style="color:#9a3412;margin-bottom:8px">' + esc(j.aviso_sync) + '</div>' : '')
             + '<div class="orc-filtros">'
             + '<input id="orcFQ" type="search" placeholder="Buscar por nº do orçamento, nº do pedido ZEN, cliente ou produto" oninput="orcFiltrar()" value="' + esc(ORC_FILTRO.q) + '">'
             + '<select id="orcFSt" onchange="orcFiltrar()">'
@@ -2468,8 +2520,9 @@ function orcCard(o) {
     if (!aberto && !o.arquivado) acoes += '<button class="orc-canc" onclick="arquivarOrc(\'' + o.id + '\', true, this)">Arquivar</button>';
     if (o.arquivado) acoes += '<button class="orc-canc" onclick="arquivarOrc(\'' + o.id + '\', false, this)">Tirar do arquivo</button>';
     const ac = orcAcompanhar(o);
+    const tt = o.teto_excedido ? (o.liberacao_teto_em ? '<div class="orc-pass" style="color:#166534">✔ Faturamento acima do teto liberado' + (o.liberacao_teto_por ? ' por ' + esc(o.liberacao_teto_por) : '') + '</div>' : '<div class="orc-pass" style="color:#9a3412;font-weight:600">⏳ Acima do teto mensal: o faturamento do excedente aguarda liberação do gerente comercial</div>') : '';
     return '<div class="orc-card"><div><div class="c-tit">' + esc(o.codigo) + '</div>' + zenLink + '<div class="orc-pass">Criado em ' + new Date(o.criado_em).toLocaleDateString('pt-BR') + '<br>Validade ' + new Date(o.validade_em).toLocaleDateString('pt-BR') + '</div><div class="c-tot">' + fmt(o.total_final) + '</div></div>'
-        + '<div><div class="c-cli">' + esc(o.cliente_nome) + '</div><div class="orc-pass">' + mascCnpj(o.cliente_cnpj) + '</div><div style="margin-top:10px"><span class="orc-st ' + st[1] + '">' + st[0] + '</span></div><div class="orc-pass">' + vis + '</div>' + (aceite ? '<div class="orc-pass">' + aceite + '</div>' : '') + zenTxt + err + (ac ? '<div class="orc-pass" style="color:#9a3412;font-weight:600">' + ac + '</div>' : '') + '</div>'
+        + '<div><div class="c-cli">' + esc(o.cliente_nome) + '</div><div class="orc-pass">' + mascCnpj(o.cliente_cnpj) + '</div><div style="margin-top:10px"><span class="orc-st ' + st[1] + '">' + st[0] + '</span></div><div class="orc-pass">' + vis + '</div>' + (aceite ? '<div class="orc-pass">' + aceite + '</div>' : '') + zenTxt + err + (ac ? '<div class="orc-pass" style="color:#9a3412;font-weight:600">' + ac + '</div>' : '') + tt + '</div>'
         + '<div class="orc-acoes-col">' + acoes + '</div></div>';
 }
 async function arquivarOrc(id, flag, btn) {
