@@ -126,7 +126,7 @@ function chamarAcesso(p){return fetch(HUB_API+'/api/disponibilidade?target=acess
 function telaEmail(msg,ok){
   app.replaceChildren();var w=el('div','lg');var c=el('div','lgc');
   c.append(el('h2','',P_TOKEN?'Acesso à proposta':'Acesso restrito'),
-    el('p','',P_TOKEN?'Para a sua segurança, confirme o e-mail para o qual esta proposta foi enviada. Enviaremos um código de 6 dígitos.':'Entre com o seu e-mail cadastrado. Enviaremos um código de 6 dígitos para confirmar.'));
+    el('p','',P_TOKEN?'Para a sua segurança, confirme o seu e-mail. Enviaremos um código de 6 dígitos. O acesso fica registrado com o seu e-mail.':'Entre com o seu e-mail cadastrado. Enviaremos um código de 6 dígitos para confirmar.'));
   if(msg){c.append(el('div','msg'+(ok?' ok':''),msg))}
   var l=el('label','','E-mail');var i=el('input');i.type='email';i.autocomplete='email';i.placeholder='seu@email.com';i.value=EMAIL_LOGIN||'';
   var b=el('button','','Enviar código');
@@ -371,7 +371,7 @@ function listarPropostas(){
     d.propostas.forEach(function(p){
       var st=p.status==='cancelada'?'Cancelada':(p.expirada?'Expirada':(p.visualizacoes>0?'Aberta':'Enviada, não aberta'));
       var tr=el('tr');tr.append(el('td','',p.codigo),el('td','',p.cliente_nome+' ('+p.regiao+')'),el('td','r',brl(p.total)),el('td','',dt(p.validade_em)),
-        el('td','',p.visualizacoes+(p.ultima_visualizacao_em?' · última '+dth(p.ultima_visualizacao_em):'')),el('td','',st));
+        el('td','',p.visualizacoes+(p.ultima_visualizacao_em?' · última '+dth(p.ultima_visualizacao_em):'')+((p.outros_emails&&p.outros_emails.length)?' · ⚠ também aberta por outro e-mail: '+p.outros_emails.join(', '):'')),el('td','',st));
       var ac=el('td','');
       if(p.status!=='cancelada'&&!p.expirada){
         var cp=el('button','sm','Copiar link');cp.onclick=function(){var l=location.origin+location.pathname+'?p='+p.token;if(navigator.clipboard)navigator.clipboard.writeText(l).then(function(){cp.textContent='Copiado!'});else prompt('Copie o link:',l)};
