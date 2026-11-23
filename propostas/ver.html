@@ -169,7 +169,8 @@ async function gateConfirmar() {
   if (cod.length < 6) { telaCodigo('Digite o código recebido por e-mail.'); return; }
   const b = document.getElementById('gBtn'); b.disabled = true; b.textContent = 'Entrando...';
   try {
-    const { data, error } = await sb.rpc('link_validar_codigo', { p_origem: 'proposta', p_token: TOKEN, p_email: EMAIL_GATE, p_codigo: cod, p_ua: navigator.userAgent });
+    const rr = await fetch(HUB_ACESSO, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ acao: 'link_validar', origem: 'proposta', token: TOKEN, email: EMAIL_GATE, codigo: cod, ua: navigator.userAgent }) });
+    const data = await rr.json().catch(() => ({})); const error = rr.ok ? null : true;
     if (error || !data || !data.ok) { telaCodigo(data && data.motivo === 'bloqueado' ? 'Muitas tentativas. Peça um novo código.' : (data && data.motivo === 'expirado' ? 'Esta proposta expirou.' : 'Código inválido ou expirado. Peça um novo código.')); return; }
     try { sessionStorage.setItem(SESS_KEY, JSON.stringify({ s: data.sessao, e: data.email, x: data.expira_em })); } catch (e) {}
     mostrar('estadoLoading');
