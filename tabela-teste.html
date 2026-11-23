@@ -2127,7 +2127,7 @@ function abrirOrcamento() {
     $('orcTitulo').textContent = 'Gerar orçamento para o cliente';
     $('orcSub').textContent = itens.length + (itens.length > 1 ? ' itens' : ' item') + ' · ' + cState + ' · ' + cSeg + ' · classe ' + cCls;
     $('orcCorpo').innerHTML =
-        '<div class="orc-resumo"><b>' + fmt(total) + '</b> · ' + pg + ' · validade de 7 dias. O orçamento sai com os preços desta tela; o link é rastreável e o cliente pode aceitar por ele.</div>'
+        '<div class="orc-resumo"><b>' + fmt(total) + '</b> · ' + pg + ' · validade de 15 dias. O orçamento sai com os preços desta tela; o link é rastreável e o cliente pode aceitar por ele.</div>'
         + '<h4 class="orc-sec">Itens e estoque</h4><div id="orcItens"></div>'
         + '<h4 class="orc-sec">Cliente</h4><div class="orc-grid">'
         + '<div><label>CNPJ / CPF *</label><input id="orcCnpj" inputmode="numeric" placeholder="00.000.000/0000-00" maxlength="18" oninput="orcCnpjInput()" onblur="orcBuscaCnpj()"><div id="orcDocMsg" class="orc-pass" style="color:#991b1b"></div><div id="orcSugClasse" class="orc-pass"></div></div>'
@@ -2324,7 +2324,7 @@ function mostrarOrcCriado(j, cliente) {
         : '<div class="orc-av">⚠ ' + esc(j.zen && j.zen.erro || 'Não foi possível salvar no ZEN.') + '</div>';
     const av = (j.avisos || []).length ? '<div class="orc-av"><b>Pontos de atenção:</b><br>' + j.avisos.map(esc).join('<br>') + '</div>' : '';
     $('orcCorpo').innerHTML = zen + av
-        + '<label>Link do orçamento (válido por 7 dias)</label>'
+        + '<label>Link do orçamento (válido por 15 dias)</label>'
         + '<div class="orc-link"><input id="orcLinkIn" readonly value="' + j.link + '" onclick="this.select()"><button class="orc-btn" onclick="copiarOrc(\'' + j.link + '\', this)">Copiar</button></div>'
         + '<div class="orc-acoes" style="justify-content:flex-start;flex-wrap:wrap"><a class="orc-btn prim" href="' + wa + '" target="_blank" rel="noopener">Enviar por WhatsApp</a><a class="orc-btn" href="' + mail + '">Enviar por e-mail</a><a class="orc-btn" href="' + j.link + '" target="_blank" rel="noopener">Ver como o cliente</a><a class="orc-btn" href="' + j.link + '&pdf=1" target="_blank" rel="noopener">Baixar PDF</a></div>'
         + '<div class="orc-pass" style="margin-top:14px">Quando o cliente aceitar, você recebe um e-mail e confirma em <b>Meus orçamentos</b>. Só então o pedido avança no ZEN para WEB Pronta entrega.</div>'
@@ -2383,7 +2383,7 @@ function abrirEdicaoOrc() {
     $('orcTitulo').textContent = 'Salvar alterações em ' + ORC_EDIT.codigo;
     $('orcSub').textContent = ORC_EDIT.cliente + ' · ' + itens.length + (itens.length > 1 ? ' itens' : ' item') + ' · ' + cState + ' · ' + cSeg + ' · classe ' + cCls;
     $('orcCorpo').innerHTML =
-        '<div class="orc-resumo"><b>' + fmt(total) + '</b> · ' + pg + '. Os preços são recalculados com a tabela de hoje e a validade volta a 7 dias. O link continua o mesmo e a venda no ZEN é atualizada.'
+        '<div class="orc-resumo"><b>' + fmt(total) + '</b> · ' + pg + '. Os preços são recalculados com a tabela de hoje e a validade volta a 15 dias. O link continua o mesmo e a venda no ZEN é atualizada.'
         + (ORC_EDIT.status === 'aceito_cliente' ? '<br><b>O cliente já tinha aceitado: ele vai precisar aceitar de novo.</b>' : '') + '</div>'
         + '<h4 class="orc-sec">Itens e estoque</h4><div id="orcItens"></div>'
         + '<h4 class="orc-sec">Observações para o cliente</h4><textarea id="orcObs" rows="2" maxlength="1500" style="width:100%;font-family:Outfit;font-size:14px;padding:10px;border:1px solid #c3cfe2;border-radius:8px">' + esc(ORC_EDIT.obs) + '</textarea>'
