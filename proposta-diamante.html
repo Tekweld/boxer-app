@@ -79,6 +79,17 @@ h2{font:800 20px 'Montserrat',Arial,sans-serif;color:var(--blue);margin:28px 0 1
 button.sm,a.sm{display:inline-block;margin:4px 6px 0 0;padding:6px 10px;border:1px solid #c3cfe2;border-radius:6px;background:#fff;color:#1d327b;font:600 12px 'Inter',Arial,sans-serif;cursor:pointer;text-decoration:none}
 button.sm.dg{color:#b42318;border-color:#f1b9b3}
 .lst .tb td{font-size:12px}
+.cst{margin:8px 0 0;font:400 12px/1.4 'Inter',Arial,sans-serif;color:#5c6478}.cst.ok{color:#166534}
+.tb.qt td{vertical-align:middle}.tb.qt th.c,.tb.qt td.c{text-align:center}.tb.qt td.nd{color:#a0aec0}
+input.q{width:70px;padding:7px;text-align:center;border:1px solid #c3cfe2;border-radius:6px;font:700 14px 'Inter',Arial,sans-serif}
+.qres{margin:10px 0;font:700 13px 'Inter',Arial,sans-serif;color:#166534}.qres.bad{color:#b42318}
+details.obs{margin-top:12px}details.obs summary{cursor:pointer;font:600 12px 'Inter',Arial,sans-serif;color:#1d327b}details.obs textarea{width:100%;margin-top:8px;padding:10px;border:1px solid #c3cfe2;border-radius:8px;font:400 14px 'Inter',Arial,sans-serif}
+body.noc,body.noc *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body.noc img{-webkit-user-drag:none;pointer-events:none}
+.avoc{display:none}
+body.noc.oculto #app>main,body.noc.oculto #app>.hd,body.noc.oculto #app>.alert,body.noc.oculto #app>.ft{visibility:hidden}
+body.noc.oculto .avoc{display:block;position:fixed;left:0;right:0;top:40%;text-align:center;font:700 15px 'Inter',Arial,sans-serif;color:#1d327b;z-index:60}
+@media print{body.noc #app,body.noc .wm{display:none!important}body.noc::before{content:'Impressão e cópia não são permitidas nesta proposta.';display:block;padding:60px;font:700 18px Arial,sans-serif;color:#1d327b}}
 .prz{margin:14px 0;background:#fff8e1;border-left:4px solid #f5a623;border-radius:6px;padding:11px 14px;font:400 13px/1.5 'Inter',Arial,sans-serif;color:#4a3b00}.prz b{font-weight:700}
 @media print{.emi,.sel,.out{display:none}.wm{position:fixed}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 </style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet"></head><body>
@@ -174,7 +185,7 @@ function cartoes(R){
     c.append(t,i);g.append(c)});
   return g}
 function notaPrazo(R){if(!R||!R.prazo_estoque)return null;var d=el('div','prz');d.append(el('b','','Importante · '),document.createTextNode(R.prazo_estoque));return d}
-function blocoFinal(main,R){
+function blocoFinal(main,R,semRodape){
   var M=R.modelos;
   var pr=el('div','prem');pr.append(el('div','v','R$ '+R.premiacao.valor));var pt=el('div','t');pt.append(el('div','k','Premiação para o vendedor'),
     document.createTextNode(R.premiacao.texto+' Válido '+(R.premiacao.modelos.length===M.length?'em todos os modelos':'nos modelos '+lista(R.premiacao.modelos))+'.'));pr.append(pt);main.append(pr);
@@ -184,7 +195,7 @@ function blocoFinal(main,R){
    ['2','Compre também 1 máquina para demonstração','Com desconto adicional sobre o preço de oferta e parcelamento. '+R.recompra_demonstracao],
    ['3','Demonstre e venda','O cliente vê o laser funcionando antes de decidir. O vendedor que fechar a venda ganha R$ '+R.premiacao.valor+' de premiação.']
   ].forEach(function(s){var d=el('div','step');d.append(el('div','n',s[0]),el('h3','',s[1]),el('p','',s[2]));st.append(d)});
-  main.append(st,el('div','fn',R.nota_rodape))}
+  main.append(st);if(!semRodape)main.append(el('div','fn',R.nota_rodape))}
 function rodape(){var ft=el('div','ft');var l2=el('img');l2.src=LOGO;l2.alt='Boxer';ft.append(l2,'www.boxersoldas.com.br · contato@boxersoldas.com.br · (19) 99646-0708');return ft}
 
 /* ---------- proposta emitida (visao do cliente, com marca d'agua) ---------- */
@@ -198,30 +209,51 @@ function carregarProposta(sessao){
       erro('Proposta indisponível','Esta proposta não está mais disponível. Fale com o seu vendedor Boxer.');return}
     renderProposta(d)
   }).catch(function(){erro('Não foi possível carregar','Tente novamente em instantes. Se continuar, avise a equipe Boxer.')})}
+function protegerLeitura(){
+  document.body.classList.add('noc');
+  var stop=function(e){e.preventDefault();return false};
+  ['copy','cut','contextmenu','dragstart','selectstart','beforeprint'].forEach(function(ev){document.addEventListener(ev,stop,true)});
+  document.addEventListener('keydown',function(e){
+    var k=(e.key||'').toLowerCase();
+    if(k==='printscreen'){try{navigator.clipboard&&navigator.clipboard.writeText('')}catch(x){}ocultar(true);setTimeout(function(){ocultar(false)},1800);e.preventDefault();return}
+    if((e.ctrlKey||e.metaKey)&&['p','s','c','a','u','x','i'].indexOf(k)>=0){e.preventDefault();e.stopPropagation();return false}
+    if(k==='f12'||(e.ctrlKey&&e.shiftKey&&['i','j','c','s'].indexOf(k)>=0)){e.preventDefault();return false}
+    if(e.metaKey&&e.shiftKey&&['3','4','5'].indexOf(k)>=0){ocultar(true);setTimeout(function(){ocultar(false)},1800)}
+  },true);
+  var tmr=null;
+  function ocultar(v){document.body.classList.toggle('oculto',v)}
+  window.addEventListener('blur',function(){ocultar(true)});
+  window.addEventListener('focus',function(){ocultar(false)});
+  document.addEventListener('visibilitychange',function(){ocultar(document.hidden)});
+  ocultar(!document.hasFocus())}
 function renderProposta(d){
   var P=d.proposta,R=d.dados;app.replaceChildren();
   var hd=topo();var h1=el('h1');h1.append('Proposta ',el('span','',P.codigo));hd.append(h1);
   hd.append(el('div','who','Preparada para '+P.cliente_nome+(P.destinatario_nome?' · A/C '+P.destinatario_nome:'')+' · Acesso registrado em '+d.visualizador));
   var al=el('div','alert');al.append('Proposta válida até '+dt(P.validade_em)+' · ',el('span','','Reajuste de preços a partir de '+(d.reajuste_a_partir_de||'04/01/2027')));
   var main=el('main');
+  main.append(el('h2','','Preços de oferta da sua região'));
+  main.append(cartoes(R));blocoFinal(main,R,true);
+  /* itens da proposta: no final da pagina, com a condicao de pagamento logo abaixo (aparece uma unica vez) */
   var sm=el('div','sum');sm.append(el('h2','','Itens desta proposta'));
   var tb=el('table','tb');var th=el('tr');['Item','Qtd','Valor','Subtotal'].forEach(function(x,i){th.append(el('th',i?'r':'',x))});tb.append(th);
   P.itens.forEach(function(it){
     var tr=el('tr');
     if(it.tipo==='estoque'){tr.append(el('td','',it.modelo+' · Laser '+it.potencia+' · para estoque'),el('td','r',String(it.qtd)),el('td','r',brl(it.oferta)),el('td','r',brl(it.subtotal)))}
-    else{tr.append(el('td','',it.modelo+' · Laser '+it.potencia+' · máquina de demonstração ('+it.parcelas+'x de '+brl(it.parcela)+')'),el('td','r','1'),el('td','r',brl(it.valor)),el('td','r',brl(it.subtotal)))}
+    else{tr.append(el('td','',it.modelo+' · Laser '+it.potencia+' · máquina de demonstração ('+it.parcelas+'x de '+brl(it.parcela)+' cada)'),el('td','r',String(it.qtd)),el('td','r',brl(it.valor)),el('td','r',brl(it.subtotal)))}
     tb.append(tr)});
   var tt=el('tr','tot');tt.append(el('td','','Total'),el('td'),el('td'),el('td','r',brl(P.total)));tb.append(tt);sm.append(tb);
+  var np0=notaPrazo(R);if(np0)sm.append(np0);
   var inf=el('div','inf');
   inf.append(el('div','','Cliente: '+P.cliente_nome+(P.cliente_cnpj?' · '+P.cliente_cnpj:'')+(P.cliente_cidade?' · '+P.cliente_cidade+(P.cliente_uf?'/'+P.cliente_uf:''):'')));
   inf.append(el('div','','Emitida em '+dt(P.criado_em)+' por '+(P.emitido_por_nome||'Boxer')+(P.emitido_por_email?' · '+P.emitido_por_email:'')+(P.emitido_por_telefone?' · '+P.emitido_por_telefone:'')));
   if(P.observacoes)inf.append(el('div','',P.observacoes));
-  var np0=notaPrazo(R);if(np0)sm.append(np0);
   sm.append(inf);main.append(sm);
-  main.append(el('h2','','Preços de oferta da sua região'));
-  main.append(cartoes(R));var np=notaPrazo(R);if(np)main.append(np);blocoFinal(main,R);
-  var ou=el('div','out');var pb=el('button','','Salvar em PDF / imprimir');pb.onclick=function(){window.print()};ou.append(pb);main.append(ou);
-  app.append(hd,al,main,rodape(),marcaDagua(['BOXER · '+P.codigo+' · '+P.cliente_nome,'Acesso de '+d.visualizador+' · válida até '+dt(P.validade_em)]))}
+  main.append(el('div','fn',R.nota_rodape));
+  var agora=new Date().toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  app.append(hd,al,main,rodape(),marcaDagua(['BOXER · '+P.codigo+' · '+P.cliente_nome,'Acesso de '+d.visualizador+' · '+agora]));
+  var av=el('div','avoc','Conteúdo oculto enquanto esta janela não estiver em foco.');app.append(av);
+  protegerLeitura()}
 
 /* ---------- pagina de precos + emissao (equipe Boxer e representantes) ---------- */
 function render(d){
@@ -239,7 +271,7 @@ function render(d){
   var lead=el('p','lead');lead.append('Compre para estoque pelo ');lead.append(el('b','','preço de oferta'));
   if(dm.length){lead.append('. Nos modelos '+lista(dm)+' você também pode comprar uma ');lead.append(el('b','','máquina de demonstração com desconto adicional'))}
   lead.append('.');main.append(lead);
-  main.append(cartoes(R));var np2=notaPrazo(R);if(np2)main.append(np2);blocoFinal(main,R);
+  main.append(cartoes(R));blocoFinal(main,R);
   main.append(painelEmissao(R,U));
   var ou=el('div','out');var ob=el('button','','Sair deste aparelho');ob.onclick=sair;ou.append(ob);main.append(ou);
   app.append(hd,al,main,rodape());
@@ -247,47 +279,86 @@ function render(d){
 }
 function campo(rot,ctl,cls){var w=el('div','fc'+(cls?' '+cls:''));w.append(el('label','',rot),ctl);return w}
 function inp(tipo,ph,max){var i=el('input');i.type=tipo||'text';if(ph)i.placeholder=ph;if(max)i.maxLength=max;return i}
+function digs(v){return String(v||'').replace(/\D/g,'')}
+function mascaraDoc(v){var d=digs(v);if(d.length<=11)return d.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/,function(_,a,b,c,e){return a+'.'+b+'.'+c+(e?'-'+e:'')});return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})/,function(_,a,b,c,e,f){return a+'.'+b+'.'+c+'/'+e+(f?'-'+f:'')})}
+function hubCliente(cnpj){
+  return sbc.auth.getSession().then(function(r){var tk=r.data&&r.data.session?r.data.session.access_token:'';
+    return fetch(HUB_API+'/api/push-pedido?target=orcamento',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tk},body:JSON.stringify({acao:'cliente',cnpj:cnpj})})
+      .then(function(x){return x.json().catch(function(){return{}}).then(function(j){if(!x.ok)throw new Error(j.error||('erro '+x.status));return j})})})}
 function painelEmissao(R,U){
-  var M=R.modelos;var box=el('div','emi');
+  var M=R.modelos;var box=el('div','emi');var cid='',uf='';
   box.append(el('h2','','Gerar proposta para uma revenda'));
-  box.append(el('p','emt','A revenda recebe o link e abre com um código enviado ao e-mail informado abaixo. Os preços ficam congelados e a proposta vale por 15 dias.'));
+  box.append(el('p','emt','Informe o CNPJ: os dados da revenda vêm do cadastro do ZEN. A revenda recebe o link por e-mail, abre com um código de confirmação e a proposta vale por 15 dias, com os preços congelados.'));
   var f=el('div','fm');
-  var cNome=inp('text','Razão social ou nome fantasia',120),cCnpj=inp('text','CNPJ (opcional)',20),cCid=inp('text','Cidade',60),cUf=inp('text','UF',2);
-  var dNome=inp('text','Nome do contato',80),dMail=inp('email','email@revenda.com.br',120),dTel=inp('tel','(19) 99999-9999',20);
-  var sEst=el('select');M.forEach(function(m){var o=el('option','',m.modelo+' · '+m.potencia+' · '+brl(m.oferta));o.value=m.modelo;sEst.append(o)});
-  var qtd=inp('number');qtd.min=1;qtd.max=20;qtd.value=1;
-  var sDem=el('select');var o0=el('option','','Sem máquina de demonstração');o0.value='';sDem.append(o0);
-  M.forEach(function(m){if(m.demonstracao.length){var o=el('option','',m.modelo+' · '+brl(m.demonstracao[0].valor)+' ('+m.demonstracao[0].parcelas+'x de '+brl(m.demonstracao[0].parcela)+')');o.value=m.modelo;sDem.append(o)}});
+  var cCnpj=inp('text','CNPJ ou CPF',18),cNome=inp('text','Preenchido pelo cadastro (pode editar)',120),dMail=inp('email','e-mail que receberá o código',120),dNome=inp('text','Nome do contato (opcional)',80);
+  var st=el('div','cst');
+  cCnpj.oninput=function(){var p=cCnpj.selectionStart;cCnpj.value=mascaraDoc(cCnpj.value);var d=digs(cCnpj.value);if(d.length===11||d.length===14)buscar(d);else st.textContent=''};
+  function buscar(d){
+    st.className='cst';st.textContent='Buscando o cadastro…';
+    hubCliente(d).then(function(c){
+      if(c.encontrado){cNome.value=c.razao_social||c.nome_fantasia||cNome.value;if(c.email)dMail.value=c.email;cid=c.cidade||'';uf=c.uf||'';
+        st.className='cst ok';st.textContent='Cadastro encontrado no ZEN'+(cid?' · '+cid+'/'+uf:'')+(c.bloqueado?' · ATENÇÃO: cliente bloqueado no ZEN':'')}
+      else if(c.publico){cNome.value=c.publico.razao_social||c.publico.nome_fantasia||cNome.value;if(c.publico.email)dMail.value=c.publico.email;cid=c.publico.cidade||'';uf=c.publico.uf||'';
+        st.className='cst';st.textContent='Fora do ZEN. Dados da Receita Federal preenchidos'+(cid?' · '+cid+'/'+uf:'')+'. Confira o e-mail.'}
+      else{st.className='cst';st.textContent='Não encontrei esse documento. Preencha o nome e o e-mail manualmente.'}
+    }).catch(function(){st.className='cst';st.textContent='Não foi possível consultar o cadastro agora. Preencha o nome e o e-mail manualmente.'})}
+  f.append(campo('CNPJ ou CPF *',cCnpj),campo('Revenda *',cNome,'w2'),campo('E-mail do contato *',dMail,'w2'),campo('Contato',dNome));
+  box.append(f,st);
+  /* quantidades por modelo */
+  box.append(el('h3','','Máquinas da proposta'));
+  box.append(el('p','emt','Mínimo de 1 máquina para estoque e 1 para demonstração. A revenda pode levar mais, de qualquer modelo.'));
+  var tb=el('table','tb qt');var th=el('tr');['Modelo','Estoque · valor','Qtd','Demonstração · valor','Qtd'].forEach(function(x,i){th.append(el('th',i===2||i===4?'c':'',x))});tb.append(th);
+  var rows=[];
+  M.forEach(function(m){
+    var tr=el('tr');var dm=m.demonstracao[0]||null;
+    var qe=inp('number');qe.min=0;qe.max=50;qe.value=0;qe.className='q';
+    var qd=null;
+    tr.append(el('td','',m.modelo+' · '+m.potencia),el('td','',brl(m.oferta)),(function(){var t=el('td','c');t.append(qe);return t})());
+    if(dm){qd=inp('number');qd.min=0;qd.max=50;qd.value=0;qd.className='q';tr.append(el('td','',brl(dm.valor)+' ('+dm.parcelas+'x de '+brl(dm.parcela)+')'),(function(){var t=el('td','c');t.append(qd);return t})())}
+    else{tr.append(el('td','nd','sem demonstração'),el('td','c','—'))}
+    [qe,qd].forEach(function(x){if(x)x.oninput=recalc});
+    rows.push({m:m,qe:qe,qd:qd});tb.append(tr)});
+  box.append(tb);
+  var res=el('div','qres');box.append(res);
+  var pz=notaPrazo(R);if(pz)box.append(pz);
+  function n(x){var v=parseInt(x&&x.value,10);return isNaN(v)||v<0?0:Math.min(v,50)}
+  function recalc(){
+    var te=0,td=0,tot=0;
+    rows.forEach(function(r){var a=n(r.qe),b=r.qd?n(r.qd):0;te+=a;td+=b;tot+=a*r.m.oferta+b*(r.m.demonstracao[0]?r.m.demonstracao[0].valor:0)});
+    var ok=te>=1&&td>=1;
+    res.className='qres'+(ok?'':' bad');
+    res.textContent=te+' máquina(s) para estoque · '+td+' para demonstração · Total '+brl(tot)+(ok?'':' · falta pelo menos 1 de cada')}
+  recalc();
   var ob=el('textarea');ob.rows=2;ob.maxLength=400;ob.placeholder='Observações que aparecem na proposta (opcional)';
-  var eTel=inp('tel','Seu telefone para contato (opcional)',20);
-  try{eTel.value=localStorage.getItem('dia_tel')||''}catch(e){}
-  f.append(campo('Revenda *',cNome,'w2'),campo('CNPJ',cCnpj),campo('Cidade',cCid),campo('UF',cUf),campo('Contato',dNome),campo('E-mail do contato *',dMail,'w2'),campo('Telefone do contato',dTel),
-    campo('Máquina para estoque *',sEst,'w2'),campo('Quantidade',qtd),campo('Máquina de demonstração',sDem,'w2'),campo('Observações',ob,'w3'),campo('Seu telefone',eTel));
+  var det=el('details','obs');det.append(el('summary','','Observações (opcional)'),ob);box.append(det);
   var msg=el('div','msg');msg.style.display='none';
   var go=el('button','','Gerar proposta e link');
   var out=el('div','res');
   go.onclick=function(){
     msg.style.display='none';
-    if(cNome.value.trim().length<2){return avisar(msg,'Informe a revenda.')}
-    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dMail.value.trim())){return avisar(msg,'Informe um e-mail válido para o contato.')}
+    var d=digs(cCnpj.value);
+    if(d.length!==11&&d.length!==14){return avisar(msg,'Informe o CNPJ (14 dígitos) ou CPF (11 dígitos) da revenda.')}
+    if(cNome.value.trim().length<2){return avisar(msg,'Informe o nome da revenda.')}
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dMail.value.trim())){return avisar(msg,'Informe um e-mail válido para o contato: é para ele que vai o código de acesso.')}
+    var itens=[];var te=0,td=0;
+    rows.forEach(function(r){var a=n(r.qe),b=r.qd?n(r.qd):0;te+=a;td+=b;if(a>0||b>0)itens.push({modelo:r.m.modelo,qtd_estoque:a,qtd_demo:b})});
+    if(te<1||td<1){return avisar(msg,'A proposta precisa de pelo menos 1 máquina para estoque e 1 para demonstração.')}
     go.disabled=true;go.textContent='Gerando...';
-    try{localStorage.setItem('dia_tel',eTel.value)}catch(e){}
-    sbc.rpc('diamante_proposta_criar',{p:{regiao:R.regiao,cliente_nome:cNome.value,cliente_cnpj:cCnpj.value,cliente_cidade:cCid.value,cliente_uf:cUf.value.toUpperCase(),
-      destinatario_nome:dNome.value,destinatario_email:dMail.value,destinatario_telefone:dTel.value,modelo_estoque:sEst.value,qtd_estoque:Number(qtd.value)||1,
-      modelo_demo:sDem.value,observacoes:ob.value,emissor_telefone:eTel.value}}).then(function(r){
+    sbc.rpc('diamante_proposta_criar',{p:{regiao:R.regiao,cliente_nome:cNome.value,cliente_cnpj:d,cliente_cidade:cid,cliente_uf:uf,
+      destinatario_nome:dNome.value,destinatario_email:dMail.value,itens:itens,observacoes:ob.value}}).then(function(r){
       go.disabled=false;go.textContent='Gerar proposta e link';
-      var d=r.data;
-      if(r.error||!d||!d.ok){var m={precos_vencidos:'A validade desta tabela de preços terminou.',sem_regiao:'Você não tem acesso a esta região.',demo_indisponivel:'Esta máquina não tem opção de demonstração.',email_invalido:'E-mail inválido.',modelo_invalido:'Modelo inválido.'};
-        return avisar(msg,(d&&m[d.motivo])||'Não foi possível gerar a proposta agora.')}
-      var link=location.origin+location.pathname+'?p='+d.token;
+      var x=r.data;
+      if(r.error||!x||!x.ok){var m={precos_vencidos:'A validade desta tabela de preços terminou.',sem_regiao:'Você não tem acesso a esta região.',demo_indisponivel:'Um dos modelos escolhidos não tem demonstração.',email_invalido:'E-mail inválido.',modelo_invalido:'Modelo inválido.',minimo_estoque:'Informe pelo menos 1 máquina para estoque.',minimo_demo:'Informe pelo menos 1 máquina para demonstração.'};
+        return avisar(msg,(x&&m[x.motivo])||'Não foi possível gerar a proposta agora.')}
+      var link=location.origin+location.pathname+'?p='+x.token;
       out.replaceChildren();var b=el('div','ok2');
-      b.append(el('b','','Proposta '+d.codigo+' gerada · '+brl(d.total)+' · válida até '+dt(d.validade_em)),el('div','lnk',link));
+      b.append(el('b','','Proposta '+x.codigo+' gerada · '+brl(x.total)+' · válida até '+dt(x.validade_em)),el('div','lnk',link));
       var cp=el('button','sm','Copiar link');cp.onclick=function(){if(navigator.clipboard)navigator.clipboard.writeText(link).then(function(){cp.textContent='Copiado!'});else{prompt('Copie o link:',link)}};
       var wa=el('a','sm','Enviar por WhatsApp');wa.target='_blank';wa.rel='noopener';
-      wa.href='https://wa.me/?text='+encodeURIComponent('Olá! Segue a proposta Boxer '+d.codigo+' para '+cNome.value.trim()+' (válida até '+dt(d.validade_em)+'): '+link+' — para abrir, use o e-mail '+dMail.value.trim().toLowerCase()+' (você receberá um código).');
+      wa.href='https://wa.me/?text='+encodeURIComponent('Olá! Segue a proposta Boxer '+x.codigo+' para '+cNome.value.trim()+' (válida até '+dt(x.validade_em)+'): '+link+' — para abrir, use o e-mail '+dMail.value.trim().toLowerCase()+' (você receberá um código).');
       b.append(el('div','',''),cp,wa);out.append(b);listarPropostas()
     }).catch(function(){go.disabled=false;go.textContent='Gerar proposta e link';avisar(msg,'Erro de conexão. Tente novamente.')})};
-  box.append(f,msg,go,out,el('h3','','Minhas propostas'),(function(){var l=el('div','lst');l.id='lstProp';return l})());
+  box.append(msg,go,out,el('h3','','Minhas propostas'),(function(){var l=el('div','lst');l.id='lstProp';return l})());
   return box}
 function avisar(m,t){m.textContent=t;m.style.display='block'}
 function listarPropostas(){
