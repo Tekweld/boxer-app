@@ -79,6 +79,7 @@ h2{font:800 20px 'Montserrat',Arial,sans-serif;color:var(--blue);margin:28px 0 1
 button.sm,a.sm{display:inline-block;margin:4px 6px 0 0;padding:6px 10px;border:1px solid #c3cfe2;border-radius:6px;background:#fff;color:#1d327b;font:600 12px 'Inter',Arial,sans-serif;cursor:pointer;text-decoration:none}
 button.sm.dg{color:#b42318;border-color:#f1b9b3}
 .lst .tb td{font-size:12px}
+.prz{margin:14px 0;background:#fff8e1;border-left:4px solid #f5a623;border-radius:6px;padding:11px 14px;font:400 13px/1.5 'Inter',Arial,sans-serif;color:#4a3b00}.prz b{font-weight:700}
 @media print{.emi,.sel,.out{display:none}.wm{position:fixed}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 </style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet"></head><body>
 <div id="app"><div class="err"><p>Carregando…</p></div></div>
@@ -172,6 +173,7 @@ function cartoes(R){
       m.demonstracao.forEach(function(p){var r=el('div','opt');r.append(el('b','',brl(p.valor)),el('span','','−'+pct(p.desconto_pct)+' · '+p.parcelas+'x de '+brl(p.parcela)));b.append(r)});i.append(b)}
     c.append(t,i);g.append(c)});
   return g}
+function notaPrazo(R){if(!R||!R.prazo_estoque)return null;var d=el('div','prz');d.append(el('b','','Importante · '),document.createTextNode(R.prazo_estoque));return d}
 function blocoFinal(main,R){
   var M=R.modelos;
   var pr=el('div','prem');pr.append(el('div','v','R$ '+R.premiacao.valor));var pt=el('div','t');pt.append(el('div','k','Premiação para o vendedor'),
@@ -214,9 +216,10 @@ function renderProposta(d){
   inf.append(el('div','','Cliente: '+P.cliente_nome+(P.cliente_cnpj?' · '+P.cliente_cnpj:'')+(P.cliente_cidade?' · '+P.cliente_cidade+(P.cliente_uf?'/'+P.cliente_uf:''):'')));
   inf.append(el('div','','Emitida em '+dt(P.criado_em)+' por '+(P.emitido_por_nome||'Boxer')+(P.emitido_por_email?' · '+P.emitido_por_email:'')+(P.emitido_por_telefone?' · '+P.emitido_por_telefone:'')));
   if(P.observacoes)inf.append(el('div','',P.observacoes));
+  var np0=notaPrazo(R);if(np0)sm.append(np0);
   sm.append(inf);main.append(sm);
   main.append(el('h2','','Preços de oferta da sua região'));
-  main.append(cartoes(R));blocoFinal(main,R);
+  main.append(cartoes(R));var np=notaPrazo(R);if(np)main.append(np);blocoFinal(main,R);
   var ou=el('div','out');var pb=el('button','','Salvar em PDF / imprimir');pb.onclick=function(){window.print()};ou.append(pb);main.append(ou);
   app.append(hd,al,main,rodape(),marcaDagua(['BOXER · '+P.codigo+' · '+P.cliente_nome,'Acesso de '+d.visualizador+' · válida até '+dt(P.validade_em)]))}
 
@@ -236,7 +239,7 @@ function render(d){
   var lead=el('p','lead');lead.append('Compre para estoque pelo ');lead.append(el('b','','preço de oferta'));
   if(dm.length){lead.append('. Nos modelos '+lista(dm)+' você também pode comprar uma ');lead.append(el('b','','máquina de demonstração com desconto adicional'))}
   lead.append('.');main.append(lead);
-  main.append(cartoes(R));blocoFinal(main,R);
+  main.append(cartoes(R));var np2=notaPrazo(R);if(np2)main.append(np2);blocoFinal(main,R);
   main.append(painelEmissao(R,U));
   var ou=el('div','out');var ob=el('button','','Sair deste aparelho');ob.onclick=sair;ou.append(ob);main.append(ou);
   app.append(hd,al,main,rodape());
