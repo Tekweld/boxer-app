@@ -27,6 +27,13 @@ iframe#frame{flex:1;border:none;width:100%;background:#e8eaf0}
 .spinner{width:36px;height:36px;border:3px solid rgba(29,50,123,.15);border-top-color:#1d327b;border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .spinner-wrap p{font-size:14px;color:#718096}
+.wm{position:fixed;left:0;top:0;right:0;bottom:0;pointer-events:none;z-index:45;background-repeat:repeat;background-size:760px 380px}
+.gin{width:100%;max-width:320px;padding:11px 14px;border:1px solid #c3cfe2;border-radius:8px;font-family:Outfit;font-size:16px;text-align:center}
+.gbt{background:#1d327b;color:#fff;border:none;border-radius:8px;padding:11px 28px;font-family:Outfit;font-size:14px;font-weight:600;cursor:pointer}
+.gbt[disabled]{opacity:.6}
+.gmsg{max-width:380px;font-size:13px;color:#991b1b;background:#fee2e2;border:1px solid #fecaca;border-radius:8px;padding:9px 12px}
+.gmsg.ok{color:#166534;background:#dcfce7;border-color:#bbf7d0}
+@media print{.wm{position:fixed}}
 </style>
 </head>
 <body>
@@ -73,24 +80,110 @@ iframe#frame{flex:1;border:none;width:100%;background:#e8eaf0}
   <button onclick="location.reload()" style="margin-top:8px;background:#1d327b;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-family:Outfit;font-size:14px;font-weight:600;cursor:pointer">Tentar novamente</button>
 </div>
 
+<div class="estado" id="estadoGate" style="display:none">
+  <img src="https://tekweld.github.io/boxer-app/Estrela-Boxer.svg">
+  <h2 id="gTitulo">Acesso à proposta</h2>
+  <p id="gTexto"></p>
+  <div class="gmsg" id="gMsg" style="display:none"></div>
+  <input class="gin" id="gInput">
+  <button class="gbt" id="gBtn"></button>
+  <a id="gOutro" href="#" style="font-size:12px;color:#718096;display:none">Usar outro e-mail</a>
+</div>
+
+<div class="estado" id="estadoExpirado" style="display:none">
+  <img src="https://tekweld.github.io/boxer-app/Estrela-Boxer.svg">
+  <h2>Proposta expirada</h2>
+  <p>Esta proposta passou da validade.<br>Peça uma nova ao seu representante Boxer Soldas.</p>
+</div>
+
 <script>
 const SUPABASE_URL  = 'https://bmepxcnrsofofoswubuu.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtZXB4Y25yc29mb2Zvc3d1YnV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MTczNzMsImV4cCI6MjA5NTI5MzM3M30.S55ouFczRYlUYNFf5PotYKXBPT5idypTSmbzR-x2Pk0';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-async function init() {
-  const token = new URLSearchParams(location.search).get('token');
-  if (!token) { mostrar('estadoErro'); return; }
+const HUB_ACESSO = 'https://hub.boxersoldas.com.br/api/disponibilidade?target=acesso';
+const TOKEN = new URLSearchParams(location.search).get('token');
+const SESS_KEY = 'prop_sess_' + TOKEN;
+let EMAIL_GATE = '';
+const ESTADOS = ['estadoLoading', 'estadoErro', 'estadoSemSnapshot', 'estadoIndisponivel', 'estadoGate', 'estadoExpirado'];
 
+function mostrar(id) {
+  ESTADOS.forEach(e => { const n = document.getElementById(e); if (n) n.style.display = 'none'; });
+  document.getElementById(id).style.display = 'flex';
+}
+function gMsg(t, ok) { const m = document.getElementById('gMsg'); if (!t) { m.style.display = 'none'; return; } m.textContent = t; m.className = 'gmsg' + (ok ? ' ok' : ''); m.style.display = 'block'; }
+function telaEmail(msg) {
+  mostrar('estadoGate');
+  document.getElementById('gTitulo').textContent = 'Acesso à proposta';
+  document.getElementById('gTexto').textContent = 'Para a sua segurança, confirme o e-mail para o qual esta proposta foi enviada. Enviaremos um código de 6 dígitos.';
+  const i = document.getElementById('gInput'); i.type = 'email'; i.placeholder = 'seu@email.com'; i.value = EMAIL_GATE; i.maxLength = 120; i.removeAttribute('inputmode');
+  i.onkeydown = e => { if (e.key === 'Enter') gatePedir(); };
+  const b = document.getElementById('gBtn'); b.textContent = 'Enviar código'; b.disabled = false; b.onclick = gatePedir;
+  document.getElementById('gOutro').style.display = 'none';
+  gMsg(msg); i.focus();
+}
+function telaCodigo(msg, ok) {
+  mostrar('estadoGate');
+  document.getElementById('gTitulo').textContent = 'Digite o código';
+  document.getElementById('gTexto').textContent = 'Enviamos um código de 6 dígitos para ' + EMAIL_GATE + '. Confira também a caixa de spam. Ele vale por 10 minutos.';
+  const i = document.getElementById('gInput'); i.type = 'text'; i.value = ''; i.placeholder = '000000'; i.maxLength = 8; i.setAttribute('inputmode', 'numeric');
+  i.onkeydown = e => { if (e.key === 'Enter') gateConfirmar(); };
+  const b = document.getElementById('gBtn'); b.textContent = 'Entrar'; b.disabled = false; b.onclick = gateConfirmar;
+  const o = document.getElementById('gOutro'); o.style.display = 'block'; o.onclick = e => { e.preventDefault(); telaEmail(); };
+  gMsg(msg, ok); i.focus();
+}
+const MSG_GATE = {
+  nao_autorizado: 'Este e-mail não é um destinatário desta proposta. Use o e-mail que recebeu o link.',
+  expirado: 'Esta proposta expirou. Peça uma nova ao seu representante Boxer.',
+  cancelado: 'Esta proposta foi cancelada. Fale com o seu representante Boxer.',
+  nao_encontrado: 'Link inválido ou não encontrado. Confira o endereço com o seu representante Boxer.',
+  limite: 'Muitas tentativas. Aguarde alguns minutos e tente de novo.',
+  erro: 'Não foi possível enviar o código agora. Tente novamente em instantes.'
+};
+async function gatePedir() {
+  const email = (document.getElementById('gInput').value || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { EMAIL_GATE = email; telaEmail('Informe um e-mail válido.'); return; }
+  EMAIL_GATE = email;
+  const b = document.getElementById('gBtn'); b.disabled = true; b.textContent = 'Enviando...';
+  try {
+    const r = await fetch(HUB_ACESSO, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ acao: 'link_codigo', origem: 'proposta', token: TOKEN, email }) });
+    const j = await r.json().catch(() => ({}));
+    const st = (r.ok && j.status) || 'erro';
+    if (st === 'enviado') { telaCodigo('Código enviado!', true); return; }
+    let m = MSG_GATE[st] || MSG_GATE.erro;
+    if (st === 'nao_autorizado' && j.dica) m += ' (cadastrado: ' + j.dica + ')';
+    telaEmail(m);
+  } catch (e) { telaEmail(MSG_GATE.erro); }
+}
+async function gateConfirmar() {
+  const cod = (document.getElementById('gInput').value || '').replace(/\D/g, '');
+  if (cod.length < 6) { telaCodigo('Digite o código recebido por e-mail.'); return; }
+  const b = document.getElementById('gBtn'); b.disabled = true; b.textContent = 'Entrando...';
+  try {
+    const { data, error } = await sb.rpc('link_validar_codigo', { p_origem: 'proposta', p_token: TOKEN, p_email: EMAIL_GATE, p_codigo: cod, p_ua: navigator.userAgent });
+    if (error || !data || !data.ok) { telaCodigo(data && data.motivo === 'bloqueado' ? 'Muitas tentativas. Peça um novo código.' : (data && data.motivo === 'expirado' ? 'Esta proposta expirou.' : 'Código inválido ou expirado. Peça um novo código.')); return; }
+    try { sessionStorage.setItem(SESS_KEY, JSON.stringify({ s: data.sessao, e: data.email, x: data.expira_em })); } catch (e) {}
+    mostrar('estadoLoading');
+    carregar(data.sessao);
+  } catch (e) { telaCodigo('Erro de conexão. Tente novamente.'); }
+}
+function marcaDagua(linha1, linha2) {
+  const cut = (x, n) => { x = String(x || ''); return x.length > n ? x.slice(0, n - 1) + '…' : x; };
+  const xe = x => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="760" height="380"><g transform="rotate(-26 380 190)" fill="#1d327b" fill-opacity="0.10" font-family="Arial,sans-serif" font-weight="700" text-anchor="middle"><text x="380" y="180" font-size="20">' + xe(cut(linha1, 44)) + '</text><text x="380" y="208" font-size="13">' + xe(cut(linha2, 60)) + '</text></g></svg>';
+  let w = document.getElementById('wm');
+  if (!w) { w = document.createElement('div'); w.id = 'wm'; w.className = 'wm'; document.body.appendChild(w); }
+  w.style.backgroundImage = 'url("data:image/svg+xml;utf8,' + encodeURIComponent(svg) + '")';
+}
+
+async function carregar(sessao) {
   let data, error;
   try {
     // Timeout evita a tela travar em "Carregando proposta..." pra sempre se o
-    // Supabase estiver fora do ar/instável — o cliente vendo uma tela sem
-    // resposta nenhuma é exatamente o tipo de coisa que esse sistema existe
-    // pra evitar (ver objetivo do sistema de propostas).
+    // Supabase estiver fora do ar/instável.
     const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 15000));
     ({ data, error } = await Promise.race([
-      sb.schema('comercial').rpc('buscar_proposta_publica', { p_token: token }),
+      sb.schema('comercial').rpc('buscar_proposta_publica_v2', { p_token: TOKEN, p_sessao: sessao, p_ua: navigator.userAgent }),
       timeout
     ]));
   } catch (e) {
@@ -99,9 +192,15 @@ async function init() {
   }
 
   if (error) { mostrar('estadoIndisponivel'); return; }
-  if (!data || data.length === 0) { mostrar('estadoErro'); return; }
+  if (!data || data.length === 0) {
+    // sessao invalida/expirada (ou proposta cancelada): volta para a porta de entrada
+    try { sessionStorage.removeItem(SESS_KEY); } catch (e) {}
+    telaEmail('Sua sessão terminou. Confirme o e-mail para abrir de novo.');
+    return;
+  }
 
   const row = data[0];
+  if (row.expirado) { mostrar('estadoExpirado'); return; }
 
   if (!row.html_snapshot) {
     mostrar('estadoSemSnapshot');
@@ -121,13 +220,19 @@ async function init() {
   document.getElementById('topbar').style.display = 'flex';
   document.getElementById('estadoLoading').style.display = 'none';
 
+  marcaDagua('BOXER · ' + (row.codigo || '') + ' · ' + (row.cliente_nome || ''),
+    'Acesso de ' + (row.visualizador || EMAIL_GATE) + (row.link_expira_em ? ' · válida até ' + new Date(row.link_expira_em).toLocaleDateString('pt-BR') : ''));
+
   // Atualizar título da aba
   document.title = row.codigo + ' — ' + row.cliente_nome + ' — Boxer Soldas';
 }
 
-function mostrar(id) {
-  document.getElementById('estadoLoading').style.display = 'none';
-  document.getElementById(id).style.display = 'flex';
+async function init() {
+  if (!TOKEN) { mostrar('estadoErro'); return; }
+  let sess = null;
+  try { const o = JSON.parse(sessionStorage.getItem(SESS_KEY) || 'null'); if (o && o.s && (!o.x || new Date(o.x) > new Date())) { sess = o.s; EMAIL_GATE = o.e || ''; } } catch (e) {}
+  if (!sess) { telaEmail(); return; }
+  carregar(sess);
 }
 
 init();
