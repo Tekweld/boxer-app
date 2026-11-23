@@ -116,6 +116,7 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 <div class="tab admin-only hidden" onclick="showTab('multiplicadores',this)">Multiplicadores</div>
 <div class="tab admin-only hidden" onclick="showTab('comissoes',this)">Comissões</div>
 <div class="tab admin-only hidden" onclick="showTab('acessos',this)">Acessos</div>
+<div class="tab admin-only hidden" onclick="showTab('diamante',this)">Diamante</div>
 <div class="tab admin-only hidden" onclick="showTab('uso',this)">Log de Uso</div>
 <div class="tab admin-only hidden" onclick="showTab('regras',this)">Regras da Tabela</div>
 </div>
@@ -159,6 +160,12 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 <div class="panel-header"><div><div class="panel-title">Acessos à Tabela de Preços</div><div class="panel-sub">Quem pode entrar na tabela (login por código enviado ao e-mail, sem senha): cadastrar, editar, inativar e excluir</div></div>
 <span><button class="btn btn-outline btn-sm" onclick="openImportAcessos()">Importar em massa</button> <button class="btn btn-primary btn-sm" onclick="openAcessoModal()">+ Novo usuário</button></span></div>
 <div id="acessosWrap"><div class="loading">Carregando...</div></div>
+</div>
+
+<div class="panel-content hidden" id="tab-diamante">
+<div class="panel-header"><div><div class="panel-title">Proposta Laser · BPartner Diamante</div><div class="panel-sub">Condições e preços por região, parâmetros, acessos, propostas emitidas e auditoria dos links. Página: app.boxersoldas.com.br/proposta-diamante.html</div></div>
+<div style="display:flex;gap:8px;align-items:center"><select id="diaSecao" class="select-sm" onchange="diaMostrar()"><option value="cond">Condições por região</option><option value="param">Parâmetros gerais</option><option value="acc">Acessos</option><option value="prop">Propostas emitidas</option><option value="log">Log de links</option></select><button class="btn btn-outline btn-sm" onclick="diaMostrar()">Atualizar</button></div></div>
+<div id="diaWrap"><div class="loading">Carregando...</div></div>
 </div>
 
 <div class="panel-content hidden" id="tab-regras">
@@ -442,6 +449,7 @@ function showTab(n,el){
     if(n==='multiplicadores')loadMult();
     if(n==='comissoes')loadComissoes();
     if(n==='acessos')loadAcessos();
+    if(n==='diamante')loadDiamante();
     if(n==='uso')loadUsoTabela();
     if(n==='regras')loadRegras();
 }
@@ -1217,6 +1225,231 @@ async function saveComissao(id,subtitle,antigoRep,antigoRevenda,antigoVt){
 }
 
 // USUÁRIOS
+
+// DIAMANTE (proposta Laser BPartner Diamante): condicoes por regiao, parametros, acessos, propostas e log de links
+let DIA = { regioes: [], regSel: 'SP' };
+function escD(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function dBRL(v){return v==null?'—':Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
+function dDH(v){return v?new Date(v).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';}
+function dD(v){return v?new Date(v).toLocaleDateString('pt-BR'):'—';}
+function dNum(v){const n=parseFloat(String(v).replace(',','.'));return isNaN(n)?null:n;}
+async function diaLog(tabela,id,campo,ant,novo){
+    try{await sb('/log_alteracoes','POST',{usuario_id:SESSION.user.id,usuario_email:SESSION.user.email,tabela_ref:tabela,registro_id:String(id),campo:campo,valor_anterior:ant==null?null:String(ant),valor_novo:novo==null?null:String(novo)});}catch(e){console.error('log',e);}
+}
+async function loadDiamante(){
+    try{
+        if(!DIA.regioes.length)DIA.regioes=await sb('/diamante_regioes?select=*&order=ordem,rotulo');
+        diaMostrar();
+    }catch(e){document.getElementById('diaWrap').innerHTML='<div style="text-align:center;padding:20px;color:#dc2626">Erro ao carregar: '+escD(e.message)+'</div>';}
+}
+function diaMostrar(){
+    const s=document.getElementById('diaSecao').value;
+    document.getElementById('diaWrap').innerHTML='<div class="loading">Carregando...</div>';
+    ({cond:diaCond,param:diaParam,acc:diaAcessos,prop:diaPropostas,log:diaLogLinks}[s])();
+}
+function diaRotulo(r){const g=DIA.regioes.find(x=>x.regiao===r);return g?g.rotulo:r;}
+
+// ---- condicoes por regiao ----
+async function diaCond(){
+    const w=document.getElementById('diaWrap');
+    try{
+        const reg=DIA.regSel;
+        const [mods,conds,calc]=await Promise.all([
+            sb('/diamante_modelos?select=*&order=ordem'),
+            sb('/diamante_condicoes?regiao=eq.'+encodeURIComponent(reg)+'&select=*'),
+            sb('/rpc/diamante_calc_admin','POST',{p_regiao:reg})
+        ]);
+        const cm={};conds.forEach(c=>cm[c.modelo]=c);
+        const pm={};((calc&&calc.modelos)||[]).forEach(m=>pm[m.modelo]=m);
+        let h='<div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap"><label style="font-size:12px;color:#4a5568;font-weight:600">REGIÃO</label><select id="diaReg" class="select-sm" onchange="DIA.regSel=this.value;diaMostrar()">'+
+            DIA.regioes.map(g=>'<option value="'+g.regiao+'"'+(g.regiao===reg?' selected':'')+'>'+escD(g.rotulo)+(g.ativo?'':' (inativa)')+'</option>').join('')+'</select>'+
+            '<span style="font-size:12px;color:#718096">Preço-base = Laser (tabela BMax) × fator do estado × Origem Revenda classe 4 × fator da tabela normal. Edite só os descontos.</span></div>';
+        h+='<table><thead><tr><th>Modelo</th><th class="text-right">Tabela normal</th><th>Desc. oferta %</th><th>Preço fixo (opcional)</th><th class="text-right">Oferta</th><th>Desc. demo %</th><th>Parcelas</th><th class="text-right">Demonstração</th><th></th></tr></thead><tbody>';
+        mods.forEach(m=>{
+            const c=cm[m.modelo]||{};const p=pm[m.modelo]||{};const dm=(p.demonstracao&&p.demonstracao[0])||null;
+            const k=m.modelo;
+            h+='<tr><td style="font-weight:600">'+escD(m.modelo)+' <span style="color:#718096;font-weight:400">'+escD(m.potencia)+'</span></td>'+
+              '<td class="text-right">'+dBRL(p.tabela_normal)+'</td>'+
+              '<td><input id="dd_'+k+'" type="number" step="0.01" style="width:80px" value="'+(c.desconto_oferta_pct==null?'':c.desconto_oferta_pct)+'"></td>'+
+              '<td><input id="df_'+k+'" type="number" step="0.01" style="width:110px" placeholder="auto" value="'+(c.preco_oferta_fixo==null?'':c.preco_oferta_fixo)+'"></td>'+
+              '<td class="text-right" style="font-weight:700;color:#1d327b">'+dBRL(p.oferta)+(p.desconto_pct!=null?'<div style="font-size:11px;color:#718096;font-weight:400">−'+Number(p.desconto_pct).toLocaleString('pt-BR',{maximumFractionDigits:2})+'%</div>':'')+'</td>'+
+              '<td><input id="dm_'+k+'" type="number" step="0.01" style="width:80px" placeholder="sem" value="'+(c.demo_desconto_pct==null?'':c.demo_desconto_pct)+'"></td>'+
+              '<td><input id="dp_'+k+'" type="number" step="1" min="1" max="36" style="width:64px" placeholder="—" value="'+(c.demo_parcelas==null?'':c.demo_parcelas)+'"></td>'+
+              '<td class="text-right">'+(dm?dBRL(dm.valor)+'<div style="font-size:11px;color:#718096">'+dm.parcelas+'x de '+dBRL(dm.parcela)+'</div>':'—')+'</td>'+
+              '<td style="white-space:nowrap"><button class="btn btn-primary btn-sm" onclick="diaSalvarCond(\''+k+'\')">Salvar</button> <button class="btn btn-outline btn-sm" onclick="diaAplicarTodas(\''+k+'\')">Aplicar a todas</button></td></tr>';
+        });
+        h+='</tbody></table><p style="font-size:12px;color:#718096;margin-top:12px">Preço fixo: quando preenchido, vale no lugar do desconto (o desconto mostrado ao cliente passa a ser calculado). Demonstração: deixe os dois campos em branco para o modelo não ter máquina de demonstração. As alterações valem para propostas novas; as já emitidas ficam congeladas.</p>';
+        w.innerHTML=h;
+    }catch(e){w.innerHTML='<div style="text-align:center;padding:20px;color:#dc2626">Erro: '+escD(e.message)+'</div>';}
+}
+function diaLerLinha(k){
+    const dd=dNum(document.getElementById('dd_'+k).value),df=dNum(document.getElementById('df_'+k).value),dm=dNum(document.getElementById('dm_'+k).value),dp=dNum(document.getElementById('dp_'+k).value);
+    if(dd==null&&df==null)throw new Error('Informe o desconto da oferta ou um preço fixo.');
+    if(dd!=null&&(dd<0||dd>80))throw new Error('Desconto da oferta deve ficar entre 0 e 80%.');
+    if(df!=null&&df<=0)throw new Error('Preço fixo inválido.');
+    if((dm==null)!==(dp==null))throw new Error('Demonstração: preencha desconto e parcelas, ou deixe os dois em branco.');
+    if(dm!=null&&(dm<0||dm>80))throw new Error('Desconto da demonstração deve ficar entre 0 e 80%.');
+    if(dp!=null&&(dp<1||dp>36||dp!==Math.round(dp)))throw new Error('Parcelas devem ser um número inteiro de 1 a 36.');
+    return {desconto_oferta_pct:dd,preco_oferta_fixo:df,demo_desconto_pct:dm,demo_parcelas:dp};
+}
+async function diaSalvarCond(k){
+    try{
+        const v=diaLerLinha(k);const reg=DIA.regSel;
+        const ant=(await sb('/diamante_condicoes?regiao=eq.'+encodeURIComponent(reg)+'&modelo=eq.'+k+'&select=*'))[0]||{};
+        await sb('/diamante_condicoes?regiao=eq.'+encodeURIComponent(reg)+'&modelo=eq.'+k,'PATCH',Object.assign({},v,{atualizado_em:new Date().toISOString(),atualizado_por:SESSION.user.email}));
+        for(const f of Object.keys(v)){if(String(ant[f]==null?'':ant[f])!==String(v[f]==null?'':v[f]))await diaLog('diamante_condicoes',reg+'/'+k,f,ant[f],v[f]);}
+        toast('Condição salva ('+diaRotulo(reg)+' · '+k+')');diaMostrar();
+    }catch(e){toast(e.message||'Erro ao salvar','error');}
+}
+async function diaAplicarTodas(k){
+    try{
+        const v=diaLerLinha(k);const reg=DIA.regSel;
+        const excl=reg==='PR_Interior'?'':'&regiao=neq.PR_Interior';
+        const n=DIA.regioes.filter(g=>reg==='PR_Interior'||g.regiao!=='PR_Interior').length;
+        if(!confirm('Aplicar as condições de '+k+' desta tela a '+n+' regiões'+(reg==='PR_Interior'?'':' (o Paraná interior mantém as próprias)')+'? Isso substitui o que existe nelas.'))return;
+        await sb('/diamante_condicoes?modelo=eq.'+k+excl,'PATCH',Object.assign({},v,{atualizado_em:new Date().toISOString(),atualizado_por:SESSION.user.email}));
+        await diaLog('diamante_condicoes','todas/'+k,'aplicado_a_todas',null,JSON.stringify(v));
+        toast('Condições de '+k+' aplicadas a '+n+' regiões');diaMostrar();
+    }catch(e){toast(e.message||'Erro ao aplicar','error');}
+}
+
+// ---- parametros gerais ----
+const DIA_PARAM_INFO={
+    fator_normal:{rot:'Fator da tabela normal',desc:'Condição de compra para a revenda (redução da margem). Tabela normal = preço Origem Revenda classe 4 × este fator.',tipo:'num'},
+    premiacao_valor:{rot:'Premiação ao vendedor (R$)',desc:'Valor mostrado na proposta.',tipo:'num'},
+    premiacao_texto:{rot:'Texto da premiação',desc:'Texto ao lado do valor da premiação.',tipo:'txt'},
+    recompra_texto:{rot:'Texto da recompra da demonstração',desc:'Frase do passo 2 (ex.: recompra permitida a cada 6 meses).',tipo:'txt'},
+    validade_texto:{rot:'Texto de validade dos preços',desc:'Faixa vermelha no topo da proposta.',tipo:'txt'},
+    reajuste_texto:{rot:'Reajuste a partir de (DD/MM/AAAA)',desc:'Também limita a validade das propostas emitidas: nenhuma proposta vale depois desta data.',tipo:'data'}
+};
+async function diaParam(){
+    const w=document.getElementById('diaWrap');
+    try{
+        const ps=await sb('/diamante_param?select=*&order=chave');
+        let h='<table><thead><tr><th>Parâmetro</th><th>Valor</th><th>O que faz</th><th></th></tr></thead><tbody>';
+        ps.forEach(p=>{
+            const i=DIA_PARAM_INFO[p.chave];const val=typeof p.valor==='string'?p.valor:JSON.stringify(p.valor);
+            h+='<tr><td style="font-weight:600">'+escD(i?i.rot:p.chave)+'<div style="font-size:11px;color:#a0aec0;font-weight:400">'+escD(p.chave)+'</div></td><td>'+escD(val)+'</td><td style="font-size:12px;color:#718096">'+escD(i?i.desc:'Referência fixa do cálculo (tabela de origem do preço). Altere só com ajuda técnica.')+'</td><td>'+(i?'<button class="btn btn-outline btn-sm" onclick="diaEditParam(\''+p.chave+'\')">Editar</button>':'')+'</td></tr>';
+        });
+        w.innerHTML=h+'</tbody></table>';
+        DIA._params=ps;
+    }catch(e){w.innerHTML='<div style="text-align:center;padding:20px;color:#dc2626">Erro: '+escD(e.message)+'</div>';}
+}
+function diaEditParam(chave){
+    const p=(DIA._params||[]).find(x=>x.chave===chave);const i=DIA_PARAM_INFO[chave];if(!p||!i)return;
+    const val=typeof p.valor==='string'?p.valor:String(p.valor);
+    openModal('<h3>'+escD(i.rot)+'</h3><p style="color:#718096;font-size:13px;margin-bottom:12px">'+escD(i.desc)+'</p><div class="form-row"><label>Valor</label>'+(i.tipo==='txt'?'<textarea id="dpv" rows="3" style="width:100%">'+escD(val)+'</textarea>':'<input id="dpv" type="'+(i.tipo==='num'?'number" step="0.0001':'text')+'" value="'+escD(val)+'">')+'</div>'+
+      '<div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="diaSalvarParam(\''+chave+'\')">Salvar</button></div>');
+}
+async function diaSalvarParam(chave){
+    const i=DIA_PARAM_INFO[chave];const p=(DIA._params||[]).find(x=>x.chave===chave);let raw=document.getElementById('dpv').value.trim();let novo;
+    if(i.tipo==='num'){novo=dNum(raw);if(novo==null||novo<=0){toast('Informe um número maior que zero.','error');return;}}
+    else if(i.tipo==='data'){if(!/^\d{2}\/\d{2}\/\d{4}$/.test(raw)){toast('Use o formato DD/MM/AAAA.','error');return;}novo=raw;}
+    else{if(raw.length<3){toast('Texto muito curto.','error');return;}novo=raw;}
+    try{
+        await sb('/diamante_param?chave=eq.'+chave,'PATCH',{valor:novo,atualizado_em:new Date().toISOString(),atualizado_por:SESSION.user.email});
+        await diaLog('diamante_param',chave,'valor',typeof p.valor==='string'?p.valor:JSON.stringify(p.valor),novo);
+        toast('Parâmetro salvo');closeModal();diaMostrar();
+    }catch(e){toast('Erro: '+e.message,'error');}
+}
+
+// ---- acessos ----
+async function diaAcessos(){
+    const w=document.getElementById('diaWrap');
+    try{
+        const rows=await sb('/diamante_acessos?select=*&order=criado_em.desc');DIA._acc=rows;
+        const hoje=new Date().toISOString().slice(0,10);
+        let h='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:12px;color:#718096">Quem pode ver os preços e emitir propostas do Diamante. Equipe interna e admin já veem todas as regiões sem cadastro. Representantes e revendas: uma linha por região.</span><button class="btn btn-primary btn-sm" onclick="diaAccModal()">+ Novo acesso</button></div>';
+        h+='<table><thead><tr><th>E-mail</th><th>Nome</th><th>Região</th><th>Validade</th><th>Situação</th><th>Observação</th><th></th></tr></thead><tbody>';
+        if(!rows.length)h+='<tr><td colspan="7" style="text-align:center;color:#a0aec0;padding:20px">Nenhum acesso cadastrado.</td></tr>';
+        rows.forEach(a=>{
+            const exp=a.validade&&a.validade<hoje;const sit=!a.ativo?'<span style="color:#991b1b">Revogado</span>':(exp?'<span style="color:#9a5b00">Expirado</span>':'<span style="color:#166534">Ativo</span>');
+            h+='<tr><td>'+escD(a.email)+'</td><td>'+escD(a.nome||'')+'</td><td>'+escD(diaRotulo(a.regiao))+'</td><td>'+(a.validade?fmtDataBR(a.validade):'sem prazo')+'</td><td>'+sit+'</td><td style="font-size:12px;color:#718096">'+escD(a.observacao||'')+'</td>'+
+              '<td style="white-space:nowrap"><button class="btn btn-outline btn-sm" onclick="diaAccModal(\''+a.id+'\')">Editar</button> <button class="btn btn-outline btn-sm" onclick="diaAccToggle(\''+a.id+'\','+(!a.ativo)+')">'+(a.ativo?'Revogar':'Reativar')+'</button></td></tr>';
+        });
+        w.innerHTML=h+'</tbody></table>';
+    }catch(e){w.innerHTML='<div style="text-align:center;padding:20px;color:#dc2626">Erro: '+escD(e.message)+'</div>';}
+}
+function diaAccModal(id){
+    const a=id?(DIA._acc||[]).find(x=>x.id===id):null;
+    const opts=DIA.regioes.map(g=>'<option value="'+g.regiao+'"'+(a&&a.regiao===g.regiao?' selected':'')+'>'+escD(g.rotulo)+'</option>').join('');
+    openModal('<h3>'+(a?'Editar acesso':'Novo acesso ao Diamante')+'</h3>'+
+      '<div class="form-row"><label>E-mail *</label><input id="da_email" type="email" value="'+escD(a?a.email:'')+'"'+(a?' disabled':'')+'></div>'+
+      '<div class="form-row"><label>Nome</label><input id="da_nome" type="text" value="'+escD(a?a.nome||'':'')+'"></div>'+
+      '<div class="form-row"><label>Região *</label><select id="da_reg"'+(a?' disabled':'')+'>'+opts+'</select></div>'+
+      '<div class="form-row"><label>Validade (vazio = sem prazo)</label><input id="da_val" type="date" value="'+(a&&a.validade?a.validade:'')+'"></div>'+
+      '<div class="form-row"><label>Observação</label><input id="da_obs" type="text" value="'+escD(a?a.observacao||'':'')+'"></div>'+
+      '<div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="diaAccSalvar('+(a?"'"+a.id+"'":'null')+')">Salvar</button></div>');
+}
+async function diaAccSalvar(id){
+    const email=document.getElementById('da_email').value.trim().toLowerCase(),nome=document.getElementById('da_nome').value.trim(),reg=document.getElementById('da_reg').value,val=document.getElementById('da_val').value||null,obs=document.getElementById('da_obs').value.trim()||null;
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){toast('Informe um e-mail válido.','error');return;}
+    try{
+        if(id){await sb('/diamante_acessos?id=eq.'+id,'PATCH',{nome:nome||null,validade:val,observacao:obs});await diaLog('diamante_acessos',id,'edicao',null,email+' · '+reg+' · '+(val||'sem prazo'));}
+        else{await sb('/diamante_acessos','POST',{email:email,regiao:reg,nome:nome||null,validade:val,observacao:obs,criado_por:SESSION.user.email});await diaLog('diamante_acessos',email+'/'+reg,'novo_acesso',null,val||'sem prazo');}
+        toast('Acesso salvo');closeModal();diaMostrar();
+    }catch(e){toast(/duplicate|uniq/i.test(e.message)?'Este e-mail já tem acesso a esta região.':'Erro: '+e.message,'error');}
+}
+async function diaAccToggle(id,ativo){
+    try{await sb('/diamante_acessos?id=eq.'+id,'PATCH',{ativo:ativo});await diaLog('diamante_acessos',id,'ativo',String(!ativo),String(ativo));toast(ativo?'Acesso reativado':'Acesso revogado');diaMostrar();}
+    catch(e){toast('Erro: '+e.message,'error');}
+}
+
+// ---- propostas emitidas ----
+async function diaPropostas(){
+    const w=document.getElementById('diaWrap');
+    try{
+        const rows=await sb('/diamante_propostas?select=id,codigo,token,regiao,cliente_nome,destinatario_email,total,emitido_por_nome,emitido_por_email,criado_em,validade_em,status,visualizacoes,ultima_visualizacao_em&order=criado_em.desc&limit=100');DIA._prop=rows;
+        let h='<table><thead><tr><th>Proposta</th><th>Cliente</th><th>Destinatário</th><th class="text-right">Total</th><th>Emitida por</th><th>Criada</th><th>Validade</th><th>Aberturas</th><th>Situação</th><th></th></tr></thead><tbody>';
+        if(!rows.length)h+='<tr><td colspan="10" style="text-align:center;color:#a0aec0;padding:20px">Nenhuma proposta emitida ainda.</td></tr>';
+        const agora=Date.now();
+        rows.forEach(p=>{
+            const st=p.status==='cancelada'?'Cancelada':(new Date(p.validade_em).getTime()<agora?'Expirada':(p.visualizacoes>0?'Aberta':'Não aberta'));
+            h+='<tr><td style="font-weight:600">'+escD(p.codigo)+'<div style="font-size:11px;color:#718096;font-weight:400">'+escD(diaRotulo(p.regiao))+'</div></td><td>'+escD(p.cliente_nome)+'</td><td>'+escD(p.destinatario_email)+'</td><td class="text-right">'+dBRL(p.total)+'</td><td>'+escD(p.emitido_por_nome||p.emitido_por_email||'')+'</td><td>'+dDH(p.criado_em)+'</td><td>'+dD(p.validade_em)+'</td><td>'+p.visualizacoes+(p.ultima_visualizacao_em?'<div style="font-size:11px;color:#718096">última '+dDH(p.ultima_visualizacao_em)+'</div>':'')+'</td><td>'+st+'</td>'+
+              '<td style="white-space:nowrap"><button class="btn btn-outline btn-sm" onclick="diaVerLog(\''+p.id+'\')">Log</button>'+(p.status!=='cancelada'?' <button class="btn btn-outline btn-sm" onclick="diaCancelarProp(\''+p.id+'\')">Cancelar</button>':'')+'</td></tr>';
+        });
+        w.innerHTML=h+'</tbody></table>';
+    }catch(e){w.innerHTML='<div style="text-align:center;padding:20px;color:#dc2626">Erro: '+escD(e.message)+'</div>';}
+}
+const DIA_EV={proposta_criada:'Proposta criada',codigo_enviado:'Código enviado',codigo_negado_email:'E-mail não autorizado',codigo_negado_expirado:'Pedido após expirar',codigo_negado_cancelado:'Pedido após cancelar',codigo_limite:'Limite de pedidos',codigo_invalido:'Código inválido',codigo_validado:'Código validado',visualizou:'Abriu a proposta',aceitou:'Aceitou',recusou:'Recusou',proposta_cancelada:'Proposta cancelada'};
+function diaEvRows(ev){
+    return ev.map(e=>'<tr><td style="white-space:nowrap">'+dDH(e.criado_em)+'</td><td>'+escD(e.origem)+'</td><td>'+escD(e.referencia||'')+'</td><td>'+escD(DIA_EV[e.evento]||e.evento)+'</td><td>'+escD(e.email||'')+'</td><td>'+escD(e.ip||'')+'</td><td style="font-size:11px;color:#718096;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+escD(e.user_agent||'')+'">'+escD(e.user_agent||'')+'</td></tr>').join('');
+}
+async function diaVerLog(id){
+    try{
+        const ev=await sb('/link_acessos?ref_id=eq.'+id+'&select=*&order=criado_em.desc&limit=300');
+        openModal('<h3>Auditoria da proposta</h3><div style="max-height:60vh;overflow:auto"><table><thead><tr><th>Quando</th><th>Origem</th><th>Ref.</th><th>Evento</th><th>E-mail</th><th>IP</th><th>Aparelho</th></tr></thead><tbody>'+(ev.length?diaEvRows(ev):'<tr><td colspan="7" style="text-align:center;color:#a0aec0;padding:16px">Sem eventos.</td></tr>')+'</tbody></table></div><div class="form-actions"><button class="btn btn-primary" onclick="closeModal()">Fechar</button></div>');
+    }catch(e){toast('Erro: '+e.message,'error');}
+}
+async function diaCancelarProp(id){
+    const p=(DIA._prop||[]).find(x=>x.id===id);if(!p||!confirm('Cancelar a proposta '+p.codigo+'? O link deixa de abrir.'))return;
+    try{
+        await sb('/diamante_propostas?id=eq.'+id,'PATCH',{status:'cancelada',ativo:false,cancelado_em:new Date().toISOString(),cancelado_por:SESSION.user.email});
+        await diaLog('diamante_propostas',p.codigo,'status','emitida','cancelada (admin)');
+        toast('Proposta cancelada');diaMostrar();
+    }catch(e){toast('Erro: '+e.message,'error');}
+}
+
+// ---- log de links (diamante, orcamento, proposta BMAX) ----
+async function diaLogLinks(){
+    const w=document.getElementById('diaWrap');
+    try{
+        const orig=(document.getElementById('diaLogOrig')||{}).value||'';const dias=(document.getElementById('diaLogDias')||{}).value||'7';
+        const desde=new Date(Date.now()-parseInt(dias)*86400000).toISOString();
+        const ev=await sb('/link_acessos?criado_em=gte.'+encodeURIComponent(desde)+(orig?'&origem=eq.'+orig:'')+'&select=*&order=criado_em.desc&limit=500');
+        DIA._ev=ev;
+        let h='<div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap"><select id="diaLogOrig" class="select-sm" onchange="diaMostrar()"><option value="">Todas as origens</option><option value="diamante"'+(orig==='diamante'?' selected':'')+'>Proposta Diamante</option><option value="orcamento"'+(orig==='orcamento'?' selected':'')+'>Orçamento Revendas</option><option value="proposta"'+(orig==='proposta'?' selected':'')+'>Proposta BMAX/Laser</option></select>'+
+          '<select id="diaLogDias" class="select-sm" onchange="diaMostrar()"><option value="1"'+(dias==='1'?' selected':'')+'>Últimas 24h</option><option value="7"'+(dias==='7'?' selected':'')+'>Últimos 7 dias</option><option value="30"'+(dias==='30'?' selected':'')+'>Últimos 30 dias</option><option value="90"'+(dias==='90'?' selected':'')+'>Últimos 90 dias</option></select>'+
+          '<input id="diaLogBusca" class="select-sm" style="min-width:220px" placeholder="Filtrar por e-mail, referência ou IP" oninput="diaFiltrarLog()"><span style="font-size:12px;color:#718096">'+ev.length+' eventos (máx. 500)</span></div>';
+        h+='<table><thead><tr><th>Quando</th><th>Origem</th><th>Ref.</th><th>Evento</th><th>E-mail</th><th>IP</th><th>Aparelho</th></tr></thead><tbody id="diaLogBody">'+(ev.length?diaEvRows(ev):'<tr><td colspan="7" style="text-align:center;color:#a0aec0;padding:20px">Sem eventos no período.</td></tr>')+'</tbody></table>';
+        w.innerHTML=h;
+    }catch(e){w.innerHTML='<div style="text-align:center;padding:20px;color:#dc2626">Erro: '+escD(e.message)+'</div>';}
+}
+function diaFiltrarLog(){
+    const q=document.getElementById('diaLogBusca').value.trim().toLowerCase();
+    const ev=(DIA._ev||[]).filter(e=>!q||[e.email,e.referencia,e.ip].some(x=>String(x||'').toLowerCase().includes(q)));
+    document.getElementById('diaLogBody').innerHTML=ev.length?diaEvRows(ev):'<tr><td colspan="7" style="text-align:center;color:#a0aec0;padding:20px">Nada encontrado.</td></tr>';
+}
 
 // Inicialização da página
 window.addEventListener('DOMContentLoaded', () => {
