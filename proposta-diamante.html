@@ -60,6 +60,26 @@ h2{font:800 20px 'Montserrat';color:var(--blue);margin:28px 0 12px}h2 span{color
 .sel select{padding:8px 10px;border:1px solid #c3cfe2;border-radius:8px;font:600 14px 'Inter'}
 .out{margin-top:14px;text-align:center}.out button{background:none;border:0;color:#5c6478;font:400 12px 'Inter';text-decoration:underline;cursor:pointer}
 @media print{.sel,.out{display:none}}
+
+.wm{position:fixed;left:0;top:0;right:0;bottom:0;pointer-events:none;z-index:50;background-repeat:repeat;background-size:460px 300px}
+.sum{margin:0 0 18px}.sum h2{margin-top:6px}
+.tb{width:100%;border-collapse:collapse;font:400 13px 'Inter';margin-top:6px}
+.tb th{background:var(--blue);color:#fff;text-align:left;padding:8px 10px;font:700 11px 'Montserrat';letter-spacing:.06em;text-transform:uppercase}
+.tb th.r,.tb td.r{text-align:right}.tb td{padding:8px 10px;border-bottom:1px solid #e6e9f2;vertical-align:top}
+.tb tr.tot td{font:800 15px 'Montserrat';color:var(--blue);border-top:2px solid var(--blue)}
+.inf{margin-top:10px;font:400 12px/1.6 'Inter';color:#5c6478}
+.emi{margin-top:30px;border-top:3px solid var(--blue);padding-top:6px}.emi h3{font:800 15px 'Montserrat';color:var(--blue);margin:22px 0 8px}
+.emt{font:400 13px/1.5 'Inter';color:#5c6478;margin-bottom:12px}
+.fm{display:grid;gap:10px;grid-template-columns:1fr}@media(min-width:700px){.fm{grid-template-columns:repeat(3,1fr)}.fc.w2{grid-column:span 2}.fc.w3{grid-column:span 3}}
+.fc label{display:block;font:600 10px 'Montserrat';letter-spacing:.1em;text-transform:uppercase;color:#5c6478;margin-bottom:4px}
+.fc input,.fc select,.fc textarea{width:100%;padding:10px;border:1px solid #c3cfe2;border-radius:8px;font:400 14px 'Inter';background:#fff}
+.emi>button{margin-top:12px;padding:12px 22px;border:0;border-radius:8px;background:var(--vivid);color:#fff;font:700 13px 'Montserrat';letter-spacing:.03em;text-transform:uppercase;cursor:pointer}
+.emi>button[disabled]{opacity:.6}
+.res .ok2{margin-top:14px;background:#e8f5e9;border:1px solid #b7dfb9;border-radius:10px;padding:12px 14px;font:400 13px/1.5 'Inter'}.res .lnk{word-break:break-all;margin:6px 0;color:#1d327b}
+button.sm,a.sm{display:inline-block;margin:4px 6px 0 0;padding:6px 10px;border:1px solid #c3cfe2;border-radius:6px;background:#fff;color:#1d327b;font:600 12px 'Inter';cursor:pointer;text-decoration:none}
+button.sm.dg{color:#b42318;border-color:#f1b9b3}
+.lst .tb td{font-size:12px}
+@media print{.emi,.sel,.out{display:none}.wm{position:fixed}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 </style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head><body>
 <div id="app"><div class="err"><p>Carregando…</p></div></div>
 <script>
@@ -69,22 +89,31 @@ var HUB_API='https://hub.boxersoldas.com.br';
 var sbc=supabase.createClient(SUPABASE_URL,SUPABASE_ANON);
 var EMAIL_LOGIN='';
 var LOGO='data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjM3OSA2MTAgMTgxMCA0OTAiPgo8cGF0aCBmaWxsPSIjZmZmZmZmIiBkPSJNIDEwMjguNzg5MDYyIDcyNC4yMTQ4NDQgQyAxMDM4LjU4NTkzOCA3MjIuOTEwMTU2IDEwNDkuMTE3MTg4IDcyMi4yNTc4MTIgMTA2MC4zOTA2MjUgNzIyLjI1NzgxMiBDIDEwODkuMzA4NTk0IDcyMi4yNTc4MTIgMTExMy4yNjk1MzEgNzI3LjIxMDkzOCAxMTMyLjI2OTUzMSA3MzcuMTI4OTA2IEMgMTE1MS4yNzM0MzggNzQ3LjA0Mjk2OSAxMTY1LjQyMTg3NSA3NTkuODQ3NjU2IDExNzQuNzE0ODQ0IDc3NS41NDI5NjkgQyAxMTg0LjAxMTcxOSA3OTEuMjQyMTg4IDExODguNjYwMTU2IDgwOC4xNzk2ODggMTE4OC42NjAxNTYgODI2LjM1NTQ2OSBMIDExODcuNDE3OTY5IDk4OC43MDMxMjUgQyAxMTg3LjQxNzk2OSAxMDE5LjY4MzU5NCAxMTc2LjI2NTYyNSAxMDQ0LjU3NDIxOSAxMTUzLjk1NzAzMSAxMDYzLjM2NzE4OCBDIDExMzEuNjQ4NDM4IDEwODIuMTY3OTY5IDExMDAuMDUwNzgxIDEwOTEuNTYyNSAxMDU5LjE1MjM0NCAxMDkxLjU2MjUgQyAxMDI5LjQxMDE1NiAxMDkxLjU2MjUgMTAwNC45MzM1OTQgMTA4Ny4wMTk1MzEgOTg1LjcyMjY1NiAxMDc3LjkzMzU5NCBDIDk2Ni41MTU2MjUgMTA2OC44NDM3NSA5NTIuMzY3MTg4IDEwNTYuNjU2MjUgOTQzLjI4MTI1IDEwNDEuMzcxMDk0IEMgOTM2LjcxODc1IDEwMzAuMzM1OTM4IDkzMi41MjM0MzggMTAxOC42NTYyNSA5MzAuNjk5MjE5IDEwMDYuMzI4MTI1IEMgOTI5LjE2MDE1NiAxMDAwLjA1MDc4MSA5MjguMzM1OTM4IDk5My40ODgyODEgOTI4LjMzNTkzOCA5ODYuNzM0Mzc1IEwgOTI4LjMzNTkzOCA5ODYuNTU0Njg4IEwgOTI4LjI5Njg3NSA2NTIuNzk2ODc1IEwgOTI4LjMwMDc4MSA2NTIuNTcwMzEyIEwgOTI4LjMwMDc4MSA2MTQuOTAyMzQ0IEwgMTAyOC43ODkwNjIgNjE0LjkwMjM0NCBaIE0gMTAyOC43ODkwNjIgOTg5LjMwODU5NCBDIDEwMjguNzg5MDYyIDEwMDYuMDc4MTI1IDEwNDIuMzgyODEyIDEwMTkuNjcxODc1IDEwNTkuMTUyMzQ0IDEwMTkuNjcxODc1IEMgMTA3NS45MTc5NjkgMTAxOS42NzE4NzUgMTA4OS41MTU2MjUgMTAwNi4wNzgxMjUgMTA4OS41MTU2MjUgOTg5LjMwODU5NCBDIDEwODkuNTE1NjI1IDkzNC4zNDM3NSAxMDg5LjUxMTcxOSA4NzkuMzc4OTA2IDEwODkuNTE1NjI1IDgyNC40MTQwNjIgTCAxMDg5LjUwNzgxMiA4MjMuODMyMDMxIEMgMTA4OS4xOTUzMTIgODA3LjMzMjAzMSAxMDc1LjcyNjU2MiA3OTQuMDUwNzgxIDEwNTkuMTUyMzQ0IDc5NC4wNTA3ODEgQyAxMDQyLjM4MjgxMiA3OTQuMDUwNzgxIDEwMjguNzg5MDYyIDgwNy42NDQ1MzEgMTAyOC43ODkwNjIgODI0LjQxNDA2MiBaIE0gMjA5Ny40NTcwMzEgNzIyLjI1NzgxMiBMIDIxNzkuNzQ2MDk0IDcyMi4yNTc4MTIgTCAyMTc5Ljc0NjA5NCA3ODguNDIxODc1IEMgMjE3OS4yODkwNjIgNzg4LjM0Mzc1IDIxNDIuOTc2NTYyIDc4OC40MjE4NzUgMjE0MC43MTQ4NDQgNzg4LjQyMTg3NSBDIDIxMjIuOTY4NzUgNzg4LjQyMTg3NSAyMTA0LjU3NDIxOSA4MDIuODQzNzUgMjEwNS4zNTU0NjkgODIzLjk3MjY1NiBMIDIxMDUuMzU1NDY5IDEwOTEuNTYyNSBMIDIwMDAuMDMxMjUgMTA5MS41NjI1IEwgMjAwMC4wMzEyNSA3NjIuMjM0Mzc1IEMgMjAwMC41MzkwNjIgNzM1Ljc0NjA5NCAyMDIwLjcyNjU2MiA3MjIuODY3MTg4IDIwNDkuMjkyOTY5IDcyMi4yNTc4MTIgWiBNIDEyMDQuOTY4NzUgOTkxLjgwMDc4MSBMIDEyMDQuOTY4NzUgODI4LjgzMjAzMSBDIDEyMDQuOTY4NzUgNzk3Ljg1NTQ2OSAxMjE1LjcwNzAzMSA3NzIuMzQzNzUgMTIzNy4xODc1IDc1Mi4zMDQ2ODggQyAxMjU4LjY3MTg3NSA3MzIuMjczNDM4IDEyOTEuNTExNzE5IDcyMi4yNTc4MTIgMTMzNS43MTQ4NDQgNzIyLjI1NzgxMiBDIDEzNjQuNjI4OTA2IDcyMi4yNTc4MTIgMTM4OC41OTM3NSA3MjcuMjEwOTM4IDE0MDcuNTg5ODQ0IDczNy4xMjg5MDYgQyAxNDI2LjU5Mzc1IDc0Ny4wNDI5NjkgMTQ0MC43NDIxODggNzU5Ljg0NzY1NiAxNDUwLjAzNTE1NiA3NzUuNTQyOTY5IEMgMTQ1OS4zMzU5MzggNzkxLjI0MjE4OCAxNDYzLjk4MDQ2OSA4MDguMTc5Njg4IDE0NjMuOTgwNDY5IDgyNi4zNTU0NjkgTCAxNDYyLjc0MjE4OCA5ODguNzAzMTI1IEMgMTQ2Mi43NDIxODggMTAxOS42ODM1OTQgMTQ1MS41ODU5MzggMTA0NC41NzQyMTkgMTQyOS4yODEyNSAxMDYzLjM2NzE4OCBDIDE0MDYuOTcyNjU2IDEwODIuMTY3OTY5IDEzNzUuMzcxMDk0IDEwOTEuNTYyNSAxMzM0LjQ3NjU2MiAxMDkxLjU2MjUgQyAxMzA0LjczMDQ2OSAxMDkxLjU2MjUgMTI4MC4yNTM5MDYgMTA4Ny4wMTk1MzEgMTI2MS4wNDI5NjkgMTA3Ny45MzM1OTQgQyAxMjQxLjgzOTg0NCAxMDY4Ljg0Mzc1IDEyMjcuNjkxNDA2IDEwNTYuNjU2MjUgMTIxOC42MDE1NjIgMTA0MS4zNzEwOTQgQyAxMjA5LjUxMTcxOSAxMDI2LjA4NTkzOCAxMjA0Ljk2ODc1IDEwMDkuNTYyNSAxMjA0Ljk2ODc1IDk5MS44MDA3ODEgTSAxMzA0LjEwOTM3NSA5ODkuMzA4NTk0IEMgMTMwNC4xMDkzNzUgMTAwNi4wNzgxMjUgMTMxNy43MDMxMjUgMTAxOS42NzE4NzUgMTMzNC40NzI2NTYgMTAxOS42NzE4NzUgQyAxMzUxLjI0MjE4OCAxMDE5LjY3MTg3NSAxMzY0LjgzNTkzOCAxMDA2LjA3ODEyNSAxMzY0LjgzNTkzOCA5ODkuMzA4NTk0IEMgMTM2NC44MzU5MzggOTM0LjM0Mzc1IDEzNjQuODMyMDMxIDg3OS4zNzg5MDYgMTM2NC44MzU5MzggODI0LjQxNDA2MiBMIDEzNjQuODI4MTI1IDgyMy44MzIwMzEgQyAxMzY0LjUxOTUzMSA4MDcuMzMyMDMxIDEzNTEuMDQ2ODc1IDc5NC4wNTA3ODEgMTMzNC40NzI2NTYgNzk0LjA1MDc4MSBDIDEzMTcuNzAzMTI1IDc5NC4wNTA3ODEgMTMwNC4xMDkzNzUgODA3LjY0NDUzMSAxMzA0LjEwOTM3NSA4MjQuNDE0MDYyIFogTSAxODIwLjc1NzgxMiA5MjEuNzgxMjUgTCAxODIwLjc1NzgxMiA5ODkuMzMyMDMxIEwgMTgyMC43NjE3MTkgOTg5LjMzMjAzMSBDIDE4MjAuODc4OTA2IDEwMDYgMTgzNC40MjE4NzUgMTAxOS40NzY1NjIgMTg1MS4xMjEwOTQgMTAxOS40NzY1NjIgQyAxODY3Ljg4NjcxOSAxMDE5LjQ3NjU2MiAxODgxLjQ4NDM3NSAxMDA1Ljg4MjgxMiAxODgxLjQ4NDM3NSA5ODkuMTEzMjgxIEwgMTg4MS40ODQzNzUgOTU5LjU3ODEyNSBMIDE5ODAuMDAzOTA2IDk1OS41NzgxMjUgQyAxOTgyLjQ4MDQ2OSAxMDAwLjg5MDYyNSAxOTcyLjg3NSAxMDMzLjAwNzgxMiAxOTUxLjE4NzUgMTA1NS45MzM1OTQgQyAxOTI5LjUgMTA3OC44NTkzNzUgMTg5Ny4xNzU3ODEgMTA5MC4zMjQyMTkgMTg1NC4yMTA5MzggMTA5MC4zMjQyMTkgQyAxNzY2LjIyMjY1NiAxMDkwLjMyNDIxOSAxNzIwLjk5MjE4OCAxMDU2LjQ1MzEyNSAxNzE4LjUxMTcxOSA5ODguNzAzMTI1IEwgMTcxOC41MTE3MTkgODM5LjM3MTA5NCBDIDE3MTguNTExNzE5IDc2MS4yOTI5NjkgMTc2NC4xNjAxNTYgNzIyLjI1NzgxMiAxODU1LjQ0OTIxOSA3MjIuMjU3ODEyIEMgMTg4MS4wNjI1IDcyMi4yNTc4MTIgMTkwMy4xNjQwNjIgNzI1Ljc2NTYyNSAxOTIxLjc1MzkwNiA3MzIuNzg5MDYyIEMgMTk0MC4zNDM3NSA3MzkuODEyNSAxOTU1LjMyMDMxMiA3NTAuNzYxNzE5IDE5NjYuNjc5Njg4IDc2NS42MzI4MTIgQyAxOTc4LjAzOTA2MiA3ODAuNTAzOTA2IDE5ODMuNzE4NzUgNzk5LjA5Mzc1IDE5ODMuNzE4NzUgODIxLjM5ODQzOCBMIDE5ODMuNzE4NzUgOTIxLjc4MTI1IFogTSAxODIwLjc1NzgxMiA4NTYuNzE4NzUgTCAxODgxLjQ4NDM3NSA4NTYuNzE4NzUgTCAxODgxLjQ4MDQ2OSA4MjQuMTc1NzgxIEwgMTg4MS40ODQzNzUgODIzLjg3ODkwNiBDIDE4ODEuNDg0Mzc1IDgwNy4xMDkzNzUgMTg2Ny44ODY3MTkgNzkzLjUxNTYyNSAxODUxLjEyMTA5NCA3OTMuNTE1NjI1IEMgMTgzNC4zNTE1NjIgNzkzLjUxNTYyNSAxODIwLjc1NzgxMiA4MDcuMTA5Mzc1IDE4MjAuNzU3ODEyIDgyMy44Nzg5MDYgTCAxODIwLjc2MTcxOSA4MjQuMDUwNzgxIEwgMTgyMC43NTc4MTIgODI0LjEzMjgxMiBaIE0gMTQ1Mi41NzQyMTkgNzIxLjc4MTI1IEwgMTU1My4wNzQyMTkgNzIxLjc4MTI1IEwgMTU5MS4yNDYwOTQgODAyLjU0Mjk2OSBMIDE2MTcuNzg5MDYyIDc0Ni4zNzg5MDYgTCAxNjE3Ljc5Mjk2OSA3NDYuMzc4OTA2IEMgMTYyNC4yMTA5MzggNzMxLjg5MDYyNSAxNjM4LjcxNDg0NCA3MjEuNzgxMjUgMTY1NS41NzgxMjUgNzIxLjc4MTI1IEMgMTY1Ni4xMDE1NjIgNzIxLjc4MTI1IDE2NTYuNjE3MTg4IDcyMS43OTI5NjkgMTY1Ny4xMzI4MTIgNzIxLjgxMjUgTCAxNjU3LjE0MDYyNSA3MjEuNzgxMjUgTCAxNzI5LjkxNzk2OSA3MjEuNzgxMjUgTCAxNjQxLjQ5MjE4OCA5MDguODU5Mzc1IEwgMTcyNy44NDM3NSAxMDkxLjU2MjUgTCAxNjI3LjM1NTQ2OSAxMDkxLjU2MjUgTCAxNTkxLjI0NjA5NCAxMDE1LjE2Nzk2OSBMIDE1NTUuMTM2NzE5IDEwOTEuNTYyNSBMIDE0NTQuNjQ0NTMxIDEwOTEuNTYyNSBMIDE1NDAuOTk2MDk0IDkwOC44NTkzNzUgWiBNIDE0NTIuNTc0MjE5IDcyMS43ODEyNSAiLz4KPHBhdGggZmlsbD0iI2RkMWQyNSIgZD0iTSA4NTYuNjQwNjI1IDYxNC44OTA2MjUgTCA4NTYuNjQwNjI1IDEwMTUuNjI4OTA2IEMgODU2LjY0MDYyNSAxMDU3LjM3ODkwNiA4MjIuNDkyMTg4IDEwOTEuNTYyNSA3ODAuNzQyMTg4IDEwOTEuNTYyNSBMIDQ1NS4zNTE1NjIgMTA5MS41NjI1IEMgNDEzLjYwNTQ2OSAxMDkxLjU2MjUgMzc5LjQ1MzEyNSAxMDU3LjM3ODkwNiAzNzkuNDUzMTI1IDEwMTUuNjI4OTA2IEwgMzc5LjQ1MzEyNSA2OTAuODI4MTI1IEMgMzc5LjQ1MzEyNSA2NjguOTIxODc1IDM4OC44NTkzNzUgNjQ5LjA3ODEyNSA0MDMuODMyMDMxIDYzNS4yMTA5MzggQyA0MDkuNjk1MzEyIDYyOS43NTM5MDYgNDE2LjQwNjI1IDYyNS4yMTg3NSA0MjMuNzQ2MDk0IDYyMS44NjMyODEgQyA0MzMuMzcxMDk0IDYxNy4zOTg0MzggNDQ0LjA2NjQwNiA2MTQuODkwNjI1IDQ1NS4zNTE1NjIgNjE0Ljg5MDYyNSBaIi8+CjxwYXRoIGZpbGw9IiNmZmZmZmYiIGQ9Ik0gODE2Ljc3MzQzOCA5OTIuMjEwOTM4IEwgNjM5LjMwODU5NCA5NDEuNTc0MjE5IEwgNjIyLjcxNDg0NCAxMDQ5LjAwMzkwNiBMIDU4MC44NTU0NjkgOTQ1LjE4NzUgTCA1MDMuNjI4OTA2IDk1OC4zNTU0NjkgTCA1NjQuNTg5ODQ0IDg5OS4zNDc2NTYgTCA0NjguNDA2MjUgODE5LjU3NDIxOSBMIDU2Ni45MTQwNjIgODQzLjE0MDYyNSBMIDQwMy44MzIwMzEgNjM1LjIxMDkzOCBDIDQwOS42OTUzMTIgNjI5Ljc1MzkwNiA0MTYuNDA2MjUgNjI1LjIxODc1IDQyMy43NDYwOTQgNjIxLjg2MzI4MSBMIDU4Ni40OTYwOTQgODI5LjM0NzY1NiBMIDYxMS41MDM5MDYgNjQ0LjkxNDA2MiBMIDYzNi43NjU2MjUgODU4Ljc0MjE4OCBMIDc3Ny4wOTM3NSA4MjguMjAzMTI1IEwgNjczLjM0NzY1NiA4OTcuMjgxMjUgWiIvPgo8L3N2Zz4K';
+var P_TOKEN=(new URLSearchParams(location.search).get('p')||'').trim();
 var app=document.getElementById('app');
 function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
 function brl(v){return 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
 function pct(v){return String(Math.abs(v).toFixed(2)).replace(/0+$/,'').replace(/\.$/,'').replace('.',',')+'%'}
 function lista(a){return a.length<2?a.join(''):a.slice(0,-1).join(', ')+' e '+a[a.length-1]}
+function dt(v){return v?new Date(v).toLocaleDateString('pt-BR'):''}
+function dth(v){return v?new Date(v).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—'}
 function erro(t,msg,btn){app.replaceChildren();var d=el('div','err');d.append(el('h2','',t),el('p','',msg));
   if(btn){var a=el('button','btn',btn[0]);a.onclick=btn[1];d.append(a)}app.append(d)}
 function topo(){var hd=el('div','hd');var im=el('img');im.src=LOGO;im.alt='Boxer';hd.append(im,el('div','k','Proposta comercial · BPartner Diamante'));return hd}
 function sair(){return sbc.auth.signOut({scope:'local'}).then(function(){location.reload()})}
+function xesc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function marcaDagua(linhas){
+  var t1=xesc(linhas[0]||''),t2=xesc(linhas[1]||'');
+  var svg='<svg xmlns="http://www.w3.org/2000/svg" width="460" height="300"><g transform="rotate(-28 230 150)" fill="#1d327b" fill-opacity="0.10" font-family="Arial,sans-serif" font-weight="700" text-anchor="middle"><text x="230" y="140" font-size="22">'+t1+'</text><text x="230" y="172" font-size="14">'+t2+'</text></g></svg>';
+  var d=el('div','wm');d.style.backgroundImage='url("data:image/svg+xml;utf8,'+encodeURIComponent(svg)+'")';return d}
 
-/* ---------- login por codigo de e-mail (mesmo fluxo da tabela de precos) ---------- */
+/* ---------- porta de entrada por codigo de e-mail ---------- */
 function chamarAcesso(p){return fetch(HUB_API+'/api/disponibilidade?target=acesso',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)})
   .then(function(r){return r.json().catch(function(){return{}}).then(function(j){if(!r.ok)throw new Error(j.error||('erro '+r.status));return j})})}
-function telaLogin(msg,ok){
+function telaEmail(msg,ok){
   app.replaceChildren();var w=el('div','lg');var c=el('div','lgc');
-  c.append(el('h2','','Acesso restrito'),el('p','','Entre com o seu e-mail cadastrado. Enviaremos um código de 6 dígitos para confirmar.'));
+  c.append(el('h2','',P_TOKEN?'Acesso à proposta':'Acesso restrito'),
+    el('p','',P_TOKEN?'Para a sua segurança, confirme o e-mail para o qual esta proposta foi enviada. Enviaremos um código de 6 dígitos.':'Entre com o seu e-mail cadastrado. Enviaremos um código de 6 dígitos para confirmar.'));
   if(msg){c.append(el('div','msg'+(ok?' ok':''),msg))}
   var l=el('label','','E-mail');var i=el('input');i.type='email';i.autocomplete='email';i.placeholder='seu@email.com';i.value=EMAIL_LOGIN||'';
   var b=el('button','','Enviar código');
@@ -92,37 +121,105 @@ function telaLogin(msg,ok){
   c.append(l,i,b);w.append(c);app.append(topo(),w);i.focus()}
 function telaCodigo(msg,ok){
   app.replaceChildren();var w=el('div','lg');var c=el('div','lgc');
-  c.append(el('h2','','Digite o código'),el('p','','Enviamos um código de 6 dígitos para '+EMAIL_LOGIN+'. Confira também a caixa de spam.'));
+  c.append(el('h2','','Digite o código'),el('p','','Enviamos um código de 6 dígitos para '+EMAIL_LOGIN+'. Confira também a caixa de spam. Ele vale por 10 minutos.'));
   if(msg){c.append(el('div','msg'+(ok?' ok':''),msg))}
   var l=el('label','','Código');var i=el('input');i.inputMode='numeric';i.autocomplete='one-time-code';i.maxLength=8;i.placeholder='000000';
   var b=el('button','','Entrar');b.onclick=function(){confirmarCodigo(i.value,b)};i.onkeydown=function(e){if(e.key==='Enter')b.click()};
-  var o=el('button','lk','Usar outro e-mail');o.onclick=function(){telaLogin()};
+  var o=el('button','lk','Usar outro e-mail');o.onclick=function(){telaEmail()};
   c.append(l,i,b,o);w.append(c);app.append(topo(),w);i.focus()}
+var MSG_LINK={nao_autorizado:'Este e-mail não é o destinatário desta proposta. Use o e-mail que recebeu o link.',
+  expirado:'Esta proposta expirou. Peça uma nova ao seu vendedor Boxer.',cancelado:'Esta proposta foi cancelada. Fale com o seu vendedor Boxer.',
+  nao_encontrado:'Link inválido ou não encontrado. Confira o endereço com o seu vendedor Boxer.',
+  limite:'Muitas tentativas. Aguarde alguns minutos e tente de novo.',erro:'Não foi possível enviar o código agora. Tente novamente em instantes.',
+  pendente:'Seu acesso está em análise. Fale com o seu representante Boxer.',revogado:'O acesso deste e-mail foi encerrado. Fale com o seu representante Boxer.',
+  nao_cadastrado:'Este e-mail não está liberado para esta proposta. Fale com o seu representante Boxer.'};
 function pedirCodigo(v,btn){
   var email=String(v||'').trim().toLowerCase();
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){EMAIL_LOGIN=email;telaLogin('Informe um e-mail válido.');return}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){EMAIL_LOGIN=email;telaEmail('Informe um e-mail válido.');return}
   EMAIL_LOGIN=email;btn.disabled=true;btn.textContent='Enviando...';
-  chamarAcesso({acao:'codigo',email:email}).then(function(r){
+  var req=P_TOKEN?{acao:'link_codigo',origem:'diamante',token:P_TOKEN,email:email}:{acao:'codigo',email:email};
+  chamarAcesso(req).then(function(r){
     var st=r.status||'enviado';
     if(st==='enviado'){telaCodigo('Código enviado!',true);return}
-    var m={nao_cadastrado:'Este e-mail não está liberado para esta proposta. Fale com o seu representante Boxer.',
-      pendente:'Seu acesso está em análise. Fale com o seu representante Boxer.',
-      expirado:'O prazo do seu acesso terminou. Fale com o seu representante Boxer.',
-      revogado:'O acesso deste e-mail foi encerrado. Fale com o seu representante Boxer.',
-      limite:'Muitas tentativas. Aguarde alguns minutos e tente de novo.',
-      erro:'Não foi possível enviar o código agora. Tente novamente em instantes.'};
-    telaLogin(m[st]||m.erro)
-  }).catch(function(){telaLogin('Não foi possível enviar o código agora. Tente novamente em instantes.')})}
+    var m=MSG_LINK[st]||MSG_LINK.erro;
+    if(st==='nao_autorizado'&&r.dica)m+=' (cadastrado: '+r.dica+')';
+    telaEmail(m)
+  }).catch(function(){telaEmail(MSG_LINK.erro)})}
 function confirmarCodigo(v,btn){
   var token=String(v||'').replace(/\D/g,'');
   if(token.length<6){telaCodigo('Digite o código recebido por e-mail.');return}
   btn.disabled=true;btn.textContent='Entrando...';
+  if(P_TOKEN){
+    sbc.rpc('link_validar_codigo',{p_origem:'diamante',p_token:P_TOKEN,p_email:EMAIL_LOGIN,p_codigo:token,p_ua:navigator.userAgent}).then(function(r){
+      var d=r.data;if(r.error||!d||!d.ok){telaCodigo(d&&d.motivo==='bloqueado'?'Muitas tentativas. Peça um novo código.':(d&&d.motivo==='expirado'?'Esta proposta expirou.':'Código inválido ou expirado. Peça um novo código.'));return}
+      try{sessionStorage.setItem('dia_sess_'+P_TOKEN,JSON.stringify({s:d.sessao,e:d.email,x:d.expira_em}))}catch(e){}
+      carregarProposta(d.sessao)}).catch(function(){telaCodigo('Erro de conexão. Tente novamente.')});return}
   sbc.auth.verifyOtp({email:EMAIL_LOGIN,token:token,type:'email'}).then(function(r){
     if(r.error)return sbc.auth.verifyOtp({email:EMAIL_LOGIN,token:token,type:'magiclink'});return r}).then(function(r){
     if(r.error||!r.data||!r.data.session){telaCodigo('Código inválido ou expirado. Peça um novo código.');return}
     carregar()}).catch(function(){telaCodigo('Erro de conexão. Tente novamente.')})}
 
-/* ---------- proposta ---------- */
+/* ---------- cartoes de preco (mesmo layout da proposta em PDF) ---------- */
+function cartoes(R){
+  var g=el('div','grid');
+  R.modelos.forEach(function(m){
+    var c=el('div','card'),t=el('div','top');t.append(el('b','',m.modelo),el('span','','Laser '+m.potencia));
+    var i=el('div','in');i.append(el('div','lab','Preço de oferta'),el('div','price',brl(m.oferta)));
+    var o=el('div','old','tabela normal ');o.append(el('s','',brl(m.tabela_normal)));i.append(o);
+    i.append(el('span','save','−'+pct(m.desconto_pct)+' · economia de '+brl(m.economia)));
+    if(m.demonstracao.length){var b=el('div','demo');b.append(el('div','dl','Máquina de demonstração'));
+      m.demonstracao.forEach(function(p){var r=el('div','opt');r.append(el('b','',brl(p.valor)),el('span','','−'+pct(p.desconto_pct)+' · '+p.parcelas+'x de '+brl(p.parcela)));b.append(r)});i.append(b)}
+    c.append(t,i);g.append(c)});
+  return g}
+function blocoFinal(main,R){
+  var M=R.modelos;
+  var pr=el('div','prem');pr.append(el('div','v','R$ '+R.premiacao.valor));var pt=el('div','t');pt.append(el('div','k','Premiação para o vendedor'),
+    document.createTextNode(R.premiacao.texto+' Válido '+(R.premiacao.modelos.length===M.length?'em todos os modelos':'nos modelos '+lista(R.premiacao.modelos))+'.'));pr.append(pt);main.append(pr);
+  main.append(el('h2','','Como entrar no projeto'));
+  var st=el('div','steps');
+  [['1','Compre 1 máquina para estoque','É o mínimo de compra para entrar no projeto, pelo preço de oferta.'],
+   ['2','Compre também 1 máquina para demonstração','Com desconto adicional sobre o preço de oferta e parcelamento. '+R.recompra_demonstracao],
+   ['3','Demonstre e venda','O cliente vê o laser funcionando antes de decidir. O vendedor que fechar a venda ganha R$ '+R.premiacao.valor+' de premiação.']
+  ].forEach(function(s){var d=el('div','step');d.append(el('div','n',s[0]),el('h3','',s[1]),el('p','',s[2]));st.append(d)});
+  main.append(st,el('div','fn',R.nota_rodape))}
+function rodape(){var ft=el('div','ft');var l2=el('img');l2.src=LOGO;l2.alt='Boxer';ft.append(l2,'www.boxersoldas.com.br · contato@boxersoldas.com.br · (19) 99646-0708');return ft}
+
+/* ---------- proposta emitida (visao do cliente, com marca d'agua) ---------- */
+function carregarProposta(sessao){
+  sbc.rpc('diamante_proposta_ver',{p_token:P_TOKEN,p_sessao:sessao,p_ua:navigator.userAgent}).then(function(r){
+    var d=r.data;
+    if(r.error||!d||!d.ok){
+      var mo=d&&d.motivo;
+      if(mo==='sessao'){try{sessionStorage.removeItem('dia_sess_'+P_TOKEN)}catch(e){}telaEmail('Sua sessão terminou. Confirme o e-mail para abrir de novo.');return}
+      if(mo==='expirado'){erro('Proposta expirada','Esta proposta passou da validade. Peça uma nova ao seu vendedor Boxer.');return}
+      erro('Proposta indisponível','Esta proposta não está mais disponível. Fale com o seu vendedor Boxer.');return}
+    renderProposta(d)
+  }).catch(function(){erro('Não foi possível carregar','Tente novamente em instantes. Se continuar, avise a equipe Boxer.')})}
+function renderProposta(d){
+  var P=d.proposta,R=d.dados;app.replaceChildren();
+  var hd=topo();var h1=el('h1');h1.append('Proposta ',el('span','',P.codigo));hd.append(h1);
+  hd.append(el('div','who','Preparada para '+P.cliente_nome+(P.destinatario_nome?' · A/C '+P.destinatario_nome:'')+' · Acesso registrado em '+d.visualizador));
+  var al=el('div','alert');al.append('Proposta válida até '+dt(P.validade_em)+' · ',el('span','','Reajuste de preços a partir de '+(d.reajuste_a_partir_de||'04/01/2027')));
+  var main=el('main');
+  var sm=el('div','sum');sm.append(el('h2','','Itens desta proposta'));
+  var tb=el('table','tb');var th=el('tr');['Item','Qtd','Valor','Subtotal'].forEach(function(x,i){th.append(el('th',i?'r':'',x))});tb.append(th);
+  P.itens.forEach(function(it){
+    var tr=el('tr');
+    if(it.tipo==='estoque'){tr.append(el('td','',it.modelo+' · Laser '+it.potencia+' · para estoque'),el('td','r',String(it.qtd)),el('td','r',brl(it.oferta)),el('td','r',brl(it.subtotal)))}
+    else{tr.append(el('td','',it.modelo+' · Laser '+it.potencia+' · máquina de demonstração ('+it.parcelas+'x de '+brl(it.parcela)+')'),el('td','r','1'),el('td','r',brl(it.valor)),el('td','r',brl(it.subtotal)))}
+    tb.append(tr)});
+  var tt=el('tr','tot');tt.append(el('td','','Total'),el('td'),el('td'),el('td','r',brl(P.total)));tb.append(tt);sm.append(tb);
+  var inf=el('div','inf');
+  inf.append(el('div','','Cliente: '+P.cliente_nome+(P.cliente_cnpj?' · '+P.cliente_cnpj:'')+(P.cliente_cidade?' · '+P.cliente_cidade+(P.cliente_uf?'/'+P.cliente_uf:''):'')));
+  inf.append(el('div','','Emitida em '+dt(P.criado_em)+' por '+(P.emitido_por_nome||'Boxer')+(P.emitido_por_email?' · '+P.emitido_por_email:'')+(P.emitido_por_telefone?' · '+P.emitido_por_telefone:'')));
+  if(P.observacoes)inf.append(el('div','',P.observacoes));
+  sm.append(inf);main.append(sm);
+  main.append(el('h2','','Preços de oferta da sua região'));
+  main.append(cartoes(R));blocoFinal(main,R);
+  var ou=el('div','out');var pb=el('button','','Salvar em PDF / imprimir');pb.onclick=function(){window.print()};ou.append(pb);main.append(ou);
+  app.append(hd,al,main,rodape(),marcaDagua(['BOXER · '+P.codigo+' · '+P.cliente_nome,'Acesso de '+d.visualizador+' · válida até '+dt(P.validade_em)]))}
+
+/* ---------- pagina de precos + emissao (equipe Boxer e representantes) ---------- */
 function render(d){
   var R=d.regiao,U=d.usuario||{},M=R.modelos,dm=M.filter(function(m){return m.demonstracao.length}).map(function(m){return m.modelo});
   app.replaceChildren();
@@ -138,38 +235,91 @@ function render(d){
   var lead=el('p','lead');lead.append('Compre para estoque pelo ');lead.append(el('b','','preço de oferta'));
   if(dm.length){lead.append('. Nos modelos '+lista(dm)+' você também pode comprar uma ');lead.append(el('b','','máquina de demonstração com desconto adicional'))}
   lead.append('.');main.append(lead);
-  var g=el('div','grid');
-  M.forEach(function(m){
-    var c=el('div','card'),t=el('div','top');t.append(el('b','',m.modelo),el('span','','Laser '+m.potencia));
-    var i=el('div','in');i.append(el('div','lab','Preço de oferta'),el('div','price',brl(m.oferta)));
-    var o=el('div','old','tabela normal ');o.append(el('s','',brl(m.tabela_normal)));i.append(o);
-    i.append(el('span','save','−'+pct(m.desconto_pct)+' · economia de '+brl(m.economia)));
-    if(m.demonstracao.length){var b=el('div','demo');b.append(el('div','dl','Máquina de demonstração'));
-      m.demonstracao.forEach(function(p){var r=el('div','opt');r.append(el('b','',brl(p.valor)),el('span','','−'+pct(p.desconto_pct)+' · '+p.parcelas+'x de '+brl(p.parcela)));b.append(r)});i.append(b)}
-    c.append(t,i);g.append(c)});
-  main.append(g);
-  var pr=el('div','prem');pr.append(el('div','v','R$ '+R.premiacao.valor));var pt=el('div','t');pt.append(el('div','k','Premiação para o vendedor'),
-    document.createTextNode(R.premiacao.texto+' Válido '+(R.premiacao.modelos.length===M.length?'em todos os modelos':'nos modelos '+lista(R.premiacao.modelos))+'.'));pr.append(pt);main.append(pr);
-  main.append(el('h2','','Como entrar no projeto'));
-  var st=el('div','steps');
-  [['1','Compre 1 máquina para estoque','É o mínimo de compra para entrar no projeto, pelo preço de oferta.'],
-   ['2','Compre também 1 máquina para demonstração','Com desconto adicional sobre o preço de oferta e parcelamento. '+R.recompra_demonstracao],
-   ['3','Demonstre e venda','O cliente vê o laser funcionando antes de decidir. O vendedor que fechar a venda ganha R$ '+R.premiacao.valor+' de premiação.']
-  ].forEach(function(s){var d=el('div','step');d.append(el('div','n',s[0]),el('h3','',s[1]),el('p','',s[2]));st.append(d)});
-  main.append(st,el('div','fn',R.nota_rodape));
+  main.append(cartoes(R));blocoFinal(main,R);
+  main.append(painelEmissao(R,U));
   var ou=el('div','out');var ob=el('button','','Sair deste aparelho');ob.onclick=sair;ou.append(ob);main.append(ou);
-  var ft=el('div','ft');var l2=el('img');l2.src=LOGO;l2.alt='Boxer';ft.append(l2,'www.boxersoldas.com.br · contato@boxersoldas.com.br · (19) 99646-0708');
-  app.append(hd,al,main,ft);
+  app.append(hd,al,main,rodape());
+  listarPropostas()
 }
+function campo(rot,ctl,cls){var w=el('div','fc'+(cls?' '+cls:''));w.append(el('label','',rot),ctl);return w}
+function inp(tipo,ph,max){var i=el('input');i.type=tipo||'text';if(ph)i.placeholder=ph;if(max)i.maxLength=max;return i}
+function painelEmissao(R,U){
+  var M=R.modelos;var box=el('div','emi');
+  box.append(el('h2','','Gerar proposta para uma revenda'));
+  box.append(el('p','emt','A revenda recebe o link e abre com um código enviado ao e-mail informado abaixo. Os preços ficam congelados e a proposta vale por 15 dias.'));
+  var f=el('div','fm');
+  var cNome=inp('text','Razão social ou nome fantasia',120),cCnpj=inp('text','CNPJ (opcional)',20),cCid=inp('text','Cidade',60),cUf=inp('text','UF',2);
+  var dNome=inp('text','Nome do contato',80),dMail=inp('email','email@revenda.com.br',120),dTel=inp('tel','(19) 99999-9999',20);
+  var sEst=el('select');M.forEach(function(m){var o=el('option','',m.modelo+' · '+m.potencia+' · '+brl(m.oferta));o.value=m.modelo;sEst.append(o)});
+  var qtd=inp('number');qtd.min=1;qtd.max=20;qtd.value=1;
+  var sDem=el('select');var o0=el('option','','Sem máquina de demonstração');o0.value='';sDem.append(o0);
+  M.forEach(function(m){if(m.demonstracao.length){var o=el('option','',m.modelo+' · '+brl(m.demonstracao[0].valor)+' ('+m.demonstracao[0].parcelas+'x de '+brl(m.demonstracao[0].parcela)+')');o.value=m.modelo;sDem.append(o)}});
+  var ob=el('textarea');ob.rows=2;ob.maxLength=400;ob.placeholder='Observações que aparecem na proposta (opcional)';
+  var eTel=inp('tel','Seu telefone para contato (opcional)',20);
+  try{eTel.value=localStorage.getItem('dia_tel')||''}catch(e){}
+  f.append(campo('Revenda *',cNome,'w2'),campo('CNPJ',cCnpj),campo('Cidade',cCid),campo('UF',cUf),campo('Contato',dNome),campo('E-mail do contato *',dMail,'w2'),campo('Telefone do contato',dTel),
+    campo('Máquina para estoque *',sEst,'w2'),campo('Quantidade',qtd),campo('Máquina de demonstração',sDem,'w2'),campo('Observações',ob,'w3'),campo('Seu telefone',eTel));
+  var msg=el('div','msg');msg.style.display='none';
+  var go=el('button','','Gerar proposta e link');
+  var out=el('div','res');
+  go.onclick=function(){
+    msg.style.display='none';
+    if(cNome.value.trim().length<2){return avisar(msg,'Informe a revenda.')}
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dMail.value.trim())){return avisar(msg,'Informe um e-mail válido para o contato.')}
+    go.disabled=true;go.textContent='Gerando...';
+    try{localStorage.setItem('dia_tel',eTel.value)}catch(e){}
+    sbc.rpc('diamante_proposta_criar',{p:{regiao:R.regiao,cliente_nome:cNome.value,cliente_cnpj:cCnpj.value,cliente_cidade:cCid.value,cliente_uf:cUf.value.toUpperCase(),
+      destinatario_nome:dNome.value,destinatario_email:dMail.value,destinatario_telefone:dTel.value,modelo_estoque:sEst.value,qtd_estoque:Number(qtd.value)||1,
+      modelo_demo:sDem.value,observacoes:ob.value,emissor_telefone:eTel.value}}).then(function(r){
+      go.disabled=false;go.textContent='Gerar proposta e link';
+      var d=r.data;
+      if(r.error||!d||!d.ok){var m={precos_vencidos:'A validade desta tabela de preços terminou.',sem_regiao:'Você não tem acesso a esta região.',demo_indisponivel:'Esta máquina não tem opção de demonstração.',email_invalido:'E-mail inválido.',modelo_invalido:'Modelo inválido.'};
+        return avisar(msg,(d&&m[d.motivo])||'Não foi possível gerar a proposta agora.')}
+      var link=location.origin+location.pathname+'?p='+d.token;
+      out.replaceChildren();var b=el('div','ok2');
+      b.append(el('b','','Proposta '+d.codigo+' gerada · '+brl(d.total)+' · válida até '+dt(d.validade_em)),el('div','lnk',link));
+      var cp=el('button','sm','Copiar link');cp.onclick=function(){if(navigator.clipboard)navigator.clipboard.writeText(link).then(function(){cp.textContent='Copiado!'});else{prompt('Copie o link:',link)}};
+      var wa=el('a','sm','Enviar por WhatsApp');wa.target='_blank';wa.rel='noopener';
+      wa.href='https://wa.me/?text='+encodeURIComponent('Olá! Segue a proposta Boxer '+d.codigo+' para '+cNome.value.trim()+' (válida até '+dt(d.validade_em)+'): '+link+' — para abrir, use o e-mail '+dMail.value.trim().toLowerCase()+' (você receberá um código).');
+      b.append(el('div','',''),cp,wa);out.append(b);listarPropostas()
+    }).catch(function(){go.disabled=false;go.textContent='Gerar proposta e link';avisar(msg,'Erro de conexão. Tente novamente.')})};
+  box.append(f,msg,go,out,el('h3','','Minhas propostas'),(function(){var l=el('div','lst');l.id='lstProp';return l})());
+  return box}
+function avisar(m,t){m.textContent=t;m.style.display='block'}
+function listarPropostas(){
+  var c=document.getElementById('lstProp');if(!c)return;
+  sbc.rpc('diamante_proposta_listar').then(function(r){
+    var d=r.data;c.replaceChildren();
+    if(r.error||!d||!d.ok){c.append(el('p','emt','Não foi possível carregar as propostas.'));return}
+    if(!d.propostas.length){c.append(el('p','emt','Nenhuma proposta gerada ainda.'));return}
+    var tb=el('table','tb');var th=el('tr');['Proposta','Cliente','Total','Validade','Aberturas','Status',''].forEach(function(x){th.append(el('th','',x))});tb.append(th);
+    d.propostas.forEach(function(p){
+      var st=p.status==='cancelada'?'Cancelada':(p.expirada?'Expirada':(p.visualizacoes>0?'Aberta':'Enviada, não aberta'));
+      var tr=el('tr');tr.append(el('td','',p.codigo),el('td','',p.cliente_nome+' ('+p.regiao+')'),el('td','r',brl(p.total)),el('td','',dt(p.validade_em)),
+        el('td','',p.visualizacoes+(p.ultima_visualizacao_em?' · última '+dth(p.ultima_visualizacao_em):'')),el('td','',st));
+      var ac=el('td','');
+      if(p.status!=='cancelada'&&!p.expirada){
+        var cp=el('button','sm','Copiar link');cp.onclick=function(){var l=location.origin+location.pathname+'?p='+p.token;if(navigator.clipboard)navigator.clipboard.writeText(l).then(function(){cp.textContent='Copiado!'});else prompt('Copie o link:',l)};
+        var cn=el('button','sm dg','Cancelar');cn.onclick=function(){if(!confirm('Cancelar a proposta '+p.codigo+'? O link deixa de abrir.'))return;
+          sbc.rpc('diamante_proposta_cancelar',{p_id:p.id}).then(function(){listarPropostas()})};
+        ac.append(cp,cn)}
+      tr.append(ac);tb.append(tr)});
+    c.append(tb)})}
+
 function carregar(regiao){
   sbc.rpc('proposta_diamante',{p_regiao:regiao||null}).then(function(r){
     if(r.error)throw r.error;var d=r.data;
     if(!d||!d.permitido){
       var mo=d&&d.motivo;
-      if(mo==='sem_login'||mo==='sem_codigo'||mo==='sessao_expirada'){sbc.auth.signOut({scope:'local'}).then(function(){telaLogin(mo==='sessao_expirada'?'Sua sessão expirou. Entre de novo com um novo código.':'')});return}
+      if(mo==='sem_login'||mo==='sem_codigo'||mo==='sessao_expirada'){sbc.auth.signOut({scope:'local'}).then(function(){telaEmail(mo==='sessao_expirada'?'Sua sessão expirou. Entre de novo com um novo código.':'')});return}
       if(mo==='nao_liberado'||mo==='sem_regiao'){erro('Sem acesso a esta proposta','Seu usuário não tem permissão para esta proposta. Fale com o seu representante Boxer.',['Entrar com outro e-mail',sair]);return}
       erro('Proposta indisponível','Não foi possível montar a proposta agora. Avise a equipe Boxer.');return}
     render(d)
   }).catch(function(){erro('Não foi possível carregar','Tente novamente em instantes. Se continuar, avise a equipe Boxer.')})}
-(function(){sbc.auth.getSession().then(function(r){if(r.data&&r.data.session)carregar();else telaLogin()}).catch(function(){telaLogin()})})();
+(function(){
+  if(P_TOKEN){
+    var s=null;try{s=JSON.parse(sessionStorage.getItem('dia_sess_'+P_TOKEN)||'null')}catch(e){}
+    if(s&&s.s&&(!s.x||new Date(s.x)>new Date())){EMAIL_LOGIN=s.e||'';carregarProposta(s.s)}else telaEmail();
+    return}
+  sbc.auth.getSession().then(function(r){if(r.data&&r.data.session)carregar();else telaEmail()}).catch(function(){telaEmail()})})();
 </script></body></html>
