@@ -1414,7 +1414,7 @@ async function diaPropostas(){
 }
 const DIA_EV={proposta_criada:'Proposta criada',codigo_enviado:'Código enviado',codigo_negado_email:'E-mail não autorizado',codigo_negado_expirado:'Pedido após expirar',codigo_negado_cancelado:'Pedido após cancelar',codigo_limite:'Limite de pedidos',codigo_invalido:'Código inválido',codigo_validado:'Código validado',visualizou:'Abriu a proposta',aceitou:'Aceitou',recusou:'Recusou',proposta_cancelada:'Proposta cancelada'};
 function diaEvRows(ev){
-    return ev.map(e=>'<tr><td style="white-space:nowrap">'+dDH(e.criado_em)+'</td><td>'+escD(e.origem)+'</td><td>'+escD(e.referencia||'')+'</td><td>'+escD(DIA_EV[e.evento]||e.evento)+'</td><td>'+escD(e.email||'')+'</td><td>'+escD(e.ip||'')+'</td><td style="font-size:11px;color:#718096;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+escD(e.user_agent||'')+'">'+escD(e.user_agent||'')+'</td></tr>').join('');
+    return ev.map(e=>'<tr'+(e.fora_cadastro?' style="background:#fff1f0"':'')+'><td style="white-space:nowrap">'+dDH(e.criado_em)+'</td><td>'+escD(e.origem)+'</td><td>'+escD(e.referencia||'')+'</td><td>'+escD(DIA_EV[e.evento]||e.evento)+'</td><td>'+escD(e.email||'')+(e.fora_cadastro?' <span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 6px;border-radius:999px;white-space:nowrap">OUTRO E-MAIL</span>':'')+'</td><td>'+escD(e.ip||'')+'</td><td style="font-size:11px;color:#718096;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+escD(e.user_agent||'')+'">'+escD(e.user_agent||'')+'</td></tr>').join('');
 }
 async function diaVerLog(id){
     try{
@@ -1435,13 +1435,13 @@ async function diaCancelarProp(id){
 async function diaLogLinks(){
     const w=document.getElementById('diaWrap');
     try{
-        const orig=(document.getElementById('diaLogOrig')||{}).value||'';const dias=(document.getElementById('diaLogDias')||{}).value||'7';
+        const orig=(document.getElementById('diaLogOrig')||{}).value||'';const dias=(document.getElementById('diaLogDias')||{}).value||'7';const soFora=!!(document.getElementById('diaLogFora')||{}).checked;
         const desde=new Date(Date.now()-parseInt(dias)*86400000).toISOString();
-        const ev=await sb('/link_acessos?criado_em=gte.'+encodeURIComponent(desde)+(orig?'&origem=eq.'+orig:'')+'&select=*&order=criado_em.desc&limit=500');
+        const ev=await sb('/link_acessos?criado_em=gte.'+encodeURIComponent(desde)+(orig?'&origem=eq.'+orig:'')+(soFora?'&fora_cadastro=eq.true':'')+'&select=*&order=criado_em.desc&limit=500');
         DIA._ev=ev;
         let h='<div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap"><select id="diaLogOrig" class="select-sm" onchange="diaMostrar()"><option value="">Todas as origens</option><option value="diamante"'+(orig==='diamante'?' selected':'')+'>Proposta Diamante</option><option value="orcamento"'+(orig==='orcamento'?' selected':'')+'>Orçamento Revendas</option><option value="proposta"'+(orig==='proposta'?' selected':'')+'>Proposta BMAX/Laser</option></select>'+
           '<select id="diaLogDias" class="select-sm" onchange="diaMostrar()"><option value="1"'+(dias==='1'?' selected':'')+'>Últimas 24h</option><option value="7"'+(dias==='7'?' selected':'')+'>Últimos 7 dias</option><option value="30"'+(dias==='30'?' selected':'')+'>Últimos 30 dias</option><option value="90"'+(dias==='90'?' selected':'')+'>Últimos 90 dias</option></select>'+
-          '<input id="diaLogBusca" class="select-sm" style="min-width:220px" placeholder="Filtrar por e-mail, referência ou IP" oninput="diaFiltrarLog()"><span style="font-size:12px;color:#718096">'+ev.length+' eventos (máx. 500)</span></div>';
+          '<label style="font-size:12px;color:#991b1b;font-weight:600;display:flex;gap:5px;align-items:center"><input type="checkbox" id="diaLogFora" onchange="diaMostrar()"'+(soFora?' checked':'')+'> Só e-mails fora do cadastro</label><input id="diaLogBusca" class="select-sm" style="min-width:220px" placeholder="Filtrar por e-mail, referência ou IP" oninput="diaFiltrarLog()"><span style="font-size:12px;color:#718096">'+ev.length+' eventos (máx. 500)</span></div>';
         h+='<table><thead><tr><th>Quando</th><th>Origem</th><th>Ref.</th><th>Evento</th><th>E-mail</th><th>IP</th><th>Aparelho</th></tr></thead><tbody id="diaLogBody">'+(ev.length?diaEvRows(ev):'<tr><td colspan="7" style="text-align:center;color:#a0aec0;padding:20px">Sem eventos no período.</td></tr>')+'</tbody></table>';
         w.innerHTML=h;
     }catch(e){w.innerHTML='<div style="text-align:center;padding:20px;color:#dc2626">Erro: '+escD(e.message)+'</div>';}
