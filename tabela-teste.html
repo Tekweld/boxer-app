@@ -447,7 +447,7 @@ tbody tr.row-ajuste .td-price-final{color:#e30613}
 </div>
 
 <div class="header" style="position:relative;"><div class="header-inner">
-<div class="nav-top"><button id="repBtn" class="nav-btn sec" style="display:none" onclick="abrirRepetir()" title="Carrega na tabela os itens do último orçamento de um cliente">↻ Repetir pedido</button><button id="painelBtn" class="nav-btn sec" style="display:none" onclick="abrirPainel()" title="Visão da gestão: funil, desempenho e ajustes de preço">📊 Painel</button><button id="orcBtn" class="nav-btn sec" style="display:none" onclick="abrirMeusOrc()" title="Orçamentos enviados aos clientes">📄 Meus orçamentos</button><button id="regrasBtn" class="nav-btn sec" onclick="abrirRegras()" title="Regras da política para consulta rápida">📋 Regras</button><a id="navBtn" href="#" class="nav-btn"></a></div>
+<div class="nav-top"><button id="repBtn" class="nav-btn sec" style="display:none" onclick="abrirRepetir()" title="Carrega na tabela os itens do último orçamento de um cliente">↻ Repetir pedido</button><button id="painelBtn" class="nav-btn sec" style="display:none" onclick="abrirPainel()" title="Visão da gestão: funil, desempenho e ajustes de preço">📊 Painel</button><button id="orcBtn" class="nav-btn sec" style="display:none" onclick="abrirMeusOrc()" title="Orçamentos enviados aos clientes">📄 Meus orçamentos</button><button id="regrasBtn" class="nav-btn sec" onclick="abrirRegras()" title="Regras da política para consulta rápida">📋 Regras</button><a id="diaBtn" href="proposta-diamante.html" class="nav-btn sec" style="display:none" title="Proposta Laser BPartner Diamante: preços por região e propostas para revendas">💎 Proposta Diamante</a><a id="navBtn" href="#" class="nav-btn"></a></div>
 <div class="logo-row">
 <img src="Estrela-Boxer.svg" width="40" height="40" style="display:block">
 <div><h1 id="pageTitle">Tabela de Preços Boxer</h1><p id="pageSubtitle">Carregando...</p></div></div>
@@ -504,6 +504,10 @@ let QTD = {}, DISP = {}, FUP_EM = null, TABELA_ATUALIZADA_EM = null;
 let EMAIL_LOGIN = '', _cooldownTimer = null;
 
 function $(id){ return document.getElementById(id); }
+// botao da Proposta Diamante: so aparece para quem tem acesso ao modulo (equipe interna/admin ou cadastrado em diamante_acessos)
+async function verificarDiamante() {
+    try { const r = await sbc.rpc('diamante_escopo'); if (r.data && r.data.permitido) { const b = $('diaBtn'); if (b) b.style.display = 'inline-flex'; } } catch (e) {}
+}
 
 // --- telas de acesso: email -> codigo | solicitar -> enviado | negado ---
 function mostrarVista(v) {
@@ -675,6 +679,7 @@ async function onSession(session, novoLogin) {
     if (!DADOS_CARREGADOS) { DADOS_CARREGADOS = true; await load(); }
     atualizarBarras();
     if (!window.OFFLINE_SESSAO) sincronizarRascunhos();
+    if (IS_AUTO) verificarDiamante();
 }
 
 async function initAuth() {
