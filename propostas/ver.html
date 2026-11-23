@@ -124,7 +124,7 @@ function gMsg(t, ok) { const m = document.getElementById('gMsg'); if (!t) { m.st
 function telaEmail(msg) {
   mostrar('estadoGate');
   document.getElementById('gTitulo').textContent = 'Acesso à proposta';
-  document.getElementById('gTexto').textContent = 'Para a sua segurança, confirme o e-mail para o qual esta proposta foi enviada. Enviaremos um código de 6 dígitos.';
+  document.getElementById('gTexto').textContent = 'Para a sua segurança, confirme o seu e-mail. Enviaremos um código de 6 dígitos. O acesso fica registrado com o seu e-mail.';
   const i = document.getElementById('gInput'); i.type = 'email'; i.placeholder = 'seu@email.com'; i.value = EMAIL_GATE; i.maxLength = 120; i.removeAttribute('inputmode');
   i.onkeydown = e => { if (e.key === 'Enter') gatePedir(); };
   const b = document.getElementById('gBtn'); b.textContent = 'Enviar código'; b.disabled = false; b.onclick = gatePedir;
