@@ -33,6 +33,14 @@ iframe#frame{flex:1;border:none;width:100%;background:#e8eaf0}
 .gbt[disabled]{opacity:.6}
 .gmsg{max-width:380px;font-size:13px;color:#991b1b;background:#fee2e2;border:1px solid #fecaca;border-radius:8px;padding:9px 12px}
 .gmsg.ok{color:#166534;background:#dcfce7;border-color:#bbf7d0}
+
+body.noc,body.noc *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body.noc input,body.noc textarea{-webkit-user-select:text;user-select:text}
+body.noc img{-webkit-user-drag:none}
+.avoc{display:none}
+body.noc.oculto .avoc{display:block;position:fixed;left:0;right:0;top:40%;text-align:center;font:700 15px Outfit,Arial,sans-serif;color:#1d327b;z-index:60}
+@media print{body.noc>*{display:none!important}body.noc::before{content:'Impressão e cópia não são permitidas neste documento.';display:block;padding:60px;font:700 18px Arial,sans-serif;color:#1d327b}}
+body.noc.oculto #frame,body.noc.oculto .topbar{visibility:hidden}
 @media print{.wm{position:fixed}}
 </style>
 </head>
@@ -53,6 +61,7 @@ iframe#frame{flex:1;border:none;width:100%;background:#e8eaf0}
 </div>
 
 <iframe id="frame" title="Proposta Técnica" style="display:none"></iframe>
+<div class="avoc">Conteúdo oculto enquanto esta janela não estiver em foco.</div>
 
 <div class="estado" id="estadoLoading">
   <div class="spinner-wrap">
@@ -176,6 +185,44 @@ function marcaDagua(linha1, linha2) {
   w.style.backgroundImage = 'url("data:image/svg+xml;utf8,' + encodeURIComponent(svg) + '")';
 }
 
+
+// ---- protecao de leitura: sem imprimir/PDF, sem copiar/selecionar, conteudo some sem foco (print de tela nao tem como impedir; a marca d'agua rastreia) ----
+let _protegido = false;
+function protegerLeitura(alvos, frame) {
+  if (_protegido) return; _protegido = true;
+  document.body.classList.add('noc');
+  const permitido = e => { const t = e.target && e.target.tagName; return t === 'INPUT' || t === 'TEXTAREA'; };
+  const bloqueia = e => { if (permitido(e)) return; e.preventDefault(); return false; };
+  const teclas = e => {
+    const k = (e.key || '').toLowerCase();
+    if (k === 'printscreen') { try { navigator.clipboard && navigator.clipboard.writeText(''); } catch (x) {} ocultar(true); setTimeout(checarFoco, 1800); e.preventDefault(); return; }
+    if ((e.ctrlKey || e.metaKey) && ['p', 's', 'u'].indexOf(k) >= 0) { e.preventDefault(); e.stopPropagation(); return false; }
+    if ((e.ctrlKey || e.metaKey) && ['c', 'a', 'x'].indexOf(k) >= 0 && !permitido(e)) { e.preventDefault(); e.stopPropagation(); return false; }
+    if (k === 'f12' || (e.ctrlKey && e.shiftKey && ['i', 'j', 'c', 's'].indexOf(k) >= 0)) { e.preventDefault(); return false; }
+    if (e.metaKey && e.shiftKey && ['3', '4', '5'].indexOf(k) >= 0) { ocultar(true); setTimeout(checarFoco, 1800); }
+  };
+  const ligar = d => { ['copy', 'cut', 'contextmenu', 'dragstart', 'selectstart'].forEach(ev => d.addEventListener(ev, bloqueia, true)); d.addEventListener('keydown', teclas, true); };
+  const ocultar = v => document.body.classList.toggle('oculto', v);
+  const checarFoco = () => ocultar(document.hidden || !document.hasFocus());
+  ligar(document);
+  window.addEventListener('blur', () => setTimeout(checarFoco, 80));
+  window.addEventListener('focus', checarFoco);
+  document.addEventListener('visibilitychange', checarFoco);
+  window.__ligarProtecao = ligar;
+  checarFoco();
+}
+
+function blindarFrame(frame) {
+  try {
+    const d = frame.contentDocument; if (!d || d.__blindado) return; d.__blindado = true;
+    const st = d.createElement('style');
+    st.textContent = '*{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none}img{-webkit-user-drag:none}@media print{html{display:none!important}}';
+    (d.head || d.documentElement).appendChild(st);
+    if (window.__ligarProtecao) window.__ligarProtecao(d);
+    d.addEventListener('focusin', () => document.body.classList.remove('oculto'));
+  } catch (e) {}
+}
+
 async function carregar(sessao) {
   let data, error;
   try {
@@ -215,6 +262,8 @@ async function carregar(sessao) {
 
   // Exibir proposta
   const frame = document.getElementById('frame');
+  protegerLeitura();
+  frame.onload = () => blindarFrame(frame);
   frame.srcdoc = row.html_snapshot;
   frame.style.display = 'block';
   document.getElementById('topbar').style.display = 'flex';
