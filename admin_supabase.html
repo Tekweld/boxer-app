@@ -119,6 +119,7 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 <div class="tab admin-only hidden" onclick="showTab('diamante',this)">Diamante</div>
 <div class="tab admin-only hidden" onclick="showTab('uso',this)">Log de Uso</div>
 <div class="tab admin-only hidden" onclick="showTab('regras',this)">Regras da Tabela</div>
+<div class="tab admin-only hidden" onclick="showTab('aumentos',this)">Aumentos</div>
 </div>
 <div class="panel">
 <div class="panel-content" id="tab-produtos">
@@ -173,6 +174,15 @@ tbody td{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 <div style="display:flex;gap:8px;align-items:center"><select id="regrasTab" class="select-sm" onchange="loadRegras()"><option value="1">Revendas</option><option value="2">BMAX</option></select>
 <button class="btn btn-primary btn-sm" onclick="addRegra()">+ Nova seção</button></div></div>
 <div id="regrasWrap"><div class="loading">Carregando...</div></div>
+</div>
+
+<div class="panel-content hidden" id="tab-aumentos">
+<div class="panel-header"><div><div class="panel-title">Planejamento de Aumentos</div><div class="panel-sub">Registre os percentuais por tabela, linha, categoria ou SKU. Nada é alterado nos preços aqui: é só o planejamento (o ajuste em massa vem depois). Precedência: SKU &gt; Categoria &gt; Linha &gt; Tabela.</div></div>
+<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+<select id="aumPlano" class="select-sm" onchange="loadAumentoPlano()"></select>
+<button class="btn btn-primary btn-sm" onclick="novoPlanoAumento()">+ Novo plano</button>
+</div></div>
+<div id="aumWrap"><div class="loading">Carregando...</div></div>
 </div>
 
 <div class="panel-content hidden" id="tab-uso">
@@ -452,6 +462,7 @@ function showTab(n,el){
     if(n==='diamante')loadDiamante();
     if(n==='uso')loadUsoTabela();
     if(n==='regras')loadRegras();
+    if(n==='aumentos')loadAumentos();
 }
 
 // PRODUTOS
@@ -698,6 +709,179 @@ async function applyReajuste(){
     }catch(e){toast('Erro: '+e.message,'error');}
 }
 
+
+
+// AUMENTOS (planejamento — não altera preços)
+let AUM_PLANOS=[], AUM_PLANO=null, AUM_REGRAS=[], AUM_CATS=[], AUM_TABS=[];
+const AUM_ESC={tabela:'Tabela inteira',linha:'Linha',categoria:'Categoria',sku:'SKU'};
+const AUM_ST={rascunho:'Rascunho',aprovado:'Aprovado',aplicado:'Aplicado',cancelado:'Cancelado'};
+function aumEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function aumPct(n){n=Number(n);return (n>0?'+':'')+n.toLocaleString('pt-BR',{maximumFractionDigits:3})+'%';}
+function aumData(d){return d?d.split('-').reverse().join('/'):'—';}
+async function loadAumentos(sel){
+    try{
+        const w=document.getElementById('aumWrap');
+        [AUM_PLANOS,AUM_CATS,AUM_TABS]=await Promise.all([
+            sb('/reajuste_planos?ativo=eq.true&select=*&order=criado_em.desc'),
+            sb('/categorias?select=id,tabela_id,nome,categoria_grupo&order=tabela_id,ordem&limit=1000'),
+            sb('/tabelas?select=id,nome&id=in.(1,2,3)&order=id')]);
+        const el=document.getElementById('aumPlano');
+        el.innerHTML=AUM_PLANOS.length?AUM_PLANOS.map(p=>`<option value="${p.id}">${aumEsc(p.nome)} · ${AUM_ST[p.status]}</option>`).join(''):'<option value="">(nenhum plano)</option>';
+        if(sel)el.value=sel;
+        if(!AUM_PLANOS.length){AUM_PLANO=null;w.innerHTML='<p style="padding:24px;color:#718096">Nenhum plano ainda. Clique em “+ Novo plano”.</p>';return;}
+        await loadAumentoPlano();
+    }catch(e){document.getElementById('aumWrap').innerHTML='<p style="padding:24px;color:#e30613">Erro: '+aumEsc(e.message)+'</p>';}
+}
+async function loadAumentoPlano(){
+    const id=document.getElementById('aumPlano').value;
+    AUM_PLANO=AUM_PLANOS.find(p=>p.id===id)||null;
+    if(!AUM_PLANO)return;
+    AUM_REGRAS=await sb('/reajuste_regras?plano_id=eq.'+id+'&ativo=eq.true&select=*&order=tabela_id,escopo,id');
+    renderAumento();
+}
+function aumAlvo(r){
+    if(r.escopo==='tabela')return 'Todos os produtos';
+    if(r.escopo==='linha')return r.linha;
+    if(r.escopo==='categoria'){const c=AUM_CATS.find(c=>c.id===r.categoria_id);return c?c.nome:'#'+r.categoria_id;}
+    return r.codigo;
+}
+function aumTab(id){const t=AUM_TABS.find(t=>t.id===id);return t?t.nome:id;}
+function renderAumento(){
+    const p=AUM_PLANO;
+    const rows=AUM_REGRAS.map(r=>`<tr><td>${aumEsc(aumTab(r.tabela_id))}</td><td>${AUM_ESC[r.escopo]}</td><td>${aumEsc(aumAlvo(r))}</td>
+<td class="text-right" style="font-weight:600;color:${r.percentual>=0?'#1d327b':'#e30613'}">${aumPct(r.percentual)}</td><td>${aumEsc(r.observacao||'')}</td>
+<td class="text-right"><button class="btn btn-outline btn-sm" onclick="removerRegraAumento(${r.id})">Remover</button></td></tr>`).join('');
+    document.getElementById('aumWrap').innerHTML=`
+<div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:12px 0">
+<div class="form-row" style="margin:0"><label>Nome</label><input id="aumNome" value="${aumEsc(p.nome)}" style="width:260px"></div>
+<div class="form-row" style="margin:0"><label>Vigência (a partir de)</label><input id="aumVig" type="date" value="${p.vigencia||''}"></div>
+<div class="form-row" style="margin:0"><label>Status</label><select id="aumStatus" class="select-sm">${['rascunho','aprovado','cancelado'].concat(p.status==='aplicado'?['aplicado']:[]).map(k=>`<option value="${k}" ${p.status===k?'selected':''}>${AUM_ST[k]}</option>`).join('')}</select></div>
+<div class="form-row" style="flex:1;min-width:200px;margin:0"><label>Observação interna</label><input id="aumObs" value="${aumEsc(p.observacao||'')}" style="width:100%"></div>
+<button class="btn btn-outline btn-sm" onclick="salvarPlanoAumento()">Salvar plano</button>
+</div>
+<div class="panel-header" style="padding:8px 0"><div class="panel-title" style="font-size:14px">Regras do plano (${AUM_REGRAS.length})</div>
+<div style="display:flex;gap:8px"><button class="btn btn-primary btn-sm" onclick="openRegraAumento()">+ Regra</button>
+<button class="btn btn-outline btn-sm" onclick="simularAumento()">Simular impacto</button>
+<button class="btn btn-outline btn-sm" onclick="comunicadoAumento()">Gerar comunicado</button></div></div>
+<div style="overflow:auto"><table><thead><tr><th>Tabela</th><th>Escopo</th><th>Alvo</th><th class="text-right">Percentual</th><th>Observação</th><th></th></tr></thead>
+<tbody>${rows||'<tr><td colspan="6" style="color:#718096;padding:16px">Nenhuma regra. Use “+ Regra”.</td></tr>'}</tbody></table></div>
+<div id="aumSim" style="margin-top:16px"></div>`;
+}
+function novoPlanoAumento(){
+    openModal(`<h3>Novo plano de aumento</h3>
+<div class="form-row"><label>Nome</label><input id="np_nome" placeholder="Ex.: Reajuste Janeiro/2027"></div>
+<div class="form-row"><label>Vigência (a partir de)</label><input id="np_vig" type="date"></div>
+<div class="form-row"><label>Observação interna</label><input id="np_obs"></div>
+<div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="criarPlanoAumento()">Criar</button></div>`);
+}
+async function criarPlanoAumento(){
+    const nome=document.getElementById('np_nome').value.trim();
+    if(!nome){toast('Informe o nome','error');return;}
+    try{
+        const r=await sb('/reajuste_planos','POST',{nome,vigencia:document.getElementById('np_vig').value||null,observacao:document.getElementById('np_obs').value||null,criado_por:SESSION.user.email});
+        await sb('/log_alteracoes','POST',{usuario_id:SESSION.user.id,usuario_email:SESSION.user.email,tabela_ref:'reajuste_planos',campo:'criar',valor_novo:nome});
+        closeModal();toast('Plano criado');loadAumentos(r[0].id);
+    }catch(e){toast('Erro: '+e.message,'error');}
+}
+async function salvarPlanoAumento(){
+    const nome=document.getElementById('aumNome').value.trim();
+    if(!nome){toast('Informe o nome','error');return;}
+    try{
+        const st=document.getElementById('aumStatus').value;
+        await sb('/reajuste_planos?id=eq.'+AUM_PLANO.id,'PATCH',{nome,vigencia:document.getElementById('aumVig').value||null,status:st,observacao:document.getElementById('aumObs').value||null,atualizado_em:new Date().toISOString()});
+        await sb('/log_alteracoes','POST',{usuario_id:SESSION.user.id,usuario_email:SESSION.user.email,tabela_ref:'reajuste_planos',campo:'editar',valor_anterior:AUM_PLANO.status,valor_novo:nome+' ('+st+')'});
+        toast('Plano salvo');loadAumentos(AUM_PLANO.id);
+    }catch(e){toast('Erro: '+e.message,'error');}
+}
+function openRegraAumento(){
+    openModal(`<h3>Nova regra de aumento</h3>
+<div class="form-row"><label>Tabela</label><select id="rg_tab" onchange="rgAlvoUI()">${AUM_TABS.map(t=>`<option value="${t.id}">${aumEsc(t.nome)}</option>`).join('')}</select></div>
+<div class="form-row"><label>Escopo</label><select id="rg_esc" onchange="rgAlvoUI()"><option value="categoria">Categoria</option><option value="linha">Linha de produtos</option><option value="sku">SKU (código)</option><option value="tabela">Tabela inteira</option></select></div>
+<div class="form-row" id="rg_alvo"></div>
+<div class="form-row"><label>Percentual (%)</label><input id="rg_pct" type="number" step="0.001" value="5"><p style="font-size:11px;color:#718096;margin-top:4px">Positivo = aumento · Negativo = redução</p></div>
+<div class="form-row"><label>Observação / racional</label><input id="rg_obs" placeholder="Ex.: repasse de custo de aço"></div>
+<div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="salvarRegraAumento()">Salvar regra</button></div>`);
+    rgAlvoUI();
+}
+function rgAlvoUI(){
+    const tid=+document.getElementById('rg_tab').value, esc=document.getElementById('rg_esc').value, el=document.getElementById('rg_alvo');
+    const cats=AUM_CATS.filter(c=>c.tabela_id===tid);
+    if(esc==='categoria')el.innerHTML='<label>Categoria</label><select id="rg_v">'+cats.map(c=>`<option value="${c.id}">${aumEsc(c.nome)}${c.categoria_grupo?' ('+aumEsc(c.categoria_grupo)+')':''}</option>`).join('')+'</select>';
+    else if(esc==='linha'){const ls=[...new Set(cats.map(c=>c.categoria_grupo).filter(Boolean))];el.innerHTML=ls.length?'<label>Linha</label><select id="rg_v">'+ls.map(l=>`<option>${aumEsc(l)}</option>`).join('')+'</select>':'<p style="font-size:12px;color:#718096">Esta tabela não tem linhas cadastradas (use Categoria).</p><input type="hidden" id="rg_v" value="">';}
+    else if(esc==='sku')el.innerHTML='<label>Código do SKU</label><input id="rg_v" placeholder="Código exato do produto">';
+    else el.innerHTML='<p style="font-size:12px;color:#718096">Vale para todos os produtos da tabela, exceto onde houver regra mais específica.</p><input type="hidden" id="rg_v" value="">';
+}
+async function salvarRegraAumento(){
+    const tabela_id=+document.getElementById('rg_tab').value, escopo=document.getElementById('rg_esc').value;
+    const v=(document.getElementById('rg_v').value||'').trim(), pct=parseFloat(document.getElementById('rg_pct').value);
+    if(isNaN(pct)){toast('Informe o percentual','error');return;}
+    if(escopo!=='tabela'&&!v){toast('Informe o alvo','error');return;}
+    const body={plano_id:AUM_PLANO.id,tabela_id,escopo,percentual:pct,observacao:document.getElementById('rg_obs').value||null,criado_por:SESSION.user.email};
+    if(escopo==='categoria')body.categoria_id=+v; if(escopo==='linha')body.linha=v; if(escopo==='sku')body.codigo=v;
+    try{
+        await sb('/reajuste_regras','POST',body);
+        await sb('/log_alteracoes','POST',{usuario_id:SESSION.user.id,usuario_email:SESSION.user.email,tabela_ref:'reajuste_regras',campo:escopo,valor_novo:aumPct(pct)+' · '+(escopo==='tabela'?aumTab(tabela_id):v)+' · plano '+AUM_PLANO.nome});
+        closeModal();toast('Regra salva');loadAumentoPlano();
+    }catch(e){toast(/duplicate|unique|23505/.test(e.message)?'Já existe regra para esse alvo no plano':'Erro: '+e.message,'error');}
+}
+async function removerRegraAumento(id){
+    if(!confirm('Remover esta regra do plano?'))return;
+    try{await sb('/reajuste_regras?id=eq.'+id,'PATCH',{ativo:false});
+        await sb('/log_alteracoes','POST',{usuario_id:SESSION.user.id,usuario_email:SESSION.user.email,tabela_ref:'reajuste_regras',registro_id:id,campo:'remover',valor_anterior:'plano '+AUM_PLANO.nome});
+        toast('Regra removida');loadAumentoPlano();}catch(e){toast('Erro: '+e.message,'error');}
+}
+async function aumSimular(){
+    const tabs=[...new Set(AUM_REGRAS.map(r=>r.tabela_id))];
+    let all=[];
+    for(const t of tabs)all=all.concat(await sb('/rpc/reajuste_simular?tabela_id=eq.'+t+'&percentual=neq.0&limit=1000','POST',{p_plano:AUM_PLANO.id}));
+    return all;
+}
+async function simularAumento(){
+    if(!AUM_REGRAS.length){toast('Cadastre ao menos uma regra','error');return;}
+    const el=document.getElementById('aumSim');el.innerHTML='<div class="loading">Simulando...</div>';
+    try{
+        const rows=await aumSimular();
+        const g={};rows.forEach(r=>{const k=r.tabela_id+'|'+r.categoria;(g[k]=g[k]||{tab:r.tabela_id,cat:r.categoria,linha:r.linha,n:0,pct:r.percentual,a:0,b:0}).n++;g[k].a+=+r.pv_atual;g[k].b+=+r.pv_novo;});
+        const L=Object.values(g).sort((x,y)=>x.tab-y.tab||x.cat.localeCompare(y.cat));
+        el.innerHTML=`<div style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px">
+<p style="font-size:14px;font-weight:600;color:#1d327b;margin-bottom:8px">${rows.length} SKUs afetados · variação média ponderada por soma de preços: ${aumPct((L.reduce((a,x)=>a+x.b,0)/L.reduce((a,x)=>a+x.a,0)-1)*100)}</p>
+<div style="overflow:auto;max-height:360px"><table style="font-size:12px"><thead><tr><th>Tabela</th><th>Categoria</th><th class="text-right">SKUs</th><th class="text-right">% aplicado</th></tr></thead><tbody>
+${L.map(x=>`<tr><td>${aumEsc(aumTab(x.tab))}</td><td>${aumEsc(x.cat)}</td><td class="text-right">${x.n}</td><td class="text-right">${aumPct(x.pct)}</td></tr>`).join('')}</tbody></table></div>
+<button class="btn btn-outline btn-sm" style="margin-top:8px" onclick="exportarSimAumento()">Baixar CSV por SKU (atual → novo)</button></div>`;
+    }catch(e){el.innerHTML='<p style="color:#e30613">Erro: '+aumEsc(e.message)+'</p>';}
+}
+async function exportarSimAumento(){
+    const rows=await aumSimular();
+    const csv=['tabela;codigo;modelo;categoria;pv_atual;percentual;origem;pv_novo'].concat(rows.map(r=>[aumTab(r.tabela_id),r.codigo,r.modelo,r.categoria,r.pv_atual,r.percentual,r.origem,r.pv_novo].map(v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"').join(';'))).join('\n');
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv'}));a.download='simulacao-aumento.csv';a.click();
+}
+function comunicadoAumento(){
+    if(!AUM_REGRAS.length){toast('Cadastre ao menos uma regra','error');return;}
+    const p=AUM_PLANO, vig=aumData(p.vigencia);
+    const por={};AUM_REGRAS.forEach(r=>(por[r.tabela_id]=por[r.tabela_id]||[]).push(r));
+    const bloco=t=>`<h3>${aumEsc(aumTab(+t))}</h3><table><thead><tr><th>Item</th><th>Tipo</th><th style="text-align:right">Reajuste</th></tr></thead><tbody>${por[t].map(r=>`<tr><td>${aumEsc(aumAlvo(r))}</td><td>${AUM_ESC[r.escopo]}</td><td style="text-align:right"><b>${aumPct(r.percentual)}</b></td></tr>`).join('')}</tbody></table>`;
+    const texto=`Prezados parceiros,\n\nInformamos que, a partir de ${vig}, a tabela de preços Boxer passará por reajuste, conforme abaixo:\n\n`+Object.keys(por).map(t=>aumTab(+t)+':\n'+por[t].map(r=>'• '+aumAlvo(r)+(r.escopo==='tabela'?' (todos os produtos, salvo exceções)':'')+': '+aumPct(r.percentual)).join('\n')).join('\n\n')+`\n\nPedidos/propostas emitidos até ${p.vigencia?aumData(new Date(new Date(p.vigencia+'T12:00:00').getTime()-864e5).toISOString().slice(0,10)):'a data de vigência'} seguem a tabela atual, respeitada a validade da proposta. Em caso de dúvida, fale com seu representante Boxer.\n\nBoxer Soldas`;
+    openModal(`<h3>Comunicado de reajuste</h3>
+<p style="font-size:12px;color:#718096;margin-bottom:8px">Revise o texto (ajuste datas e regras de transição antes de enviar). Pode copiar para e-mail/WhatsApp ou abrir a versão para imprimir/salvar em PDF.</p>
+<textarea id="com_txt" style="width:100%;height:280px;font-family:Outfit;font-size:13px">${aumEsc(texto)}</textarea>
+<div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">Fechar</button>
+<button class="btn btn-outline" onclick="navigator.clipboard.writeText(document.getElementById('com_txt').value).then(()=>toast('Texto copiado'))">Copiar texto</button>
+<button class="btn btn-primary" onclick="imprimirComunicado()">Abrir para imprimir / PDF</button></div>`);
+    window._comBlocos=Object.keys(por).map(bloco).join('');
+}
+function imprimirComunicado(){
+    const p=AUM_PLANO,txt=document.getElementById('com_txt').value;
+    const intro=aumEsc(txt.split('\n\n')[1]||'');
+    const fim=aumEsc(txt.split('\n\n').slice(-2).join('\n\n')).replace(/\n/g,'<br>');
+    const w=window.open('','_blank');
+    w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Comunicado de reajuste — ${aumEsc(p.nome)}</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+<style>body{font-family:Outfit,sans-serif;color:#1a202c;max-width:760px;margin:0 auto;padding:32px}header{border-bottom:3px solid #25bbee;padding-bottom:12px;margin-bottom:20px;display:flex;align-items:center;gap:12px}header img{height:40px}h1{font-size:20px;color:#1d327b;margin:0}h3{font-size:15px;color:#1d327b;margin:20px 0 6px}table{width:100%;border-collapse:collapse;font-size:13px}th{background:#f7fafc;color:#718096;font-size:11px;text-transform:uppercase;text-align:left;padding:6px 8px;border:1px solid #e2e8f0}td{padding:6px 8px;border:1px solid #e2e8f0}p{font-size:14px;line-height:1.5}@media print{button{display:none}}</style></head><body>
+<header><img src="Estrela-Boxer.svg" alt="Boxer"><h1>Comunicado de reajuste de tabela</h1></header>
+<p>Prezados parceiros,</p><p>${intro}</p>${window._comBlocos}<p style="margin-top:24px">${fim}</p>
+<button onclick="print()" style="margin-top:16px;padding:8px 16px">Imprimir / Salvar PDF</button></body></html>`);
+    w.document.close();
+}
 
 // USO DA TABELA (log da tela de teste com login)
 const USO_EVENTOS={login:'Login',acesso:'Acesso',acesso_negado:'Acesso negado',logout:'Logout',consulta:'Consulta (filtros)',consulta_disponibilidade:'Consulta de estoque',selecionar_item:'Selecionou item',desselecionar_item:'Removeu item',gerar_proposta:'Gerou proposta',ver_detalhes:'Abriu detalhes do produto',ver_regras:'Abriu as regras',exportar_disponibilidade:'Exportou disponibilidade (Excel)',codigo_enviado:'Código enviado',codigo_negado:'Código negado (email não liberado)',codigo_limite:'Limite de códigos atingido',codigo_erro:'Erro ao enviar código',acesso_auto_dominio:'Acesso automático (domínio Boxer)',solicitacao_acesso:'Solicitou acesso',acesso_aprovado:'Acesso aprovado',acesso_adicionado:'Acesso adicionado',acesso_editado:'Acesso editado',acesso_renovado:'Acesso renovado',acesso_revogado:'Acesso revogado',acesso_reativado:'Acesso reativado',solicitacao_negada:'Solicitação negada'};
